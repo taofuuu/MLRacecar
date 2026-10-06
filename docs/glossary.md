@@ -58,6 +58,10 @@
 | **Spline** | A smooth curve drawn through a set of points. | The track centerline. |
 | **Catmull-Rom (centripetal)** | A kind of spline that passes exactly through your points without loops or sharp spikes. | How your clicked dots become a smooth track. |
 | **Arc length (s)** | Distance travelled along the curve. | How far around the lap a car is. |
+| **Segment / polyline** | A segment is a straight line between two points; a polyline is a chain of segments. | Track edges and the centerline are polylines. |
+| **2D cross product** | One number that says whether vector *b* turns left (positive) or right (negative) from vector *a*. | Which side of the road a car is on; whether two segments cross. |
+| **Projection (onto a polyline)** | Finding the closest point on a line to a given point. | Progress along the lap and distance from the road's middle. |
+| **Floating-point rounding / tolerance** | Computers store decimals approximately, so exact comparisons can fail by a hair. A tolerance accepts "close enough". | Rays aimed exactly at a corner where two edge segments meet must still hit. |
 | **Curvature** | How sharply a curve bends (1 / radius). | Tight corners have high curvature. |
 | **Boundary folding** | When a corner is so tight the inner edge of the road crosses over itself. | A track validation rule. |
 | **Kinematic bicycle model** | Simple car physics: the car goes where its wheels point, with no skidding. | First car model (M2-2). |

@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- `mlracecar.core.geometry`: vectorized 2D geometry (cross product, rotation, angle wrapping,
+  segment intersection, raycasts, projection onto a polyline, self-intersection detection),
+  property-tested with Hypothesis.
+
 - Project vision, architecture, ADRs 0001–0009, roadmap, and contribution workflow.
 - Backlog definition and an idempotent GitHub seeding script.
 - Plain-language summaries on every planning document, plus a glossary.
