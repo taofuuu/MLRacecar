@@ -264,10 +264,14 @@ window, the replay recorder, the video writer, and later the web demo.
 
 ### 4.12 Track editor
 
-- **Model:** `TrackDraft`, pure Python with no pygame, so it is unit-testable headless.
+- **Model:** `TrackDraft` (`mlracecar.editor.draft`), pure Python with no pygame, so it is
+  unit-testable headless. Drafts are **immutable**: every edit returns a new draft, so undo/redo
+  is a history of drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)).
 - **View:** pygame canvas that draws the spline, boundaries, and validation issues.
-- **Controller:** turns input into `Command` objects (command pattern), which gives
-  undo/redo for free.
+- **Controller:** turns input into draft edits. A plain **click appends** a point after the last
+  one (drawing a track is clicking around it); **shift+click on the road inserts** a point into
+  that stretch (refining a corner). Guessing where a plain click belongs fails on real layouts:
+  points along a straight make every guess a tie.
 
 Validation runs on every edit, so mistakes show up while you draw.
 

@@ -42,7 +42,8 @@
 | **Optional extra** | A group of libraries you only install if you need that feature. | `train` (PyTorch) and `render` (pygame). |
 | **Protocol / interface** | A promise about what methods something has, without saying how it works. Lets you swap implementations. | `Agent`: human, SB3, or our own PPO all fit the same slot. |
 | **MVC** (Model–View–Controller) | Splitting an app into data (model), drawing (view), and input handling (controller). | The track editor. |
-| **Command pattern** | Each edit is stored as an object that knows how to do *and* undo itself. That's how undo/redo works. | Track editor undo/redo. |
+| **Immutable** | Can't be changed after it's made. Changing it means making a new copy with the change. | Editor drafts: undo is going back to an earlier copy ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
+| **Command pattern** | Each edit is stored as an object that knows how to do *and* undo itself. A classic way to build undo/redo. | Considered for the editor, replaced by immutable drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Observer pattern** | One thing publishes updates and many listeners receive them. | Snapshots go to the screen, replay recorder, and video writer at once. |
 | **Snapshot** | A frozen picture of the whole race at one moment: every car's position, speed, lap. | Drawn, recorded, and sent to the web demo. |
 | **JSON** | A plain-text format for structured data that almost every program can read. | Track files (`tracks/*.json`). |
