@@ -96,6 +96,5 @@ Day-to-day commands:
 | `uv run ruff check --fix .`               | Lint, auto-fixing what it safely can                           |
 | `uv run ruff format .`                    | Format all code                                                |
 | `uv run mypy`                             | Strict type check of `src/`, `tests/`, `scripts/`              |
+| `uv run lint-imports`                     | Architecture check: each layer only imports the layers below it |
 | `uv run pre-commit run --all-files`       | Everything the commit hook runs, on the whole repo             |
-
-Coming later in M0: `uv run lint-imports` (architecture rules, #6).

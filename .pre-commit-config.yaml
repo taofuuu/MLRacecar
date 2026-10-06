@@ -38,3 +38,10 @@ repos:
         types_or: [python, pyi]
         pass_filenames: false
         require_serial: true
+      - id: import-linter
+        name: import-linter (architecture layers)
+        entry: uv run --frozen lint-imports
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+        require_serial: true

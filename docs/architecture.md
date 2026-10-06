@@ -71,7 +71,9 @@ flowchart TB
   config --> core
 ```
 
-Rules (enforced by [import-linter](https://import-linter.readthedocs.io/) in CI, see ticket M0-6):
+Rules (checked on every commit and in CI: the layer order by
+[import-linter](https://import-linter.readthedocs.io/), configured in `pyproject.toml`, and the
+core's import allow-list by `tests/unit/test_architecture.py`):
 
 1. **Dependencies point downward only.** Nothing imports from a layer above it.
 2. **`core` depends only on the standard library and NumPy.** It does no I/O, has no

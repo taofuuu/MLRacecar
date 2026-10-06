@@ -32,3 +32,11 @@ Heavy dependencies (`pygame`, `torch`, `stable-baselines3`) are optional extras.
   run in a browser via Pyodide. CI installs stay small. Boundaries are visible to reviewers.
 - **Negative / costs:** some mapping code between pydantic config models and plain core
   dataclasses; occasional friction when a "quick" import would cross a boundary.
+
+## Amendments
+
+- **2026-10-06 (#6):** import-linter enforces the layer order. The "`core` imports only the
+  standard library and NumPy" rule is an allow-list, and import-linter's contracts are
+  deny-lists (they can only forbid named packages, so a newly added dependency would slip
+  through). That rule is therefore enforced by `tests/unit/test_architecture.py`, which scans
+  every import in `core` and also runs in pre-commit and CI.
