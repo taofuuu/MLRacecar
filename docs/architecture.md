@@ -1,7 +1,7 @@
 # Architecture
 
 > **Status:** Draft v0.1 (2026-10-06). This document describes the target design. It changes
-> through [ADRs](adr/); if the code and this document disagree, one of them has a bug.
+> through [ADRs](adr/README.md); if the code and this document disagree, one of them has a bug.
 
 > **In plain words:** The program is built like a building with floors. The bottom floor is
 > the "physics engine": it moves the cars, counts laps, and measures how far each car is from

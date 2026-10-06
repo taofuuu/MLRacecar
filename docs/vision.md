@@ -46,7 +46,7 @@ These apply to every milestone, not just the last one:
 - Test coverage ≥ 90% for `core`, ≥ 80% overall.
 - Same seed + same config → identical simulation results (bitwise, on the same platform).
 - Every training result is traceable to a run directory (resolved config, git SHA, seed).
-- Every significant decision is recorded as an [ADR](adr/).
+- Every significant decision is recorded as an [ADR](adr/README.md).
 - Fresh clone → driving your own track in under 5 minutes, one command per step.
 - Performance is measured, not guessed: throughput benchmarks are published in the README.
 

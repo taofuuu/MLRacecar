@@ -11,6 +11,7 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: check-yaml
+        args: [--unsafe] # syntax-only, so mkdocs.yml's !!python/name tag is accepted
       - id: check-toml
       - id: check-json
       - id: check-merge-conflict

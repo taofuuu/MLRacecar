@@ -40,3 +40,7 @@ develop) and Linux (CI), and that a reviewer recognizes as current best practice
   and relaxing a single module later (if an untyped third-party library forces it) is far easier
   than tightening everything once code exists. ruff and mypy run through `uv run` in the
   pre-commit hooks, so local checks use exactly the versions pinned in `uv.lock`.
+- **2026-10-06 (#8):** the docs site stays on **MkDocs 1.x** (`mkdocs<2`). MkDocs 2.0 removes the
+  plugin system that Material for MkDocs and mkdocstrings depend on, and offers no migration
+  path. The Material team's successor, Zensical, reads the same `mkdocs.yml`, but it is still
+  pre-1.0. We'll re-evaluate once it reaches 1.0.

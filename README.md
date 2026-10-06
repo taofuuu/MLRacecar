@@ -1,6 +1,7 @@
 # MLRacecar
 
 [![CI](https://github.com/taofuuu/MLRacecar/actions/workflows/ci.yml/badge.svg)](https://github.com/taofuuu/MLRacecar/actions/workflows/ci.yml)
+[![Docs](https://github.com/taofuuu/MLRacecar/actions/workflows/docs.yml/badge.svg)](https://taofuuu.github.io/MLRacecar/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-strict-2a6db2.svg)](https://mypy-lang.org/)
@@ -36,6 +37,9 @@ track you design.
 | [Roadmap](docs/roadmap.md)               | Milestones and backlog                            |
 | [Contributing](CONTRIBUTING.md)          | Workflow, conventions, Definition of Done         |
 | [Glossary](docs/glossary.md)             | Every technical term, explained in plain words    |
+
+All of it is also published as a website, with search and diagrams:
+**[taofuuu.github.io/MLRacecar](https://taofuuu.github.io/MLRacecar/)**
 
 ## Tech stack
 
