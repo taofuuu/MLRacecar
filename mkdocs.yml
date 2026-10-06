@@ -92,3 +92,5 @@ plugins:
             show_source: false
             members_order: source
             heading_level: 2
+            show_submodules: true # new modules appear in the API reference automatically
+            docstring_section_style: list
