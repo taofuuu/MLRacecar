@@ -1,0 +1,72 @@
+# Runs on every pull request and every push to main. Branch protection on main requires
+# all jobs below to pass before a PR can be merged.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the run that is still going.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash # same syntax on Ubuntu and Windows runners
+
+jobs:
+  checks:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0 (no major tag published; pinned to the release commit)
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (must match uv.lock exactly)
+        run: uv sync --locked
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      # The same hooks developers run on every commit: one definition, used locally and in CI.
+      - name: Run all pre-commit hooks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+  tests:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false # report every OS, even if one fails
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0 (no major tag published; pinned to the release commit)
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (must match uv.lock exactly)
+        run: uv sync --locked
+
+      - name: Run tests with coverage
+        run: uv run pytest
+
+      - name: Add coverage table to the job summary
+        if: always()
+        run: |
+          echo "### Coverage (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
+          uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"

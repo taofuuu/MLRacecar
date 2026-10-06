@@ -19,6 +19,19 @@ How work flows through this project, from idea to release. The reasoning is in
 5. **CI must be green.** Review, then **squash merge**. The linked issue moves to *Done*
    automatically.
 
+## Continuous integration
+
+Every PR and every push to `main` runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+| Job                   | What it runs                                                            |
+|-----------------------|-------------------------------------------------------------------------|
+| Lint and type check   | All pre-commit hooks (the same ones that run on your commits)           |
+| Tests (ubuntu-latest) | `pytest` with coverage; the coverage table appears in the run summary   |
+| Tests (windows-latest)| The same, on Windows                                                    |
+
+`main` is protected: changes land only through a PR, all three jobs must pass, and PRs are
+squash-merged.
+
 ## Board columns
 
 | Column          | Meaning                                                                       |
