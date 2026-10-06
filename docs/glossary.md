@@ -39,9 +39,12 @@
 | **Core** | The bottom floor: physics, track math, race rules. Plain math, no graphics or AI libraries. | `src/mlracecar/core/` |
 | **Composition root** | The one place where all the parts get connected together. | The `racecar` command (`cli`). |
 | **Dependency** | Something your code needs in order to run: another module or an installed library. | numpy, pygame, torch, … |
-| **Optional extra** | A group of libraries you only install if you need that feature. | `train` (PyTorch) and `render` (pygame). |
+| **Optional extra** | A group of libraries you only install if you need that feature. | `train` (PyTorch) and `render` (pygame-ce). |
+| **pygame / pygame-ce** | A Python library for opening a window, reading the mouse and keyboard, and drawing shapes. pygame-ce is its actively maintained edition. | The track editor and the race window ([ADR-0012](adr/0012-pygame-ce-for-windows-and-drawing.md)). |
 | **Protocol / interface** | A promise about what methods something has, without saying how it works. Lets you swap implementations. | `Agent`: human, SB3, or our own PPO all fit the same slot. |
 | **MVC** (Model–View–Controller) | Splitting an app into data (model), drawing (view), and input handling (controller). | The track editor. |
+| **Camera** | Which part of the world the window shows, and how zoomed in. It converts metres to screen pixels and back. | Panning and zooming in the editor and the race window. |
+| **Grid snap** | New and moved points jump to the nearest grid crossing, so a track lines up neatly. | Press G in the editor. |
 | **Immutable** | Can't be changed after it's made. Changing it means making a new copy with the change. | Editor drafts: undo is going back to an earlier copy ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Command pattern** | Each edit is stored as an object that knows how to do *and* undo itself. A classic way to build undo/redo. | Considered for the editor, replaced by immutable drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Observer pattern** | One thing publishes updates and many listeners receive them. | Snapshots go to the screen, replay recorder, and video writer at once. |
@@ -105,9 +108,9 @@
 | **Smoke test** | A quick end-to-end run that just checks nothing crashes. | A 2,000-step training run in CI. |
 | **Benchmark** | A measurement of speed. | Simulation steps per second. |
 | **Coverage** | What percentage of the code is run by the tests. | Target ≥ 90% for `core`. |
-| **Headless** | Running without a screen or window. | Training and CI. |
+| **Headless** | Running without a screen or window. | Training, CI, and the editor's tests (pygame's windows open off-screen). |
 | **Pre-commit hook** | Checks that run automatically every time you commit. | ruff, mypy, import-linter. |
-| **import-linter** | A tool that fails the build if code breaks the "floors" rule. | Enforces the layered architecture. |
+| **import-linter** | A tool that fails the build if code breaks the "floors" rule. | Enforces the layered architecture, and keeps pygame out of code that must run headless. |
 | **Lockfile** | A file listing the exact version of every installed library, so everyone gets identical installs. | `uv.lock` |
 | **uv** | A fast tool that installs Python and libraries and manages the project environment. | `uv sync`, `uv run …` |
 | **MkDocs / GitHub Pages** | MkDocs turns our Markdown docs into a website; GitHub Pages hosts it for free. | [taofuuu.github.io/MLRacecar](https://taofuuu.github.io/MLRacecar/) |

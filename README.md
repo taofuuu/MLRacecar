@@ -31,11 +31,14 @@ track you design.
 
 ```bash
 uv sync
+uv run racecar edit tracks/gp-circuit.json
 uv run racecar check tracks/gp-circuit.json
 ```
 
-`racecar check` reads a track file and runs the track checks on it. The sample tracks are in
-[`tracks/`](tracks/); the format is described in [docs/track-format.md](docs/track-format.md).
+`racecar edit` opens the track editor: click to add points and the road appears as you draw.
+Press **H** in the editor for all the controls. `racecar check` reads a track file and runs the
+track checks on it. The sample tracks are in [`tracks/`](tracks/); the format is described in
+[docs/track-format.md](docs/track-format.md).
 
 ## Documentation
 

@@ -189,6 +189,19 @@ def test_point_near_finds_the_closest_point_within_the_radius() -> None:
     assert TrackDraft().point_near((0.0, 0.0), radius=100.0) is None
 
 
+@pytest.mark.parametrize(
+    ("position", "on_road"),
+    [((120.0, 0.0), True), ((125.5, 0.0), True), ((126.5, 0.0), False), ((0.0, 0.0), False)],
+)
+def test_is_on_road(position: Point, on_road: bool) -> None:
+    draft = clicked(oval_clicks())  # 12 m wide: 6 m either side of the middle at (120, 0)
+    assert draft.is_on_road(position) is on_road
+
+
+def test_nothing_is_on_the_road_until_there_is_a_track() -> None:
+    assert not TrackDraft().append_point((0.0, 0.0)).is_on_road((0.0, 0.0))
+
+
 def test_adding_to_a_broken_draft_uses_the_straight_lines_between_points() -> None:
     # Points 1 and 2 coincide, so there's no curve yet; the click still finds its stretch.
     draft = TrackDraft(

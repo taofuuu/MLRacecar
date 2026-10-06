@@ -118,6 +118,14 @@ class TrackDraft:
         index = int(np.argmin(distances))
         return index if distances[index] <= radius else None
 
+    def is_on_road(self, position: Point) -> bool:
+        """Whether ``position`` is on the road (never, while the points can't form a track)."""
+        track = self.track
+        if track is None:
+            return False
+        nearest = project_onto_polyline([position], track.centerline.points, closed=True)
+        return bool(abs(nearest.offset[0]) <= track.width[int(nearest.segment[0])] / 2)
+
     # ------------------------------------------------------------------ #
     # Edits
     # ------------------------------------------------------------------ #
@@ -125,8 +133,8 @@ class TrackDraft:
     def append_point(self, position: Point) -> Self:
         """Add a point after the last one, extending the track (the loop closes back to point 0).
 
-        This is what a plain click does: clicking around in order draws a track. The new point
-        gets the last point's width.
+        This is what a click off the road does: clicking around in order draws a track. The new
+        point gets the last point's width.
         """
         width = self.widths[-1] if self.widths else DEFAULT_WIDTH
         return self._with((*self.points, position), (*self.widths, width))
@@ -134,7 +142,7 @@ class TrackDraft:
     def insert_point(self, position: Point) -> Self:
         """Insert a point into the stretch of road nearest ``position``.
 
-        This is for refining a track (shift+click on the road): the point goes between the two
+        This is what a click on the road does, to refine a track: the point goes between the two
         points around that stretch, with the road width the track has there, so the shape barely
         changes until the new point is moved. With fewer than 3 points there are no stretches
         yet, so it appends instead.

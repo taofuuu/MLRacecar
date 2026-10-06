@@ -25,7 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Filled in by later tickets; declared now so the install commands never change.
-render = []  # pygame (M2-6)
+render = ["pygame-ce>=2.5.8"]  # the track editor and race window (ADR-0012)
 train = []   # torch, stable-baselines3, tensorboard (M4-1)
 
 [project.scripts]
@@ -39,6 +39,7 @@ Changelog = "https://github.com/taofuuu/MLRacecar/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
+  "mlracecar[render]",  # the editor and renderer are tested in CI too
   "hypothesis>=6.168.5",
   "import-linter>=2.15",
   "mypy>=2.4.0",
@@ -118,6 +119,7 @@ warn_required_dynamic_aliases = true
 
 [tool.importlinter]
 root_package = "mlracecar"
+include_external_packages = true  # so contracts can name third-party packages like pygame
 
 [[tool.importlinter.contracts]]
 name = "Layers: each layer imports only the layers below it"
@@ -130,6 +132,22 @@ layers = [
   "mlracecar.config | mlracecar.io",
   "mlracecar.core",
 ]
+
+[[tool.importlinter.contracts]]
+name = "Only drawing code imports pygame: everything else runs headless"
+type = "forbidden"
+source_modules = [
+  "mlracecar.core",
+  "mlracecar.config",
+  "mlracecar.io",
+  "mlracecar.env",
+  "mlracecar.agents",
+  "mlracecar.training",
+  "mlracecar.render.camera",
+  "mlracecar.editor.draft",
+  "mlracecar.editor.controller",
+]
+forbidden_modules = ["pygame"]
 
 # --------------------------------------------------------------------------- #
 # Tests (architecture.md section 6)

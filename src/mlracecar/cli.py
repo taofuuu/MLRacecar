@@ -1,5 +1,6 @@
-"""The `racecar` command line. Subcommands for editing, driving, and training come later."""
+"""The `racecar` command line. Subcommands for driving and training come later."""
 
+import os
 from pathlib import Path
 from typing import Annotated
 
@@ -8,6 +9,7 @@ import typer
 from mlracecar import __version__
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
+from mlracecar.editor.draft import TrackDraft
 from mlracecar.io.track_file import TrackFileError, read_track_file
 
 app = typer.Typer(
@@ -63,3 +65,38 @@ def check(
         typer.echo(f"  {issue.severity.value.upper()}: {issue.message}")
     if has_errors(issues):
         raise typer.Exit(1)
+
+
+@app.command()
+def edit(
+    track: Annotated[
+        Path | None,
+        typer.Argument(help="The track file to open. If it doesn't exist yet, starts a new track."),
+    ] = None,
+) -> None:
+    """Open the track editor: draw a track with the mouse and see the road as you go.
+
+    Needs the `render` extra (pygame). Press H in the editor for the controls.
+    """
+    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")  # no pygame banner on start
+    try:
+        from mlracecar.editor.app import run_editor  # here, not at the top: pygame is optional
+    except ModuleNotFoundError as error:
+        if error.name != "pygame":
+            raise
+        typer.echo(
+            "The editor needs pygame. Install it with: pip install 'mlracecar[render]'", err=True
+        )
+        raise typer.Exit(1) from None
+
+    if track is None:
+        draft = TrackDraft()
+    elif track.exists():
+        try:
+            draft = TrackDraft.from_track_file(read_track_file(track))
+        except TrackFileError as error:
+            typer.echo(f"Can't open the track. {error}", err=True)
+            raise typer.Exit(1) from None
+    else:
+        draft = TrackDraft(name=track.stem)
+    run_editor(draft)
