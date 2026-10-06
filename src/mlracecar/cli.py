@@ -1,4 +1,4 @@
-"""The `racecar` command line. Subcommands (edit, drive, train, ...) are added by later milestones."""
+"""The `racecar` command line. Subcommands (edit, drive, train, ...) arrive in later milestones."""
 
 from typing import Annotated
 
@@ -24,7 +24,9 @@ def _print_version(value: bool) -> None:
 def main(
     version: Annotated[
         bool,
-        typer.Option("--version", callback=_print_version, is_eager=True, help="Show the version and exit."),
+        typer.Option(
+            "--version", callback=_print_version, is_eager=True, help="Show the version and exit."
+        ),
     ] = False,
 ) -> None:
     """Design race tracks, train AI drivers, and race them."""

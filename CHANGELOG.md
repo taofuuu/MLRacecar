@@ -13,3 +13,6 @@ All notable changes to this project are documented here. The format is based on
 - Plain-language summaries on every planning document, plus a glossary.
 - Python package scaffold (`src/mlracecar`, uv, Python 3.12) with a `racecar` CLI
   (`racecar --version`).
+- Code-quality gates: ruff lint and format, strict mypy, and pre-commit hooks.
+- Test framework: pytest with coverage (80% minimum), Hypothesis, pytest-benchmark, and opt-in
+  `slow` / `gpu` / `benchmark` markers.
