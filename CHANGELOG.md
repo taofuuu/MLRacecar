@@ -19,8 +19,9 @@ All notable changes to this project are documented here. The format is based on
 - `mlracecar.core.track.validation.validate`: checks a track and reports every problem with a
   severity, a stable code, a plain-language message, and a location (control point, stretch of
   road, or spot) for the editor to highlight. Rules: too few points, invalid or coinciding
-  points, non-positive widths, too narrow, too short, edges folding in tight bends, bends too
-  tight to steer (warning), the track crossing itself, and parts of the road overlapping.
+  points, non-positive widths, too narrow, too short, edges folding in tight bends, inside
+  edges coming to a sharp point (warning), bends too tight to steer (warning), the track
+  crossing itself, and parts of the road overlapping.
 - `mlracecar.core.geometry.polyline_crossings`, and a bounding-box broad phase for all crossing
   searches: about 46x faster on a 1.5 km track (validation takes ~33 ms there).
 

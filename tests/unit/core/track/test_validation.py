@@ -62,10 +62,12 @@ def peanut(waist_gap: float) -> FloatArray:
 
 
 @pytest.mark.parametrize(
-    "points", [OVAL, PLAYGROUND, OVAL[::-1].copy()], ids=["oval", "playground", "clockwise"]
+    ("points", "width"),
+    [(OVAL, 12.0), (OVAL[::-1].copy(), 12.0), (PLAYGROUND, 9.0)],
+    ids=["oval", "clockwise", "playground"],
 )
-def test_sample_tracks_have_no_issues(points: FloatArray) -> None:
-    assert validate(points, same_width(points, 12.0)) == []
+def test_sample_tracks_have_no_issues(points: FloatArray, width: float) -> None:
+    assert validate(points, same_width(points, width)) == []
 
 
 # --------------------------------------------------------------------------- #
@@ -151,6 +153,24 @@ def test_edge_folds_where_the_road_is_too_wide_for_the_bend(clockwise: bool) -> 
     assert any(_covers(stretch, tightest, track.length) for stretch in stretches)
     inside = "right" if clockwise else "left"  # the inside of the turn is the folding edge
     assert all(f"the {inside} edge folds" in issue.message for issue in issues)
+
+
+def test_sharp_inside_corner_is_a_warning() -> None:
+    # At 12 m wide, the playground hairpin (radius 6.1 m) leaves its inside edge a 9 cm radius:
+    # not a fold, but a near-sharp point.
+    issues = validate(PLAYGROUND, same_width(PLAYGROUND, 12.0))
+    assert codes(issues) == [IssueCode.SHARP_INSIDE_CORNER]
+    assert issues[0].severity is Severity.WARNING
+    assert "the right edge come to a sharp point" in issues[0].message  # the hairpin turns right
+    assert "inside radius is only 0.1 m" in issues[0].message
+    track = Track.build(PLAYGROUND, same_width(PLAYGROUND, 12.0))
+    tightest = track.centerline.arc_length[np.argmax(np.abs(track.centerline.curvature))]
+    assert _covers(issues[0].location, tightest, track.length)
+    # The rule's threshold is adjustable.
+    assert (
+        validate(PLAYGROUND, same_width(PLAYGROUND, 12.0), ValidationRules(min_inside_radius=0))
+        == []
+    )
 
 
 def test_tight_but_drivable_bend_is_a_warning() -> None:

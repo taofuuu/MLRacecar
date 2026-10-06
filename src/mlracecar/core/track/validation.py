@@ -49,6 +49,7 @@ class IssueCode(StrEnum):
     TOO_NARROW = "too-narrow"
     TOO_SHORT = "too-short"
     EDGE_FOLDS = "edge-folds"
+    SHARP_INSIDE_CORNER = "sharp-inside-corner"
     TIGHT_BEND = "tight-bend"
     TRACK_CROSSES_ITSELF = "track-crosses-itself"
     TRACK_OVERLAPS = "track-overlaps"
@@ -103,6 +104,9 @@ class ValidationRules:
     """Narrowest allowed road, in metres: room for two 2 m cars side by side with margins."""
     min_length: float = 100.0
     """Shortest allowed lap, in metres."""
+    min_inside_radius: float = 1.0
+    """Bends whose inside edge curves tighter than this radius (metres) get a warning: the edge
+    comes to a near-sharp point, which looks like a fold and makes an unrealistic, spiky wall."""
     min_drivable_radius: float = 6.0
     """Bends tighter than this radius (metres) get a warning: a car can't steer that sharply.
     A placeholder until vehicle parameters exist (#18)."""
@@ -245,16 +249,19 @@ def _check_size(track: Track, rules: ValidationRules) -> list[ValidationIssue]:
 
 
 def _check_bends(track: Track, rules: ValidationRules) -> list[ValidationIssue]:
-    """Bends too tight for the road width (error) or for a car to steer (warning).
+    """Bends too tight for the road width or for a car to steer.
 
-    A *bend* here is a continuous stretch where the road is too tight by either measure. Each
-    bend is reported once: as an edge-fold error if the edge folds anywhere in it, otherwise as
-    a tight-bend warning.
+    A *bend* here is a continuous stretch where the road is too tight by any measure. Each bend
+    is reported once, by its most serious problem: an edge-fold error if the inside edge folds
+    anywhere in it; otherwise a sharp-inside-corner warning if the inside edge comes to a
+    near-point; otherwise a tight-bend warning.
     """
     curvature = np.nan_to_num(np.abs(track.centerline.curvature), nan=np.inf)
     radius = 1 / curvature
-    folds = radius < track.width / 2
-    problem = folds | (radius < rules.min_drivable_radius)
+    inside_radius = radius - track.width / 2  # radius of the inside edge; below 0 it folds
+    folds = inside_radius < 0
+    sharp = inside_radius < rules.min_inside_radius
+    problem = folds | sharp | (radius < rules.min_drivable_radius)
 
     issues: list[ValidationIssue] = []
     for samples in _runs(problem):
@@ -271,6 +278,20 @@ def _check_bends(track: Track, rules: ValidationRules) -> list[ValidationIssue]:
                 "edge folds over itself. Widen the bend or narrow the road there."
             )
             issues.append(_error(IssueCode.EDGE_FOLDS, message, Stretch(start, end)))
+        elif sharp[samples].any():
+            cornered = samples[sharp[samples]]
+            worst = cornered[np.argmin(inside_radius[cornered])]
+            side = "left" if track.centerline.curvature[worst] > 0 else "right"
+            message = (
+                f"{where} makes the {side} edge come to a sharp point: its inside radius is only "
+                f"{inside_radius[worst]:.1f} m (at least {rules.min_inside_radius:.1f} m "
+                "recommended). Widen the bend or narrow the road there."
+            )
+            issues.append(
+                ValidationIssue(
+                    Severity.WARNING, IssueCode.SHARP_INSIDE_CORNER, message, Stretch(start, end)
+                )
+            )
         else:
             message = (
                 f"{where} is tighter than a car can steer: radius {radius[tightest]:.1f} m, "
