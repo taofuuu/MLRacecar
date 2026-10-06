@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 import mlracecar
 from mlracecar.cli import app
+from mlracecar.editor.document import TrackDocument
 from mlracecar.editor.draft import TrackDraft
 from mlracecar.io.track_file import TrackFile, write_track_file
 
@@ -106,40 +107,41 @@ def test_check_names_points_that_cannot_form_a_track(tmp_path: Path) -> None:
 
 
 @pytest.fixture
-def opened(monkeypatch: pytest.MonkeyPatch) -> list[TrackDraft]:
-    """Stands in for the editor window and records the draft it was opened with."""
-    drafts: list[TrackDraft] = []
+def opened(monkeypatch: pytest.MonkeyPatch) -> list[TrackDocument]:
+    """Stands in for the editor window and records the document it was opened with."""
+    documents: list[TrackDocument] = []
 
-    def fake_run_editor(draft: TrackDraft | None = None) -> TrackDraft:
-        drafts.append(draft or TrackDraft())
-        return drafts[-1]
+    def fake_run_editor(document: TrackDocument | None = None) -> TrackDraft:
+        assert document is not None
+        documents.append(document)
+        return document.saved
 
     monkeypatch.setattr("mlracecar.editor.app.run_editor", fake_run_editor)
-    return drafts
+    return documents
 
 
-def test_edit_with_no_file_starts_a_new_track(opened: list[TrackDraft]) -> None:
+def test_edit_with_no_file_starts_a_new_track(opened: list[TrackDocument]) -> None:
     result = runner.invoke(app, ["edit"])
     assert result.exit_code == 0
-    assert opened == [TrackDraft()]
+    assert opened == [TrackDocument(None, TrackDraft())]
 
 
-def test_edit_opens_a_track_file(opened: list[TrackDraft]) -> None:
+def test_edit_opens_a_track_file(opened: list[TrackDocument]) -> None:
     result = runner.invoke(app, ["edit", str(SAMPLES / "oval.json")])
     assert result.exit_code == 0
-    assert opened[0].name == "Oval"
-    assert len(opened[0].points) == 16
+    assert opened[0].path == SAMPLES / "oval.json"
+    assert opened[0].saved.name == "Oval"
 
 
 def test_edit_a_file_that_does_not_exist_yet_starts_a_track_named_after_it(
-    opened: list[TrackDraft], tmp_path: Path
+    opened: list[TrackDocument], tmp_path: Path
 ) -> None:
     result = runner.invoke(app, ["edit", str(tmp_path / "my-circuit.json")])
     assert result.exit_code == 0
-    assert opened == [TrackDraft(name="my-circuit")]
+    assert opened == [TrackDocument(tmp_path / "my-circuit.json", TrackDraft(name="my-circuit"))]
 
 
-def test_edit_reports_an_unreadable_file(opened: list[TrackDraft], tmp_path: Path) -> None:
+def test_edit_reports_an_unreadable_file(opened: list[TrackDocument], tmp_path: Path) -> None:
     path = tmp_path / "broken.json"
     path.write_text("not json", encoding="utf-8")
     result = runner.invoke(app, ["edit", str(path)])

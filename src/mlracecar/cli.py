@@ -9,7 +9,7 @@ import typer
 from mlracecar import __version__
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
-from mlracecar.editor.draft import TrackDraft
+from mlracecar.editor.document import TrackDocument
 from mlracecar.io.track_file import TrackFileError, read_track_file
 
 app = typer.Typer(
@@ -74,7 +74,8 @@ def edit(
         typer.Argument(help="The track file to open. If it doesn't exist yet, starts a new track."),
     ] = None,
 ) -> None:
-    """Open the track editor: draw a track with the mouse and see the road as you go.
+    """Open the track editor: draw a track with the mouse, see the road and any problems as you
+    go, and save it (Ctrl+S).
 
     Needs the `render` extra (pygame). Press H in the editor for the controls.
     """
@@ -89,14 +90,9 @@ def edit(
         )
         raise typer.Exit(1) from None
 
-    if track is None:
-        draft = TrackDraft()
-    elif track.exists():
-        try:
-            draft = TrackDraft.from_track_file(read_track_file(track))
-        except TrackFileError as error:
-            typer.echo(f"Can't open the track. {error}", err=True)
-            raise typer.Exit(1) from None
-    else:
-        draft = TrackDraft(name=track.stem)
-    run_editor(draft)
+    try:
+        document = TrackDocument.open(track)
+    except TrackFileError as error:
+        typer.echo(f"Can't open the track. {error}", err=True)
+        raise typer.Exit(1) from None
+    run_editor(document)

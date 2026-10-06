@@ -22,6 +22,9 @@ from mlracecar.io.track_file import TrackFile
 
 type Point = tuple[float, float]
 
+DEFAULT_NAME = "Untitled track"
+"""Name of a new track until the user names it (or saves it, which names it after the file)."""
+
 DEFAULT_WIDTH = 12.0
 """Road width given to the first points of a new track, in metres."""
 
@@ -40,7 +43,7 @@ class TrackDraft:
     """Control points in driving order, in metres. Point 0 is on the start/finish line."""
     widths: tuple[float, ...] = ()
     """Road width at each point, in metres."""
-    name: str = "Untitled track"
+    name: str = DEFAULT_NAME
     author: str = ""
     description: str = ""
     metadata: dict[str, JsonValue] = field(default_factory=dict, hash=False, repr=False)
