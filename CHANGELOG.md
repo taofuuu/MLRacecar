@@ -16,3 +16,5 @@ All notable changes to this project are documented here. The format is based on
 - Code-quality gates: ruff lint and format, strict mypy, and pre-commit hooks.
 - Test framework: pytest with coverage (80% minimum), Hypothesis, pytest-benchmark, and opt-in
   `slow` / `gpu` / `benchmark` markers.
+- Continuous integration on GitHub Actions: all pre-commit hooks, plus tests on Ubuntu and
+  Windows with a coverage summary. `main` is protected: merging requires a PR with green CI.
