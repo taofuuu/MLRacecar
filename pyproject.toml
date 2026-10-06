@@ -131,6 +131,7 @@ layers = [
 [tool.pytest.ini_options]
 minversion = "9.0"
 testpaths = ["tests"]
+pythonpath = ["tests"] # shared test helpers, e.g. `from strategies import track_like_points`
 addopts = [
   "-ra",
   "--strict-markers",
