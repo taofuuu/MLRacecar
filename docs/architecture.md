@@ -274,10 +274,13 @@ window, the replay recorder, the video writer, and later the web demo.
   the points, a status bar, and a help panel, onto any pygame surface.
 - **Controller:** `EditorController` (`mlracecar.editor.controller`) turns input into draft
   edits and camera moves. It takes window pixels and converts them with an immutable `Camera`
-  (`mlracecar.render.camera`), so every interaction is tested without pygame. A plain **click
-  appends** a point after the last one (drawing a track is clicking around it); **shift+click
-  inserts** a point into the nearest stretch (refining a corner). Guessing where a plain click
-  belongs fails on real layouts: points along a straight make every guess a tie. Other input:
+  (`mlracecar.render.camera`), so every interaction is tested without pygame. A **click on the
+  road inserts** a point into that stretch (refining a corner; a hollow dot under the cursor
+  shows it); a **click anywhere else appends** a point after the last one (drawing a track is
+  clicking around it). Sending *every* click to the nearest stretch fails when drawing: it
+  misplaced 94 of 98 points of the GP circuit clicked in order. With the on-road rule, 1 of 98
+  is misplaced (a hairpin dot 7 m from the previous one), and none with 2–3 dots per corner;
+  **shift+click** always appends, for that case. Other input:
   drag a point to move it, right-click to delete it, right- or middle-drag to pan, the wheel to
   zoom around the cursor, shift+wheel to change the road width at a point, and **G** to snap
   to the grid.

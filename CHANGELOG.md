@@ -32,7 +32,8 @@ All notable changes to this project are documented here. The format is based on
   (ADR-0011) with append, insert-into-stretch, move, delete, width, reverse-direction, and
   set-start edits, cached track and validation per draft, and conversion to and from track files.
 - The track editor window, `racecar edit [file]`: click to draw a track and watch the road
-  appear, shift+click to insert, drag to move, right-click to delete, shift+wheel or `[`/`]`
+  appear, click on the road to insert a point there (shift+click always adds after the last
+  point), drag to move, right-click to delete, shift+wheel or `[`/`]`
   for road width, pan and zoom, grid snap (G), fit (F), reverse (R), start line (S), and a help
   panel (H). Opens existing track files; saving comes next.
 - `mlracecar.render`: an immutable `Camera` (metres to pixels, pan, zoom around the cursor,

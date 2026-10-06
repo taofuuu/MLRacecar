@@ -92,8 +92,9 @@ SHORTCUTS = (
 )
 
 MOUSE_HELP = (
-    ("Click", "add a point after the last one (hold to place it)"),
-    ("Shift+click", "insert a point into the nearest stretch of road"),
+    ("Click on the road", "insert a point there (hold to place it)"),
+    ("Click elsewhere", "add a point after the last one"),
+    ("Shift+click", "always add after the last one"),
     ("Drag a point", "move it"),
     ("Right-click a point", "delete it"),
     ("Right-drag", "pan"),

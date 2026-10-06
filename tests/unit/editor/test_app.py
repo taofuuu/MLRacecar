@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 
+import numpy as np
 import pygame
 import pytest
 
@@ -104,13 +105,20 @@ def test_clicks_add_points_where_the_mouse_is() -> None:
     assert window.controller.draft.points == ((100.0, 0.0), (0.0, 100.0))
 
 
-def test_shift_click_inserts() -> None:
+def test_a_click_on_the_road_inserts_and_shift_click_appends() -> None:
     window = EditorWindow(SQUARE, size=(800, 600))
-    window.controller.camera = window.controller.camera.fit([(-300, -300), (300, 300)])
-    pygame.key.set_mods(pygame.KMOD_SHIFT)
-    click(window, on_screen(window, (0.0, 101.0)))
-    assert len(window.controller.draft.points) == 5
+    track = SQUARE.track
+    assert track is not None
+
+    def on_road(after: int) -> tuple[int, int]:
+        stretch = np.flatnonzero(track.centerline.piece == after)
+        return on_screen(window, tuple(track.centerline.points[stretch[len(stretch) // 2]]))
+
+    click(window, on_road(after=0))
     assert window.controller.selected == 1
+    pygame.key.set_mods(pygame.KMOD_SHIFT)
+    click(window, on_road(after=2))
+    assert window.controller.selected == 5
 
 
 def test_the_old_wheel_buttons_are_ignored() -> None:

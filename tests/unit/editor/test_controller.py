@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from circuits import gp_circuit
 from mlracecar.editor.controller import (
     DRAG_THRESHOLD,
     PAN_STEP,
@@ -64,19 +65,44 @@ def test_holding_the_click_places_the_new_point_where_the_mouse_is_let_go() -> N
     assert editor.draft.points == ((110.0, 10.0),)
 
 
-def test_shift_click_inserts_into_the_nearest_stretch() -> None:
+def on_the_road(editor: EditorController, after: int) -> Pixel:
+    """A pixel on the middle of the road, halfway along the stretch after point ``after``."""
+    track = editor.draft.track
+    assert track is not None
+    stretch = np.flatnonzero(track.centerline.piece == after)
+    return pixel_of(tuple(track.centerline.points[stretch[len(stretch) // 2]]))
+
+
+def test_clicking_on_the_road_inserts_a_point_there() -> None:
     editor = square_editor()
-    click(editor, (400, 96), shift=True)  # just outside the top side, between points 0 and 1
+    pixel = on_the_road(editor, after=0)
+    click(editor, pixel)
     assert len(editor.draft.points) == 5
-    assert editor.draft.points[1] == (0.0, 102.0)
+    np.testing.assert_allclose(pixel_of(editor.draft.points[1]), pixel)
     assert editor.selected == 1
 
 
-def test_shift_click_with_too_few_points_appends() -> None:
-    editor = EditorController(TrackDraft(), CAMERA)
-    click(editor, (500, 300), shift=True)
-    assert editor.draft.points == ((50.0, 0.0),)
-    assert editor.selected == 0
+def test_shift_click_on_the_road_still_adds_after_the_last_point() -> None:
+    editor = square_editor()
+    pixel = on_the_road(editor, after=0)
+    click(editor, pixel, shift=True)
+    np.testing.assert_allclose(pixel_of(editor.draft.points[4]), pixel)
+    assert editor.selected == 4
+
+
+@pytest.mark.parametrize("every", [2, 3])
+def test_drawing_a_circuit_in_order_keeps_the_order(every: int) -> None:
+    # With a few dots per corner, some clicks land on the road drawn so far (on the stretch
+    # back to the start); they must still end up in the order they were clicked.
+    points = [(float(x), float(y)) for x, y in gp_circuit("clean").points[::every]]
+    camera = Camera(size=(1600, 1000)).fit(points)
+    editor = EditorController(TrackDraft(), camera)
+    on_road = 0
+    for point in points:
+        on_road += editor.draft.is_on_road(point)
+        click(editor, pixel_of(point, camera))
+    assert on_road > 0
+    np.testing.assert_allclose(editor.draft.points, points, atol=1e-9)
 
 
 # --------------------------------------------------------------------------- #

@@ -86,6 +86,22 @@ def test_selected_and_hovered_points_stand_out() -> None:
     assert color_at(surface, ring) == SELECTED
 
 
+def hint_pixels(editor: EditorController, cursor: Point) -> int:
+    x, y = CAMERA.to_screen(cursor)
+    editor.move((float(x), float(y)))
+    area = render(editor).subsurface((round(x) - 8, round(y) - 8, 17, 17))
+    return int(pygame.mask.from_threshold(area, HOVERED, (1, 1, 1, 255)).count())
+
+
+def test_a_hollow_dot_shows_where_a_click_would_insert_into_the_road() -> None:
+    editor = square()
+    track = editor.draft.track
+    assert track is not None
+    on_road = track.centerline.points[len(track.centerline.points) // 8]
+    assert hint_pixels(editor, (float(on_road[0]), float(on_road[1]))) > 0
+    assert hint_pixels(editor, (0.0, 0.0)) == 0  # off the road: a click adds after the last point
+
+
 def test_the_status_bar_runs_along_the_bottom() -> None:
     surface = render(square(snap=True))
     assert surface.get_at((SIZE[0] // 2, SIZE[1] - 2))[:3] == PANEL[:3]

@@ -6,8 +6,9 @@ translates its events into these calls.
 
 Mouse:
 
-- **Click** on empty ground adds a point after the last one; hold and drag to place it.
-- **Shift+click** inserts a point into the nearest stretch of road.
+- **Click on the road** inserts a point into that stretch; hold and drag to place it.
+- **Click anywhere else** adds a point after the last one, so clicking around in order draws a
+  track. **Shift+click** always adds after the last one, even on the road.
 - **Drag** a point to move it. A click on a point without dragging selects it.
 - **Right-click** a point to delete it.
 - **Right-drag** or **middle-drag** pans; the **wheel** zooms around the cursor.
@@ -227,7 +228,7 @@ class EditorController:
     def _add_point(self, *, shift: bool) -> int:
         """Add a point at the cursor and return its index."""
         position = self._snapped(self.cursor_world)
-        if not shift:
+        if shift or not self.draft.is_on_road(self.cursor_world):
             self.draft = self.draft.append_point(position)
             return len(self.draft.points) - 1
         before = self.draft.points

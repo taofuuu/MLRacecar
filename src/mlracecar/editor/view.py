@@ -48,6 +48,7 @@ class EditorView:
         else:
             draw_track(surface, track, editor.camera)
         self._draw_points(surface, editor)
+        self._draw_insert_hint(surface, editor)
         self._draw_status(surface, editor)
         if help_lines:
             self._draw_help(surface, help_lines)
@@ -66,6 +67,11 @@ class EditorView:
             color = START_POINT if index == 0 else POINT
             radius = POINT_RADIUS + 1 if index == hovered else POINT_RADIUS
             pygame.draw.circle(surface, HOVERED if index == hovered else color, pixel, radius)
+
+    def _draw_insert_hint(self, surface: pygame.Surface, editor: EditorController) -> None:
+        """A hollow dot at the cursor while a click there would insert a point into the road."""
+        if editor.hovered is None and editor.draft.is_on_road(editor.cursor_world):
+            pygame.draw.circle(surface, HOVERED, editor.cursor, POINT_RADIUS, width=1)
 
     def _draw_status(self, surface: pygame.Surface, editor: EditorController) -> None:
         width, height = surface.get_size()
