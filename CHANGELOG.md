@@ -24,7 +24,6 @@ All notable changes to this project are documented here. The format is based on
   crossing itself, and parts of the road overlapping.
 - `mlracecar.core.geometry.polyline_crossings`, and a bounding-box broad phase for all crossing
   searches: about 46x faster on a 1.5 km track (validation takes ~33 ms there).
-
 - Project vision, architecture, ADRs 0001–0009, roadmap, and contribution workflow.
 - Backlog definition and an idempotent GitHub seeding script.
 - Plain-language summaries on every planning document, plus a glossary.
