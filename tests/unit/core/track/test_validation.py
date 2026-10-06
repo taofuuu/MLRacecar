@@ -8,6 +8,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
+from circuits import gp_circuit
 from mlracecar.core.geometry import FloatArray, project_onto_polyline, self_intersections
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import (
@@ -46,6 +47,17 @@ PLAYGROUND = np.array(
 # Five unevenly spaced points whose control polygon is simple, but whose C2 spline overshoots
 # into a small loop (found by searching random shapes; see ADR-0010).
 OVERSHOOT = np.array([[5, 33], [-33, -23], [4, -42], [103, -105], [22, -19]], dtype=np.float64)
+
+
+def paperclip(radius: float, straight: float = 150.0) -> FloatArray:
+    """Two straights joined by 180-degree hairpins, with dots like a person would place them."""
+    along = np.arange(-straight / 2, straight / 2, radius / 2)
+    halves = np.linspace(-np.pi / 2, np.pi / 2, 9)[:-1]
+    bottom = np.column_stack([along, np.full(len(along), -radius)])
+    right = np.column_stack([straight / 2 + radius * np.cos(halves), radius * np.sin(halves)])
+    top = np.column_stack([-along, np.full(len(along), radius)])
+    left = np.column_stack([-straight / 2 - radius * np.cos(halves), -radius * np.sin(halves)])
+    return np.vstack([bottom, right, top, left])
 
 
 def peanut(waist_gap: float) -> FloatArray:
@@ -127,6 +139,26 @@ def test_too_narrow_points_at_the_narrow_control_point() -> None:
     assert issues[0].location == ControlPointAt(11)
 
 
+def test_neighbouring_narrow_points_are_reported_together() -> None:
+    widths = same_width(OVAL, 12.0)
+    widths[3:6] = [5.0, 4.0, 5.5]
+    issues = validate(OVAL, widths)
+    assert codes(issues) == [IssueCode.TOO_NARROW]
+    assert "points 3 to 5 is as narrow as 4.0 m" in issues[0].message
+    stretch = issues[0].location
+    assert isinstance(stretch, Stretch)
+    spline = Track.build(OVAL, widths).spline
+    np.testing.assert_allclose(stretch, spline.arc_length_at([3, 5], 0.0))
+
+
+def test_narrow_points_on_both_sides_of_the_start_are_one_group() -> None:
+    widths = same_width(OVAL, 12.0)
+    widths[[11, 0]] = 4.0
+    issues = validate(OVAL, widths)
+    assert codes(issues) == [IssueCode.TOO_NARROW]
+    assert "points 11 to 0" in issues[0].message
+
+
 def test_too_short() -> None:
     points = ellipse(10, 14, 12)  # about 82 m around
     issues = validate(points, same_width(points, 6.0))
@@ -171,6 +203,55 @@ def test_sharp_inside_corner_is_a_warning() -> None:
         validate(PLAYGROUND, same_width(PLAYGROUND, 12.0), ValidationRules(min_inside_radius=0))
         == []
     )
+
+
+@pytest.mark.parametrize(
+    ("width", "code"), [(16.0, IssueCode.SHARP_INSIDE_CORNER), (18.0, IssueCode.EDGE_FOLDS)]
+)
+def test_each_hairpin_is_reported_once(width: float, code: IssueCode) -> None:
+    # A hairpin's bend is tightest at its entry and exit, so the problem stretches come in
+    # pieces; pieces that turn the same way and lie close together are one bend.
+    points = paperclip(10.0)
+    widths = same_width(points, width)
+    assert codes(validate(points, widths)) == [code, code]  # two hairpins, one report each
+    unmerged = validate(points, widths, ValidationRules(bend_merge_widths=0.0))
+    assert len(unmerged) > 2
+
+
+def test_a_hairpin_split_across_the_start_line_is_still_one_bend() -> None:
+    hairpin_apex = len(paperclip(10.0)) - 4  # start the lap in the middle of a hairpin
+    points = np.roll(paperclip(10.0), -hairpin_apex, axis=0)
+    issues = validate(points, same_width(points, 16.0))
+    assert codes(issues) == [IssueCode.SHARP_INSIDE_CORNER] * 2
+    wrapping = [
+        i.location
+        for i in issues
+        if isinstance(i.location, Stretch) and i.location.end < i.location.start
+    ]
+    assert len(wrapping) == 1  # the hairpin at the start runs through the start/finish line
+
+
+def test_realistic_gp_circuit_only_warns_about_its_slowest_hairpin() -> None:
+    circuit = gp_circuit("clean")
+    issues = validate(circuit.points, circuit.widths)
+    assert codes(issues) == [IssueCode.SHARP_INSIDE_CORNER]
+    track = Track.build(circuit.points, circuit.widths)
+    hairpin = track.spline.arc_length_at(circuit.corners["T11"], 0.0)
+    stretch = issues[0].location
+    assert isinstance(stretch, Stretch)
+    assert hairpin.min() - 10 <= stretch.start <= stretch.end <= hairpin.max() + 15
+
+
+def test_gp_circuit_pushed_past_its_limits() -> None:
+    circuit = gp_circuit("limit")  # 7.5 m chicane, 24 m wide hairpin, 5 m wide T1
+    issues = validate(circuit.points, circuit.widths)
+    assert codes(issues) == [IssueCode.TOO_NARROW] + [IssueCode.EDGE_FOLDS] * 3
+    first, last = circuit.corners["T1"][0], circuit.corners["T1"][-1]
+    assert f"points {first} to {last}" in issues[0].message  # the whole corner, reported once
+    chicane_left, chicane_right, hairpin = issues[1:]
+    assert "left edge folds" in chicane_left.message  # the chicane's halves turn opposite ways,
+    assert "right edge folds" in chicane_right.message  # so they stay two separate bends
+    assert "right edge folds" in hairpin.message  # and the hairpin is one bend, not several
 
 
 def test_tight_but_drivable_bend_is_a_warning() -> None:

@@ -110,6 +110,12 @@ class ValidationRules:
     min_drivable_radius: float = 6.0
     """Bends tighter than this radius (metres) get a warning: a car can't steer that sharply.
     A placeholder until vehicle parameters exist (#18)."""
+    bend_merge_widths: float = 2.0
+    """Problem stretches that turn the same way and are closer than this many road widths along
+    the road are reported as one bend. A hairpin's bend tightens and loosens along its length
+    (typically tightest at its entry and exit), which would otherwise split one corner into
+    several reports. Stretches turning opposite ways, like the two halves of a chicane, stay
+    separate."""
     overlap_separation: float = 4.0
     """Edge crossings count as overlapping road only between parts of the track at least this
     many road widths apart along the lap. Closer crossings come from a bend folding the edge,
@@ -236,15 +242,20 @@ def _check_size(track: Track, rules: ValidationRules) -> list[ValidationIssue]:
                 None,
             )
         )
-    for index in np.flatnonzero(track.control_widths < rules.min_width):
-        issues.append(
-            _error(
-                IssueCode.TOO_NARROW,
-                f"The road at point {index} is {track.control_widths[index]:.1f} m wide; the "
-                f"minimum is {rules.min_width:.1f} m.",
-                ControlPointAt(int(index)),
+    for points in _runs(track.control_widths < rules.min_width):
+        narrowest = float(track.control_widths[points].min())
+        minimum = f"the minimum is {rules.min_width:.1f} m."
+        if len(points) == 1:
+            message = f"The road at point {points[0]} is {narrowest:.1f} m wide; {minimum}"
+            location: Location = ControlPointAt(int(points[0]))
+        else:
+            message = (
+                f"The road at points {points[0]} to {points[-1]} is as narrow as "
+                f"{narrowest:.1f} m; {minimum}"
             )
-        )
+            start, end = track.spline.arc_length_at([points[0], points[-1]], 0.0)
+            location = Stretch(float(start), float(end))
+        issues.append(_error(IssueCode.TOO_NARROW, message, location))
     return issues
 
 
@@ -263,8 +274,11 @@ def _check_bends(track: Track, rules: ValidationRules) -> list[ValidationIssue]:
     sharp = inside_radius < rules.min_inside_radius
     problem = folds | sharp | (radius < rules.min_drivable_radius)
 
+    step = track.length / len(problem)
+    max_gap = rules.bend_merge_widths * float(track.width.max()) / step
+    turning = np.sign(track.centerline.curvature)
     issues: list[ValidationIssue] = []
-    for samples in _runs(problem):
+    for samples in _merge_close_runs(_runs(problem), turning, max_gap):
         tightest = samples[np.argmax(curvature[samples])]
         start, end = _stretch(track, samples)
         where = f"The bend from {np.floor(start):.0f} m to {np.ceil(end):.0f} m"
@@ -379,6 +393,48 @@ def _runs(mask: BoolArray) -> list[IntArray]:
     edges = np.diff(np.concatenate(([0], np.roll(mask, -shift).astype(np.int8), [0])))
     starts, stops = np.flatnonzero(edges == 1), np.flatnonzero(edges == -1)
     return [(np.arange(a, b) + shift) % count for a, b in zip(starts, stops, strict=True)]
+
+
+def _merge_close_runs(runs: list[IntArray], turning: FloatArray, max_gap: float) -> list[IntArray]:
+    """Join runs (in order around the loop) that turn the same way and are close together.
+
+    Args:
+        runs: Sample-index runs in order around the loop.
+        turning: Sign of the curvature at every sample (+1 left, -1 right).
+        max_gap: Largest number of samples between two runs that still get joined.
+
+    Returns:
+        The runs, with each joined pair replaced by one continuous run that includes the samples
+        in between.
+    """
+    count = len(turning)
+
+    def direction(run: IntArray) -> float:
+        return float(np.sign(turning[run].sum()))
+
+    def joinable(first: IntArray, second: IntArray) -> int | None:
+        gap = int((second[0] - first[-1] - 1) % count)
+        return gap if gap <= max_gap and direction(first) == direction(second) else None
+
+    merged: list[IntArray] = []
+    for run in runs:
+        gap = joinable(merged[-1], run) if merged else None
+        if gap is None:
+            merged.append(run)
+        else:
+            merged[-1] = np.concatenate([merged[-1], _between(merged[-1][-1], gap, count), run])
+    if len(merged) > 1:  # the last run may also join the first, across the start line
+        gap = joinable(merged[-1], merged[0])
+        if gap is not None:
+            last = merged.pop()
+            merged[0] = np.concatenate([last, _between(last[-1], gap, count), merged[0]])
+    return merged
+
+
+def _between(after: int, gap: int, count: int) -> IntArray:
+    """The ``gap`` sample indices that follow ``after`` around a loop of ``count`` samples."""
+    result: IntArray = (after + 1 + np.arange(gap)) % count
+    return result
 
 
 def _stretch(track: Track, samples: IntArray) -> Stretch:
