@@ -146,6 +146,8 @@ order of the control points. Track file, schema v1:
 }
 ```
 
+The full format, with field rules and versioning, is in [Track file format](track-format.md).
+
 Validation returns a list of structured `ValidationIssue(severity, code, message, location)`
 instead of raising, so the editor can highlight problems while you draw.
 

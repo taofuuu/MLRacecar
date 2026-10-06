@@ -32,6 +32,7 @@ nav:
       - adr/0009-development-workflow.md
       - adr/0010-c2-cubic-spline-centerline.md
       - ADR template: adr/0000-template.md
+  - Track file format: track-format.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md
   - API reference: reference.md
