@@ -12,6 +12,7 @@ from mlracecar.core.geometry import (
     cast_rays,
     cross,
     norm,
+    polyline_crossings,
     project_onto_polyline,
     ray_segment_distances,
     rotate,
@@ -322,5 +323,48 @@ def test_convex_polygons_never_cross_themselves(
     corners = center + radius * unit_vector(
         rotation + np.linspace(0, 2 * np.pi, sides, endpoint=False)
     )
-    # Up to 600 sides also exercises more than one comparison block (256 rows each).
+    # Up to 600 sides also exercises several comparison blocks (64 segments each).
     assert self_intersections(corners, closed=True).shape == (0, 2)
+
+
+def brute_force_pairs(a: np.ndarray, b: np.ndarray, closed: bool) -> set[tuple[int, int]]:
+    """Every segment pair that touches, found the slow way (no broad phase)."""
+    a_end = np.roll(a, -1, axis=0) if closed else a[1:]
+    b_end = np.roll(b, -1, axis=0) if closed else b[1:]
+    a_start, b_start = (a, b) if closed else (a[:-1], b[:-1])
+    pairs = set()
+    for i in range(len(a_start)):
+        for j in range(len(b_start)):
+            if segments_intersect(a_start[i], a_end[i], b_start[j], b_end[j]):
+                pairs.add((i, j))
+    return pairs
+
+
+@given(polyline, polyline, st.booleans())
+def test_polyline_crossings_matches_brute_force(
+    first: np.ndarray, second: np.ndarray, closed: bool
+) -> None:
+    found = {tuple(pair) for pair in polyline_crossings(first, second, closed=closed).tolist()}
+    assert found == brute_force_pairs(first, second, closed)
+
+
+@given(polyline, st.booleans())
+def test_self_intersections_matches_brute_force(vertices: np.ndarray, closed: bool) -> None:
+    count = len(vertices) if closed else len(vertices) - 1
+    expected = {
+        (i, j)
+        for i, j in brute_force_pairs(vertices, vertices, closed)
+        if j > i + 1 and not (closed and i == 0 and j == count - 1)
+    }
+    found = {tuple(pair) for pair in self_intersections(vertices, closed=closed).tolist()}
+    assert found == expected
+
+
+def test_polyline_crossings_between_overlapping_and_distant_squares() -> None:
+    square = np.array([[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]])
+    shifted = square + np.array([5.0, 5.0])  # overlaps the top-right quarter
+    np.testing.assert_array_equal(
+        polyline_crossings(square, shifted, closed=True), [[1, 0], [2, 3]]
+    )
+    far_away = square + np.array([100.0, 100.0])  # the broad phase skips every block
+    assert polyline_crossings(square, far_away, closed=True).shape == (0, 2)

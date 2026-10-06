@@ -16,7 +16,17 @@ All notable changes to this project are documented here. The format is based on
 - `mlracecar.core.track.model.Track`: road widths blended smoothly between control points, left
   and right edges, evenly spaced checkpoints with the start/finish line at control point 0,
   poses at any distance along the track, and a staggered two-wide starting grid.
-
+- `mlracecar.core.track.validation.validate`: checks a track and reports every problem with a
+  severity, a stable code, a plain-language message, and a location (control point, stretch of
+  road, or spot) for the editor to highlight. Rules: too few points, invalid or coinciding
+  points, non-positive widths, too narrow, too short, edges folding in tight bends, inside
+  edges coming to a sharp point (warning), bends too tight to steer (warning), the track
+  crossing itself, and parts of the road overlapping. Each bend, and each run of too-narrow
+  points, is reported once.
+- A realistic 3.5 km GP-style test circuit (`tests/circuits.py`) that validation is checked
+  against, both as designed and pushed past its limits.
+- `mlracecar.core.geometry.polyline_crossings`, and a bounding-box broad phase for all crossing
+  searches: about 46x faster on a 1.5 km track (validation takes ~33 ms there).
 - Project vision, architecture, ADRs 0001–0009, roadmap, and contribution workflow.
 - Backlog definition and an idempotent GitHub seeding script.
 - Plain-language summaries on every planning document, plus a glossary.
