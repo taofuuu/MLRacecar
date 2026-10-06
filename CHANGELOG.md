@@ -11,3 +11,5 @@ All notable changes to this project are documented here. The format is based on
 - Project vision, architecture, ADRs 0001–0009, roadmap, and contribution workflow.
 - Backlog definition and an idempotent GitHub seeding script.
 - Plain-language summaries on every planning document, plus a glossary.
+- Python package scaffold (`src/mlracecar`, uv, Python 3.12) with a `racecar` CLI
+  (`racecar --version`).

@@ -1,0 +1,44 @@
+[project]
+name = "mlracecar"
+version = "0.1.0.dev0"
+description = "Design a race track, train an AI to master it with reinforcement learning, then race it."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Phonlakrit Lookyee" }]
+requires-python = ">=3.12"
+keywords = ["reinforcement-learning", "racing", "simulation", "gymnasium"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Games/Entertainment :: Simulation",
+  "Typing :: Typed",
+]
+dependencies = [
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+# Filled in by later tickets; declared now so the install commands never change.
+render = []  # pygame (M2-6)
+train = []   # torch, stable-baselines3, tensorboard (M4-1)
+
+[project.scripts]
+racecar = "mlracecar.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/taofuuu/MLRacecar"
+Documentation = "https://github.com/taofuuu/MLRacecar/tree/main/docs"
+Issues = "https://github.com/taofuuu/MLRacecar/issues"
+Changelog = "https://github.com/taofuuu/MLRacecar/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+# Developer tools; filled in by M0-3 (lint/types) and M0-4 (tests).
+dev = []
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"

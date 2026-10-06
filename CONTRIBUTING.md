@@ -61,7 +61,14 @@ How work flows through this project, from idea to release. The reasoning is in
 
 ## Local development
 
-These commands become available as milestone M0 lands:
+Prerequisites: Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+```bash
+uv sync                       # create .venv and install the project
+uv run racecar --version      # check the install
+```
+
+These commands become available as the rest of milestone M0 lands:
 
 ```bash
 uv sync --all-extras          # install everything
