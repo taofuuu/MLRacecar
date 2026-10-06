@@ -1,0 +1,50 @@
+name: Research spike
+description: A time-boxed experiment or investigation that ends in a written answer (an ADR or experiment-log entry).
+labels: ["type:research"]
+projects: ["taofuuu/3"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: The single question this spike answers.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: Which decision or ticket is waiting on the answer?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options or hypotheses to test
+      value: |
+        1.
+  - type: input
+    id: timebox
+    attributes:
+      label: Time box
+      description: The most time worth spending before deciding with what we know, e.g. "4 hours".
+    validations:
+      required: true
+  - type: dropdown
+    id: output
+    attributes:
+      label: Written outcome
+      options:
+        - ADR (a decision)
+        - Experiment log entry (a result)
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] The question is answered in writing, with the evidence (measurements, links, prototypes)
+    validations:
+      required: true
