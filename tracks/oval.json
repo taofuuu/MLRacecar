@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "Oval",
+  "author": "MLRacecar",
+  "description": "A 300 m x 160 m oval, 12 m wide, driven counter-clockwise. The simplest track to learn on.",
+  "control_points": [
+    {"x": 150.0, "y": 0.0, "width": 12.0},
+    {"x": 138.6, "y": 30.6, "width": 12.0},
+    {"x": 106.1, "y": 56.6, "width": 12.0},
+    {"x": 57.4, "y": 73.9, "width": 12.0},
+    {"x": 0.0, "y": 80.0, "width": 12.0},
+    {"x": -57.4, "y": 73.9, "width": 12.0},
+    {"x": -106.1, "y": 56.6, "width": 12.0},
+    {"x": -138.6, "y": 30.6, "width": 12.0},
+    {"x": -150.0, "y": 0.0, "width": 12.0},
+    {"x": -138.6, "y": -30.6, "width": 12.0},
+    {"x": -106.1, "y": -56.6, "width": 12.0},
+    {"x": -57.4, "y": -73.9, "width": 12.0},
+    {"x": -0.0, "y": -80.0, "width": 12.0},
+    {"x": 57.4, "y": -73.9, "width": 12.0},
+    {"x": 106.1, "y": -56.6, "width": 12.0},
+    {"x": 138.6, "y": -30.6, "width": 12.0}
+  ],
+  "metadata": {}
+}

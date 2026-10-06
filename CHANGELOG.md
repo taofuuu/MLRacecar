@@ -23,6 +23,11 @@ All notable changes to this project are documented here. The format is based on
   edges coming to a sharp point (warning), bends too tight to steer (warning), the track
   crossing itself, and parts of the road overlapping. Each bend, and each run of too-narrow
   points, is reported once.
+- Track files (`mlracecar.io.track_file`): versioned JSON (format version 1) with field-level
+  error messages, automatic upgrades from older versions, refusal of newer ones, atomic saving,
+  one control point per line, and a published JSON Schema (`docs/schemas/`).
+- Sample tracks in `tracks/`: an oval and a 3.5 km GP circuit, both free of track-check issues.
+- `racecar check <file>`: reads a track file and runs the track checks on it.
 - A realistic 3.5 km GP-style test circuit (`tests/circuits.py`) that validation is checked
   against, both as designed and pushed past its limits.
 - `mlracecar.core.geometry.polyline_crossings`, and a bounding-box broad phase for all crossing

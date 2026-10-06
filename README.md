@@ -27,6 +27,16 @@ track you design.
 - **Multi-car racing:** collisions, overtaking, and self-play training
 - **From-scratch PPO:** benchmarked against Stable-Baselines3 with proper statistics
 
+## Try it
+
+```bash
+uv sync
+uv run racecar check tracks/gp-circuit.json
+```
+
+`racecar check` reads a track file and runs the track checks on it. The sample tracks are in
+[`tracks/`](tracks/); the format is described in [docs/track-format.md](docs/track-format.md).
+
 ## Documentation
 
 | Document                                 | What's inside                                     |

@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "ControlPoint": {
+      "additionalProperties": false,
+      "description": "One point the user placed, with the road width there.",
+      "properties": {
+        "x": {
+          "description": "Metres.",
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "description": "Metres.",
+          "title": "Y",
+          "type": "number"
+        },
+        "width": {
+          "description": "Road width at this point, in metres.",
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width"
+      ],
+      "title": "ControlPoint",
+      "type": "object"
+    },
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "The contents of a track file (format version 1).",
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Format version; files from newer versions of MLRacecar are rejected with a clear message.",
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "author": {
+      "default": "",
+      "title": "Author",
+      "type": "string"
+    },
+    "description": {
+      "default": "",
+      "title": "Description",
+      "type": "string"
+    },
+    "control_points": {
+      "description": "The points in driving order; the first one is on the start/finish line.",
+      "items": {
+        "$ref": "#/$defs/ControlPoint"
+      },
+      "minItems": 3,
+      "title": "Control Points",
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "Free-form data for tools; MLRacecar itself ignores it.",
+      "title": "Metadata",
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "name",
+    "control_points"
+  ],
+  "title": "MLRacecar track file",
+  "type": "object"
+}
