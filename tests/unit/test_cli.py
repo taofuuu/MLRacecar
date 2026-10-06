@@ -9,6 +9,14 @@ from mlracecar.cli import app
 
 runner = CliRunner()
 
+# Typer colors its help output when it detects CI (e.g. GITHUB_ACTIONS is set). The color
+# codes split words like "--version", so tests compare against the plain text.
+ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def plain(text: str) -> str:
+    return ANSI_ESCAPE.sub("", text)
+
 
 def test_version_flag_prints_package_version() -> None:
     result = runner.invoke(app, ["--version"])
@@ -22,7 +30,7 @@ def test_version_follows_pep_440() -> None:
 
 
 def test_no_arguments_shows_help() -> None:
-    result = runner.invoke(app, [])
+    output = plain(runner.invoke(app, []).output)
 
-    assert "Usage" in result.output
-    assert "--version" in result.output
+    assert "Usage" in output
+    assert "--version" in output
