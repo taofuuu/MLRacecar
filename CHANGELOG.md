@@ -31,6 +31,16 @@ All notable changes to this project are documented here. The format is based on
 - `mlracecar.editor.draft.TrackDraft`: the track editor's headless model. Immutable drafts
   (ADR-0011) with append, insert-into-stretch, move, delete, width, reverse-direction, and
   set-start edits, cached track and validation per draft, and conversion to and from track files.
+- The track editor window, `racecar edit [file]`: click to draw a track and watch the road
+  appear, shift+click to insert, drag to move, right-click to delete, shift+wheel or `[`/`]`
+  for road width, pan and zoom, grid snap (G), fit (F), reverse (R), start line (S), and a help
+  panel (H). Opens existing track files; saving comes next.
+- `mlracecar.render`: an immutable `Camera` (metres to pixels, pan, zoom around the cursor,
+  fit, grid spacing) and pygame drawing of the grid and the track (road, edges, start line,
+  direction arrow) that fills only what's on screen, for a few milliseconds per frame at any
+  zoom.
+- The `render` extra now installs pygame-ce (ADR-0012). An architecture rule keeps pygame out
+  of everything that must run headless.
 - A realistic 3.5 km GP-style test circuit (`tests/circuits.py`) that validation is checked
   against, both as designed and pushed past its limits.
 - `mlracecar.core.geometry.polyline_crossings`, and a bounding-box broad phase for all crossing

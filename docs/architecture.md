@@ -71,7 +71,7 @@ flowchart TB
   config --> core
 ```
 
-Rules (checked on every commit and in CI: the layer order by
+Rules (checked on every commit and in CI: the layer order and the pygame boundary by
 [import-linter](https://import-linter.readthedocs.io/), configured in `pyproject.toml`, and the
 core's import allow-list by `tests/unit/test_architecture.py`):
 
@@ -80,10 +80,12 @@ core's import allow-list by `tests/unit/test_architecture.py`):
    rendering code and no global state. This keeps it fast to test, deterministic, and
    portable: it could run unchanged in a browser via Pyodide ([ADR-0003](adr/0003-layered-architecture-pure-core.md)).
 3. **`env` and `render` are siblings.** The RL environment never imports pygame; training
-   runs headless.
+   runs headless. Only drawing code imports pygame (pygame-ce,
+   [ADR-0012](adr/0012-pygame-ce-for-windows-and-drawing.md)): `render.drawing` and the
+   editor's view and window.
 4. **Only `cli` wires concrete implementations together.** Everything else receives its
    dependencies through constructors, so tests can swap in fakes.
-5. **Heavy dependencies are optional extras:** `render` (pygame), `train` (PyTorch,
+5. **Heavy dependencies are optional extras:** `render` (pygame-ce), `train` (PyTorch,
    Stable-Baselines3, TensorBoard). `core` and `env` install in seconds in CI.
 
 ## 3. Package map
@@ -101,8 +103,8 @@ core's import allow-list by `tests/unit/test_architecture.py`):
 | `env`               | Gymnasium / PettingZoo adapters, observations, rewards             | `RacingEnv`, `BatchedRacingEnv`, `ObservationSpec`   |
 | `agents`            | Anything that maps observations to actions                         | `Agent`, `KeyboardAgent`, `SB3Agent`, `OnnxAgent`    |
 | `training`          | Training runs, evaluation, experiment tracking                     | `TrainingRun`, `Evaluator`, `Tracker`                |
-| `render`            | pygame rendering of snapshots, HUD, debug overlays, video export   | `Renderer`, `Camera`, `VideoWriter`                  |
-| `editor`            | Track editor application (MVC with command pattern)                | `TrackDraft`, `EditorController`, `Command`          |
+| `render`            | Camera, grid and track drawing; later snapshots, HUD, video export | `Camera`, `draw_track`, `Renderer`, `VideoWriter`    |
+| `editor`            | Track editor application (MVC with immutable drafts)               | `TrackDraft`, `EditorController`, `EditorWindow`     |
 | `cli`               | `racecar` command-line entry points (Typer)                        | n/a                                                  |
 
 ## 4. Core domain
@@ -267,11 +269,22 @@ window, the replay recorder, the video writer, and later the web demo.
 - **Model:** `TrackDraft` (`mlracecar.editor.draft`), pure Python with no pygame, so it is
   unit-testable headless. Drafts are **immutable**: every edit returns a new draft, so undo/redo
   is a history of drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)).
-- **View:** pygame canvas that draws the spline, boundaries, and validation issues.
-- **Controller:** turns input into draft edits. A plain **click appends** a point after the last
-  one (drawing a track is clicking around it); **shift+click on the road inserts** a point into
-  that stretch (refining a corner). Guessing where a plain click belongs fails on real layouts:
-  points along a straight make every guess a tie.
+- **View:** `EditorView` (`mlracecar.editor.view`) draws the grid, the road with its edges,
+  start line and direction arrow (shared with the race window through `mlracecar.render`),
+  the points, a status bar, and a help panel, onto any pygame surface.
+- **Controller:** `EditorController` (`mlracecar.editor.controller`) turns input into draft
+  edits and camera moves. It takes window pixels and converts them with an immutable `Camera`
+  (`mlracecar.render.camera`), so every interaction is tested without pygame. A plain **click
+  appends** a point after the last one (drawing a track is clicking around it); **shift+click
+  inserts** a point into the nearest stretch (refining a corner). Guessing where a plain click
+  belongs fails on real layouts: points along a straight make every guess a tie. Other input:
+  drag a point to move it, right-click to delete it, right- or middle-drag to pan, the wheel to
+  zoom around the cursor, shift+wheel to change the road width at a point, and **G** to snap
+  to the grid.
+- **Window:** `EditorWindow` (`mlracecar.editor.app`) is the only part that handles pygame
+  events. It redraws only after input, so an idle editor uses no CPU. Its keyboard shortcuts
+  are one table that also fills the help panel, so the help can't drift from the keys.
+  `racecar edit [file]` opens it.
 
 Validation runs on every edit, so mistakes show up while you draw.
 
