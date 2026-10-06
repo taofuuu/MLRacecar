@@ -1,0 +1,38 @@
+name: Feature
+description: A new capability for the simulator, tools, or training pipeline.
+labels: ["type:feature"]
+projects: ["taofuuu/3"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New tickets land in **Backlog**. Before moving one to **Ready**, add `area:`, `priority:`,
+        and `size:` labels and check the [Definition of Ready](https://github.com/taofuuu/MLRacecar/blob/main/CONTRIBUTING.md#definition-of-ready).
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What should exist when this is done, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tasks
+      description: The steps you expect, as a checklist. They can change during the work.
+      value: |
+        - [ ]
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Testable statements. The ticket is done when every one of them is true.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: depends-on
+    attributes:
+      label: Depends on
+      description: Tickets that must be finished first, e.g. `- #12`. Leave empty if none.

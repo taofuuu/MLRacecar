@@ -15,9 +15,24 @@ How work flows through this project, from idea to release. The reasoning is in
 2. **Branch** off `main`: `<type>/<issue>-<short-slug>`, e.g. `feat/10-spline-centerline`.
 3. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/):
    `feat(track): add centripetal Catmull-Rom resampling`.
-4. **Open a PR** early (draft is fine). Fill in the template and include `Closes #<issue>`.
+4. **Open a PR** early (draft is fine). The PR template asks for a summary, a plain-words
+   box, how each acceptance criterion was verified, and the Definition of Done. Keep
+   `Closes #<issue>` at the bottom.
 5. **CI must be green.** Review, then **squash merge**. The linked issue moves to *Done*
    automatically.
+
+## Creating a ticket
+
+New issues go through one of three forms (blank issues are turned off):
+
+| Form               | Use it for                                                    | Gets the label  |
+|--------------------|---------------------------------------------------------------|-----------------|
+| **Feature**        | A new capability                                              | `type:feature`  |
+| **Bug**            | Something behaves differently from the docs or tests          | `type:bug`      |
+| **Research spike** | A time-boxed question that ends in an ADR or experiment log   | `type:research` |
+
+Every form adds the issue to the Project board, where it lands in **Backlog**. To move it to
+**Ready**, add its `area:`, `priority:`, and `size:` labels and check the Definition of Ready.
 
 ## Continuous integration
 
@@ -34,18 +49,22 @@ squash-merged.
 
 ## Board columns
 
-| Column          | Meaning                                                                       |
-|-----------------|-------------------------------------------------------------------------------|
-| **Backlog**     | Captured, not yet refined                                                     |
-| **Ready**       | Meets the Definition of Ready, can be started                                 |
-| **In Progress** | A branch exists; actively being worked on                                     |
-| **In Review**   | PR open, waiting for CI and review                                            |
-| **Done**        | Merged to `main` and meets the Definition of Done                             |
+| Column          | Meaning                                              | How a card gets there              |
+|-----------------|------------------------------------------------------|------------------------------------|
+| **Backlog**     | Captured, not yet refined                            | Automatic when an issue is created |
+| **Ready**       | Meets the Definition of Ready, can be started        | By hand, during refinement         |
+| **In Progress** | A branch exists; actively being worked on            | By hand, when work starts          |
+| **In Review**   | PR open, waiting for CI and review                   | Automatic when a PR links the issue |
+| **Done**        | Merged to `main` and meets the Definition of Done    | Automatic when the PR is merged    |
+
+Board views: **Board** (cards by column), **By milestone** (table grouped by milestone), and
+**Current milestone** (the board, filtered to the active milestone).
 
 ## Definition of Ready
 
 - The goal is clear, with acceptance criteria written as testable statements.
 - Dependencies are done, or explicitly not blocking.
+- It has `area:`, `priority:`, and `size:` labels.
 - Size is S or M (L tickets get split).
 
 ## Definition of Done

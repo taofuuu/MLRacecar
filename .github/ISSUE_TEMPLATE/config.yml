@@ -1,0 +1,9 @@
+# Every new issue goes through one of the forms, so tickets stay consistent.
+blank_issues_enabled: false
+contact_links:
+  - name: Roadmap and backlog
+    url: https://github.com/users/taofuuu/projects/3
+    about: Check the board first; the work you have in mind may already be planned.
+  - name: Architecture and decisions
+    url: https://github.com/taofuuu/MLRacecar/blob/main/docs/architecture.md
+    about: How the system is designed, and the decision records behind it.

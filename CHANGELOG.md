@@ -21,3 +21,5 @@ All notable changes to this project are documented here. The format is based on
 - Architecture layer packages (`core`, `config`, `io`, `env`, `render`, `agents`, `training`,
   `editor`) with automated boundary checks: import-linter for the layer order and an
   allow-list test keeping `core` to the standard library and NumPy.
+- Issue forms (feature, bug, research spike) that label new tickets and add them to the board,
+  and a pull request template with the Definition of Done.
