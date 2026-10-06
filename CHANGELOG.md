@@ -18,3 +18,6 @@ All notable changes to this project are documented here. The format is based on
   `slow` / `gpu` / `benchmark` markers.
 - Continuous integration on GitHub Actions: all pre-commit hooks, plus tests on Ubuntu and
   Windows with a coverage summary. `main` is protected: merging requires a PR with green CI.
+- Architecture layer packages (`core`, `config`, `io`, `env`, `render`, `agents`, `training`,
+  `editor`) with automated boundary checks: import-linter for the layer order and an
+  allow-list test keeping `core` to the standard library and NumPy.

@@ -38,6 +38,7 @@ Changelog = "https://github.com/taofuuu/MLRacecar/blob/main/CHANGELOG.md"
 [dependency-groups]
 dev = [
   "hypothesis>=6.168.5",
+  "import-linter>=2.15",
   "mypy>=2.4.0",
   "pre-commit>=4.6.2",
   "pytest>=9.1.1",
@@ -94,6 +95,26 @@ files = ["src", "tests", "scripts"]
 strict = true
 warn_unreachable = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+# --------------------------------------------------------------------------- #
+# Architecture rules (ADR-0003, architecture.md section 2)
+# The "core imports only stdlib + NumPy" allow-list lives in tests/unit/test_architecture.py.
+# --------------------------------------------------------------------------- #
+
+[tool.importlinter]
+root_package = "mlracecar"
+
+[[tool.importlinter.contracts]]
+name = "Layers: each layer imports only the layers below it"
+type = "layers"
+layers = [
+  "mlracecar.cli",
+  "mlracecar.editor | mlracecar.training",
+  "mlracecar.agents",
+  "mlracecar.env | mlracecar.render",
+  "mlracecar.config | mlracecar.io",
+  "mlracecar.core",
+]
 
 # --------------------------------------------------------------------------- #
 # Tests (architecture.md section 6)
