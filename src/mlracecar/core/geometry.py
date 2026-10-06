@@ -8,6 +8,7 @@ Conventions (architecture.md section 4.1): metres and radians, x to the right, y
 counter-clockwise from +x. "Left of a direction" means counter-clockwise from it.
 """
 
+from collections.abc import Callable
 from typing import NamedTuple
 
 import numpy as np
@@ -26,8 +27,9 @@ PARALLEL_TOLERANCE = 1e-12
 # so a sensor could see "through" a track boundary.
 ENDPOINT_TOLERANCE = 1e-9
 
-# Rows of segments compared per step in `self_intersections`, bounding its memory use.
-_SELF_INTERSECTION_BLOCK = 256
+# Segments per block when searching for crossings. Each block is checked against only the
+# segments near it (see `_crossing_pairs`); 64 measured fastest on 0.6-3 km tracks.
+_CROSSING_BLOCK = 64
 
 
 def _as_vectors(values: ArrayLike, name: str) -> FloatArray:
@@ -157,7 +159,9 @@ def segments_intersect(
     qp = q - p
     denominator = cross(r, s)
     parallel = np.abs(denominator) <= PARALLEL_TOLERANCE * norm(r) * norm(s)
-    with np.errstate(divide="ignore", invalid="ignore"):
+    # Near-parallel or degenerate inputs divide by (almost) zero; the resulting inf/nan values
+    # fail the range checks below, which is the right answer, so the warnings are silenced.
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
         t = cross(qp, s) / denominator  # position along a, 0..1 inside the segment
         u = cross(qp, r) / denominator  # position along b, 0..1 inside the segment
     result: BoolArray = ~parallel & _within_segment(t) & _within_segment(u)
@@ -200,11 +204,13 @@ def ray_segment_distances(
     denominator = cross(r, s)
     ray_length = norm(r)
     parallel = np.abs(denominator) <= PARALLEL_TOLERANCE * ray_length * norm(s)
-    with np.errstate(divide="ignore", invalid="ignore"):
+    # Near-parallel or degenerate inputs divide by (almost) zero; the resulting inf/nan values
+    # fail the range checks below, which is the right answer, so the warnings are silenced.
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
         t = cross(qp, s) / denominator  # distance along the ray, in direction lengths
         u = cross(qp, r) / denominator  # position along the segment, 0..1 inside it
-    hit = ~parallel & (t >= 0) & _within_segment(u)
-    result: FloatArray = np.where(hit, t * ray_length, np.inf)
+        hit = ~parallel & (t >= 0) & _within_segment(u)
+        result: FloatArray = np.where(hit, t * ray_length, np.inf)
     return result
 
 
@@ -310,8 +316,7 @@ def self_intersections(vertices: ArrayLike, *, closed: bool) -> IntArray:
     """Find pairs of polyline segments that cross or touch each other.
 
     Neighbouring segments always share a vertex, so they are never reported. Used to reject
-    tracks whose boundaries fold over themselves. Segments are compared in blocks to keep
-    memory bounded on long tracks; each block is fully vectorized.
+    tracks that cross themselves.
 
     Args:
         vertices: Polyline vertices in order, shape ``(V, 2)`` with ``V >= 2``.
@@ -323,12 +328,66 @@ def self_intersections(vertices: ArrayLike, *, closed: bool) -> IntArray:
     """
     starts, ends = _polyline_segments(_as_polyline(vertices), closed)
     count = len(starts)
-    j = np.arange(count)
-    found: list[IntArray] = []
-    for first in range(0, count, _SELF_INTERSECTION_BLOCK):
-        i = np.arange(first, min(first + _SELF_INTERSECTION_BLOCK, count))[:, None]
-        crossing = segments_intersect(starts[i], ends[i], starts[None, j], ends[None, j])
+
+    def keep(i: IntArray, j: IntArray) -> BoolArray:
         neighbours = (j == i + 1) | (closed & (i == 0) & (j == count - 1))
-        pairs = np.argwhere(crossing & (j > i) & ~neighbours)
-        found.append(pairs + np.array([first, 0]))
+        result: BoolArray = (j > i) & ~neighbours
+        return result
+
+    return _crossing_pairs(starts, ends, starts, ends, keep)
+
+
+def polyline_crossings(first: ArrayLike, second: ArrayLike, *, closed: bool) -> IntArray:
+    """Find pairs of segments, one from each polyline, that cross or touch.
+
+    Args:
+        first: Vertices of the first polyline, shape ``(V, 2)`` with ``V >= 2``.
+        second: Vertices of the second polyline, shape ``(W, 2)`` with ``W >= 2``.
+        closed: Whether both polylines are loops.
+
+    Returns:
+        Array of shape ``(K, 2)`` with pairs ``(i, j)``: segment ``i`` of ``first`` touches
+        segment ``j`` of ``second``. Sorted.
+    """
+    a_start, a_end = _polyline_segments(_as_polyline(first), closed)
+    b_start, b_end = _polyline_segments(_as_polyline(second), closed)
+    return _crossing_pairs(a_start, a_end, b_start, b_end, lambda i, j: np.ones((), np.bool_))
+
+
+def _crossing_pairs(
+    a_start: FloatArray,
+    a_end: FloatArray,
+    b_start: FloatArray,
+    b_end: FloatArray,
+    keep: Callable[[IntArray, IntArray], BoolArray],
+) -> IntArray:
+    """Index pairs ``(i, j)`` where segment ``a[i]`` touches segment ``b[j]`` and ``keep`` agrees.
+
+    Works through ``a`` in blocks of consecutive segments to bound memory. For each block, a
+    broad phase first keeps only the ``b`` segments whose bounding boxes overlap the block's
+    bounding box: on a track, a stretch of road can only touch road nearby, so this skips most
+    pairs. The survivors get the exact, vectorized test.
+
+    Boxes are padded by `ENDPOINT_TOLERANCE` times the segment length, the same margin the
+    exact test accepts past a segment's ends, so the broad phase never drops a pair the exact
+    test would report.
+    """
+    b_pad = (ENDPOINT_TOLERANCE * norm(b_end - b_start))[:, None]
+    b_low = np.minimum(b_start, b_end) - b_pad
+    b_high = np.maximum(b_start, b_end) + b_pad
+    a_pad = ENDPOINT_TOLERANCE * norm(a_end - a_start)
+    found: list[IntArray] = [np.empty((0, 2), dtype=np.intp)]
+    for first in range(0, len(a_start), _CROSSING_BLOCK):
+        i = np.arange(first, min(first + _CROSSING_BLOCK, len(a_start)))
+        pad = a_pad[i].max()
+        block_low = np.minimum(a_start[i], a_end[i]).min(axis=0) - pad
+        block_high = np.maximum(a_start[i], a_end[i]).max(axis=0) + pad
+        j = np.flatnonzero(np.all((b_low <= block_high) & (b_high >= block_low), axis=1))
+        if len(j) == 0:
+            continue
+        touching = segments_intersect(
+            a_start[i][:, None], a_end[i][:, None], b_start[j][None, :], b_end[j][None, :]
+        )
+        rows, columns = np.nonzero(touching & keep(i[:, None], j[None, :]))
+        found.append(np.column_stack([i[rows], j[columns]]))
     return np.concatenate(found).astype(np.intp)

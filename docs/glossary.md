@@ -93,6 +93,8 @@
 | **Lint / linter** | A tool that flags style problems and likely bugs without running the code. | ruff |
 | **Type checking** | A tool that checks you're passing the right kinds of values around (e.g. a number, not text). | mypy |
 | **Unit test** | A test of one small piece in isolation. | Most of `tests/unit/` |
+| **Fuzz test** | Throwing large amounts of random, often nonsensical input at code to prove it never crashes. | Track checks must handle any points a user could place. |
+| **Bounding box** | The smallest upright rectangle around a shape. If two boxes don't touch, the shapes inside can't either. | The broad phase that makes crossing checks ~46x faster. |
 | **Property-based test** | Instead of hand-picked examples, the tool generates hundreds of random inputs and checks a rule always holds. | Geometry tests with Hypothesis. |
 | **Contract test** | Checks our code follows an external standard's rules. | Our env passes Gymnasium's official checker. |
 | **Equivalence test** | Checks two ways of computing something give the same answer. | One car alone = the same car among 1,024. |
