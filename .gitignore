@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+.env
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.benchmarks/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.import_linter_cache/
+
+# Docs build
+site/
+
+# Training output (runs are reproducible from config + git SHA)
+runs/
+*.ckpt
+
+# Web demo
+web/node_modules/
+web/dist/
+
+# IDEs and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,1186 @@
+# Initial backlog for MLRacecar.
+#
+# This file seeds GitHub (labels, milestones, issues) via seed_github.py.
+# After seeding, GitHub Issues is the source of truth; this file stays as the
+# record of the initial plan. M0-M4 are planned in detail; M5-M8 are epic-level
+# and get refined when we reach them (rolling-wave planning).
+#
+# Sizes are relative complexity, not hours: S = small, M = medium, L = large.
+
+# --------------------------------------------------------------------------- #
+# Labels
+# --------------------------------------------------------------------------- #
+
+[[labels]]
+name = "type:feature"
+color = "1d76db"
+description = "New capability"
+
+[[labels]]
+name = "type:chore"
+color = "cfd3d7"
+description = "Tooling, infrastructure, maintenance"
+
+[[labels]]
+name = "type:test"
+color = "bfd4f2"
+description = "Tests, benchmarks, quality gates"
+
+[[labels]]
+name = "type:docs"
+color = "0075ca"
+description = "Documentation"
+
+[[labels]]
+name = "type:research"
+color = "d876e3"
+description = "Spike, experiment, or investigation with a written outcome"
+
+[[labels]]
+name = "type:bug"
+color = "d73a4a"
+description = "Something is broken"
+
+[[labels]]
+name = "type:refactor"
+color = "fef2c0"
+description = "Code change without behaviour change"
+
+[[labels]]
+name = "priority:P0"
+color = "b60205"
+description = "Must-have for its milestone"
+
+[[labels]]
+name = "priority:P1"
+color = "d93f0b"
+description = "Should-have; cut if the milestone is at risk"
+
+[[labels]]
+name = "priority:P2"
+color = "fbca04"
+description = "Nice-to-have"
+
+[[labels]]
+name = "size:S"
+color = "c2e0c6"
+description = "Small: a focused change"
+
+[[labels]]
+name = "size:M"
+color = "7bcf8a"
+description = "Medium: a few components or a tricky piece"
+
+[[labels]]
+name = "size:L"
+color = "0e8a16"
+description = "Large: consider splitting when it becomes Ready"
+
+[[labels]]
+name = "area:infra"
+color = "ededed"
+description = "Repo, CI/CD, tooling, releases"
+
+[[labels]]
+name = "area:core"
+color = "c5def5"
+description = "Geometry, shared core utilities"
+
+[[labels]]
+name = "area:track"
+color = "c5def5"
+description = "Track model, validation, formats, generation"
+
+[[labels]]
+name = "area:editor"
+color = "c5def5"
+description = "Track editor application"
+
+[[labels]]
+name = "area:sim"
+color = "c5def5"
+description = "Vehicle dynamics, world, race rules, sensors"
+
+[[labels]]
+name = "area:render"
+color = "c5def5"
+description = "Rendering, HUD, replays, video"
+
+[[labels]]
+name = "area:env"
+color = "c5def5"
+description = "RL environments, observations, rewards"
+
+[[labels]]
+name = "area:agents"
+color = "c5def5"
+description = "Agent interface and implementations"
+
+[[labels]]
+name = "area:training"
+color = "c5def5"
+description = "Training pipeline, evaluation, experiment tracking"
+
+[[labels]]
+name = "area:web"
+color = "c5def5"
+description = "Browser demo"
+
+# --------------------------------------------------------------------------- #
+# Milestones
+# --------------------------------------------------------------------------- #
+
+[[milestones]]
+key = "M0"
+title = "M0: Foundations"
+due = "2026-10-13"
+description = "Goal: a professional repo skeleton where every later ticket lands safely. Demo: a PR with green CI (lint, types, tests, architecture rules) on Windows + Linux."
+
+[[milestones]]
+key = "M1"
+title = "M1: Tracks"
+due = "2026-10-27"
+description = "Goal: design, validate and save your own tracks. Demo: build a new track in the editor in under 5 minutes."
+
+[[milestones]]
+key = "M2"
+title = "M2: Drivable simulation"
+due = "2026-11-10"
+description = "Goal: vehicle physics, race rules and a renderer. Demo: drive your own track with the keyboard and set a lap time."
+
+[[milestones]]
+key = "M3"
+title = "M3: RL environment"
+due = "2026-11-24"
+description = "Goal: a fast, standards-compliant RL environment. Demo: random agent in a Gymnasium env, with throughput benchmarks."
+
+[[milestones]]
+key = "M4"
+title = "M4: MVP - First lap (v0.1.0)"
+due = "2026-12-08"
+description = "Goal: an agent learns to lap your track, reproducibly. Demo: GIF of the trained agent, eval report, v0.1.0 release."
+
+[[milestones]]
+key = "M5"
+title = "M5: Generalize and play (v0.2.0)"
+description = "Goal: agents that drive unseen tracks, and you can race them. Demo: you vs. AI on a freshly generated track."
+
+[[milestones]]
+key = "M6"
+title = "M6: Browser demo (v0.3.0)"
+description = "Goal: anyone can watch the agent race from a link. Demo: public GitHub Pages URL."
+
+[[milestones]]
+key = "M7"
+title = "M7: Multi-car racing (v0.4.0)"
+description = "Goal: cars that race and overtake each other. Demo: a 6-car self-play race."
+
+[[milestones]]
+key = "M8"
+title = "M8: ML deep dive (v1.0.0)"
+description = "Goal: own PPO implementation, rigorous benchmarks and ablations. Demo: technical write-up with results and confidence intervals."
+
+# --------------------------------------------------------------------------- #
+# M0: Foundations
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M0-1"
+milestone = "M0"
+title = "Initialize repository and project metadata"
+labels = ["type:chore", "area:infra", "priority:P0", "size:S"]
+summary = "Create the repository skeleton that every later ticket builds on, including the planning documents."
+tasks = [
+  "MIT LICENSE, README, CHANGELOG (Keep a Changelog format)",
+  "`.gitignore` (Python, uv, IDEs, `runs/`), `.gitattributes` (LF normalization), `.editorconfig`",
+  "Planning docs: vision, architecture, ADRs 0001-0009, roadmap, CONTRIBUTING",
+  "Public GitHub repository with `main` as default branch",
+]
+acceptance = [
+  "Repository is public on GitHub and README links to all planning docs",
+  "Line endings are normalized so Windows and Linux checkouts produce identical files",
+]
+
+[[issues]]
+key = "M0-2"
+milestone = "M0"
+title = "Scaffold the Python package with uv"
+labels = ["type:chore", "area:infra", "priority:P0", "size:S"]
+summary = "Set up a reproducible Python project using uv and a `src/` layout."
+tasks = [
+  "Install uv; pin Python 3.12 with `.python-version`",
+  "`pyproject.toml` with project metadata, `src/mlracecar/` package, `py.typed` marker",
+  "Optional dependency groups declared (empty for now): `render`, `train`, `dev`",
+  "Typer CLI entry point `racecar` with `--version`",
+  "Commit `uv.lock`",
+]
+acceptance = [
+  "`uv sync` works on a fresh clone on Windows and Linux",
+  "`uv run racecar --version` prints the package version",
+  "Package version has a single source of truth",
+]
+
+[[issues]]
+key = "M0-3"
+milestone = "M0"
+title = "Configure linting, formatting, and type checking"
+labels = ["type:chore", "area:infra", "priority:P0", "size:S"]
+summary = "Automated code-quality gates so style and type errors never reach review."
+tasks = [
+  "ruff lint with a curated rule set (pycodestyle, pyflakes, isort, pyupgrade, bugbear, simplify, naming, ruff-specific)",
+  "ruff format as the single formatter",
+  "mypy: strict mode for `mlracecar.core`, standard elsewhere",
+  "pre-commit hooks: ruff, ruff-format, mypy, trailing whitespace, end-of-file, TOML/YAML checks",
+  "Document the commands in CONTRIBUTING.md",
+]
+acceptance = [
+  "`uv run pre-commit run --all-files` passes on a clean checkout",
+  "A deliberately mistyped function in `core` fails mypy",
+]
+depends_on = ["M0-2"]
+
+[[issues]]
+key = "M0-4"
+milestone = "M0"
+title = "Set up the test framework"
+labels = ["type:test", "area:infra", "priority:P0", "size:S"]
+summary = "Test layout and tooling that matches the testing strategy in architecture.md section 6."
+tasks = [
+  "pytest, pytest-cov, Hypothesis, pytest-benchmark as dev dependencies",
+  "`tests/unit`, `tests/integration`, `tests/regression`, `tests/benchmarks`",
+  "Markers `slow`, `benchmark`, `gpu`, deselected by default where appropriate",
+  "Coverage config with branch coverage and an initial `fail_under` threshold",
+  "Smoke test for the CLI",
+]
+acceptance = [
+  "`uv run pytest` passes and prints a coverage report",
+  "Benchmark and GPU tests are skipped unless explicitly selected",
+]
+depends_on = ["M0-2"]
+
+[[issues]]
+key = "M0-5"
+milestone = "M0"
+title = "CI pipeline on GitHub Actions"
+labels = ["type:chore", "area:infra", "priority:P0", "size:M"]
+summary = "Every push and PR is checked automatically on both operating systems we care about."
+tasks = [
+  "Workflow on push to `main` and on PRs: ruff check, ruff format --check, mypy, import-linter, pytest",
+  "Matrix: ubuntu-latest and windows-latest, Python 3.12",
+  "uv dependency caching; cancel superseded runs (concurrency group)",
+  "Coverage summary in the job summary; CI badge in README",
+  "Branch protection on `main`: require PR + green CI, squash merge only",
+]
+acceptance = [
+  "A PR shows green checks for both OSes",
+  "A failing test blocks merging",
+  "CI completes in under 5 minutes",
+]
+depends_on = ["M0-3", "M0-4"]
+
+[[issues]]
+key = "M0-6"
+milestone = "M0"
+title = "Enforce architecture boundaries with import-linter"
+labels = ["type:chore", "area:infra", "priority:P0", "size:S"]
+summary = "Make the layering rules from ADR-0003 executable, so they can't erode silently."
+tasks = [
+  "Create empty subpackages matching architecture.md section 3",
+  "import-linter `layers` contract (cli > editor|training > agents > env|render > config|io > core)",
+  "`forbidden` contract: `core` may not import third-party packages other than NumPy",
+  "Run in pre-commit and CI",
+]
+acceptance = [
+  "Importing `mlracecar.render` from `mlracecar.core` fails CI with a clear message",
+  "Importing `pygame` or `torch` from `core` fails CI",
+]
+depends_on = ["M0-2"]
+
+[[issues]]
+key = "M0-7"
+milestone = "M0"
+title = "GitHub workflow conventions and board automation"
+labels = ["type:chore", "area:infra", "priority:P0", "size:S"]
+summary = "Templates and automation that make the workflow in ADR-0009 the path of least resistance."
+tasks = [
+  "Issue forms: feature, bug, research spike",
+  "PR template with Definition of Done checklist and `Closes #` prompt",
+  "Project board views: Board (by status), Roadmap (by milestone), Current milestone",
+  "Board automation: new issues land in Backlog; merged PRs move linked issues to Done",
+  "Finalize CONTRIBUTING.md",
+]
+acceptance = [
+  "New issues use the forms",
+  "Merging a PR with `Closes #N` moves the card to Done automatically",
+]
+
+[[issues]]
+key = "M0-8"
+milestone = "M0"
+title = "Documentation site with MkDocs Material"
+labels = ["type:docs", "area:infra", "priority:P1", "size:M"]
+summary = "Publish the docs as a browsable site, deployed from CI."
+tasks = [
+  "`mkdocs.yml` with navigation for vision, architecture, ADRs, roadmap, guides",
+  "Mermaid diagram rendering",
+  "API reference generated from docstrings (mkdocstrings)",
+  "CI job: build in strict mode on PRs, deploy to GitHub Pages on `main`",
+]
+acceptance = [
+  "Docs site is live on GitHub Pages",
+  "A broken internal link fails the docs build",
+]
+depends_on = ["M0-5"]
+
+# --------------------------------------------------------------------------- #
+# M1: Tracks
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M1-1"
+milestone = "M1"
+title = "Vectorized 2D geometry primitives"
+labels = ["type:feature", "area:core", "priority:P0", "size:M"]
+summary = "The math every other module relies on: fast, batched, and property-tested."
+tasks = [
+  "Helpers over `(N, 2)` float64 arrays: norms, rotations, angle wrapping",
+  "Batched segment-segment intersection",
+  "Batched ray-segment intersection returning hit distance",
+  "Point-to-polyline projection: closest point, segment index, arc length, signed lateral offset",
+  "Polyline self-intersection check",
+]
+acceptance = [
+  "Hypothesis property tests (e.g. projected distance <= distance to any vertex; intersection is symmetric)",
+  "No Python-level loops over points in hot paths",
+  "mypy strict passes; 100% branch coverage for the module",
+]
+depends_on = ["M0-4"]
+
+[[issues]]
+key = "M1-2"
+milestone = "M1"
+title = "Closed centripetal Catmull-Rom spline centerline"
+labels = ["type:feature", "area:track", "priority:P0", "size:M"]
+summary = "Turn control points into a smooth closed centerline, resampled by arc length (see ADR-0004)."
+tasks = [
+  "Centripetal Catmull-Rom evaluation for closed loops",
+  "Arc-length table and uniform resampling at configurable spacing (default 0.5 m)",
+  "Per-sample tangent, normal and signed curvature",
+]
+acceptance = [
+  "Resampled spacing is within 2% of the target",
+  "Curvature of a spline fitted to a circle is within 1% of 1/R",
+  "The spline passes through every control point",
+]
+depends_on = ["M1-1"]
+
+[[issues]]
+key = "M1-3"
+milestone = "M1"
+title = "Track model: boundaries, checkpoints, start grid"
+labels = ["type:feature", "area:track", "priority:P0", "size:M"]
+summary = "An immutable `Track` with all derived geometry the simulation needs."
+tasks = [
+  "Width per sample, interpolated from control-point widths",
+  "Left and right boundary polylines offset along normals",
+  "Start/finish line at s = 0; checkpoints every K metres",
+  "Start grid: N staggered two-wide poses behind the start line, facing the driving direction",
+]
+acceptance = [
+  "Boundaries are offset exactly width/2 from the centerline (within float tolerance)",
+  "Start grid poses don't overlap and face along the track tangent",
+  "Works for both clockwise and counter-clockwise tracks",
+]
+depends_on = ["M1-2"]
+
+[[issues]]
+key = "M1-4"
+milestone = "M1"
+title = "Track validation rules"
+labels = ["type:feature", "area:track", "priority:P0", "size:M"]
+summary = "Catch tracks the simulator can't handle and report them as structured issues, not exceptions."
+tasks = [
+  "`ValidationIssue(severity, code, message, location)`",
+  "Rules: at least 4 control points; boundaries don't self-intersect or cross each other; minimum width; minimum total length",
+  "Inner-boundary folding: corner radius smaller than half the track width",
+]
+acceptance = [
+  "Each rule has a failing fixture test",
+  "Issues include a location the editor can highlight",
+  "All sample tracks validate with zero errors",
+]
+depends_on = ["M1-3"]
+
+[[issues]]
+key = "M1-5"
+milestone = "M1"
+title = "Versioned JSON track file format"
+labels = ["type:feature", "area:track", "priority:P0", "size:S"]
+summary = "Load and save tracks in a schema-versioned format that can evolve safely."
+tasks = [
+  "Pydantic model for schema v1 in `mlracecar.io` (schema_version, name, author, control_points, metadata)",
+  "Load/save with clear, field-level errors",
+  "Migration registry (empty for v1) for future schema versions",
+  "Export the JSON Schema to `docs/`",
+  "Ship sample tracks in `tracks/`: an oval and a technical circuit",
+]
+acceptance = [
+  "Save then load is lossless",
+  "Loading a file from a newer, unknown schema version fails with a clear message",
+  "Invalid files report the offending field path",
+]
+depends_on = ["M1-3"]
+
+[[issues]]
+key = "M1-6"
+milestone = "M1"
+title = "Track editor v1"
+labels = ["type:feature", "area:editor", "priority:P0", "size:L"]
+summary = "`racecar edit [path]`: a pygame app to design tracks visually, built as MVC so its logic is testable headless."
+tasks = [
+  "`TrackDraft` model (no pygame), view, and input controller",
+  "Add, insert-between, move, and delete control points",
+  "Adjust per-point width (mouse wheel); reverse driving direction",
+  "Pan, zoom, grid with optional snap",
+  "Live preview of boundaries; validation issues highlighted on the canvas",
+  "Open, save, save-as",
+]
+acceptance = [
+  "A new valid track can be built from scratch and saved in under 5 minutes",
+  "Invalid tracks can be saved as drafts but are clearly flagged",
+  "Editor model logic is unit-tested without a display",
+]
+depends_on = ["M1-4", "M1-5", "M0-6"]
+
+[[issues]]
+key = "M1-7"
+milestone = "M1"
+title = "Editor undo/redo and help overlay"
+labels = ["type:feature", "area:editor", "priority:P1", "size:M"]
+summary = "Command pattern for every edit, plus discoverable shortcuts."
+tasks = [
+  "Every edit is a `Command` with do/undo; Ctrl+Z / Ctrl+Y",
+  "Bounded history",
+  "`?` toggles a keyboard-shortcut overlay",
+  "Unsaved-changes prompt on quit",
+]
+acceptance = [
+  "Every edit operation is undoable and redoable (unit-tested on the model)",
+]
+depends_on = ["M1-6"]
+
+[[issues]]
+key = "M1-8"
+milestone = "M1"
+title = "Track format and editor user guide"
+labels = ["type:docs", "area:editor", "priority:P1", "size:S"]
+summary = "How to build, validate, and share tracks."
+tasks = [
+  "Guide page with screenshots or a GIF",
+  "Shortcut table",
+  "Format reference generated from the JSON Schema",
+]
+acceptance = ["A new user can create and save a track using only the guide"]
+depends_on = ["M1-6"]
+
+# --------------------------------------------------------------------------- #
+# M2: Drivable simulation
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M2-1"
+milestone = "M2"
+title = "Typed configuration system"
+labels = ["type:feature", "area:core", "priority:P0", "size:M"]
+summary = "Pydantic + YAML configuration with CLI overrides, as decided in ADR-0008."
+tasks = [
+  "`mlracecar.config` models for vehicle, simulation, and environment",
+  "YAML loading with base file + override files",
+  "CLI overrides: `--set vehicle.max_steer=0.5`",
+  "Conversion to frozen core dataclasses; resolved config dump",
+  "`configs/` directory with defaults",
+]
+acceptance = [
+  "Invalid values fail with path-qualified errors",
+  "A dumped config reloads to an identical object",
+  "Precedence (defaults < file < CLI) is tested and documented",
+]
+depends_on = ["M0-6"]
+
+[[issues]]
+key = "M2-2"
+milestone = "M2"
+title = "Vehicle model: kinematic bicycle"
+labels = ["type:feature", "area:sim", "priority:P0", "size:M"]
+summary = "The first vehicle dynamics model, vectorized over N cars (ADR-0005)."
+tasks = [
+  "`VehicleParams` frozen dataclass and struct-of-arrays `VehicleState`",
+  "Continuous action `[steer, pedal]` in [-1, 1]",
+  "Actuators: steering rate limit, motor force, braking, drag, rolling resistance",
+  "Kinematic bicycle integration (semi-implicit Euler)",
+  "`DynamicsModel` protocol so models are swappable",
+]
+acceptance = [
+  "Constant steering drives a circle of radius L / tan(delta) within 1%",
+  "Top speed on a straight matches the analytic drag equilibrium",
+  "Equivalence: a car simulated alone matches the same car inside a batch of 1024",
+]
+depends_on = ["M1-1", "M2-1"]
+
+[[issues]]
+key = "M2-3"
+milestone = "M2"
+title = "Vehicle model: dynamic bicycle with tire slip"
+labels = ["type:feature", "area:sim", "priority:P1", "size:L"]
+summary = "A more realistic model where understeer, oversteer, and drifting emerge from tire forces."
+tasks = [
+  "Lateral tire forces via a simplified Pacejka magic formula",
+  "Blend to the kinematic model at low speed to avoid the zero-velocity singularity",
+  "Friction coefficient parameter",
+  "Select the model via config",
+  "Document the equations in the docs",
+]
+acceptance = [
+  "Stable at the default timestep across all speeds: no NaNs under fuzzed inputs",
+  "Understeer at high speed is observable and covered by a test",
+]
+depends_on = ["M2-2"]
+
+[[issues]]
+key = "M2-4"
+milestone = "M2"
+title = "Simulation world with a fixed-timestep loop"
+labels = ["type:feature", "area:sim", "priority:P0", "size:M"]
+summary = "`World` simulates N cars deterministically and publishes immutable snapshots."
+tasks = [
+  "`World(track, vehicle_params, n_cars, rng)` with `step(actions)` and `reset(mask)`",
+  "Fixed timestep with action repeat",
+  "Reset subsets of cars to grid or random positions along the track",
+  "Immutable `Snapshot` for renderer, replays, and env",
+  "No global state; explicit `np.random.Generator`",
+]
+acceptance = [
+  "Same seed + same actions produce bitwise-identical snapshots",
+  "Resetting some cars does not affect the others",
+]
+depends_on = ["M1-3", "M2-2"]
+
+[[issues]]
+key = "M2-5"
+milestone = "M2"
+title = "Race rules: progress, checkpoints, laps, off-track"
+labels = ["type:feature", "area:sim", "priority:P0", "size:L"]
+summary = "Everything that turns physics into a race, robust against the exploits RL agents love to find."
+tasks = [
+  "Per-car progress via local-window projection onto the centerline (arc length, lateral offset, heading error)",
+  "Ordered checkpoints; laps only count if all were crossed",
+  "Lap and sector timing",
+  "Off-track detection with policy: none, slowdown, reset, terminate",
+  "Wrong-way detection",
+  "Race events as plain data: LapCompleted, OffTrack, WrongWay",
+  "Test-only scripted centerline-following driver",
+]
+acceptance = [
+  "Reversing back and forth across the finish line never counts a lap",
+  "Skipping a checkpoint invalidates the lap",
+  "The scripted driver completes laps with times matching the expected value within 1%",
+]
+depends_on = ["M2-4"]
+
+[[issues]]
+key = "M2-6"
+milestone = "M2"
+title = "pygame renderer with HUD and debug overlays"
+labels = ["type:feature", "area:render", "priority:P0", "size:L"]
+summary = "Draw the race from snapshots only, so the same renderer serves live play, replays, and video."
+tasks = [
+  "Track: asphalt, boundaries, kerbs, start line",
+  "Cars as oriented, colored shapes",
+  "Cameras: follow, overview, free with zoom",
+  "HUD: speed, lap, current and best lap time",
+  "Toggleable debug overlays: centerline, checkpoints, sensor rays, velocity vectors",
+  "Offscreen mode returning RGB arrays",
+]
+acceptance = [
+  "60 FPS with 16 cars on the development laptop",
+  "Renderer imports no simulation internals (import-linter)",
+  "Headless `rgb_array` rendering works in CI (SDL dummy driver)",
+]
+depends_on = ["M2-4"]
+
+[[issues]]
+key = "M2-7"
+milestone = "M2"
+title = "Agent interface and keyboard driving"
+labels = ["type:feature", "area:agents", "priority:P0", "size:M"]
+summary = "The `Agent` protocol plus a human driver: the first playable version."
+tasks = [
+  "`Agent` protocol: `reset(seed)`, batched `act(observations)`",
+  "`KeyboardAgent` with smoothed analog steering from digital keys",
+  "Optional gamepad support via pygame joystick",
+  "`racecar drive --track <file>` application loop with restart key",
+]
+acceptance = [
+  "You can drive and complete timed laps on your own track",
+  "Best lap time is shown in the HUD",
+]
+depends_on = ["M2-5", "M2-6"]
+
+[[issues]]
+key = "M2-8"
+milestone = "M2"
+title = "Determinism and golden-trajectory regression tests"
+labels = ["type:test", "area:sim", "priority:P0", "size:S"]
+summary = "Catch accidental physics changes immediately."
+tasks = [
+  "Record reference trajectories from scripted actions to `tests/regression/golden/*.npz`",
+  "Compare runs against golden files within tolerance",
+  "Script to regenerate golden files intentionally (with a PR note)",
+]
+acceptance = [
+  "Changing a physics constant fails the test with a readable diff summary",
+  "Tests pass on both Windows and Linux CI",
+]
+depends_on = ["M2-5"]
+
+[[issues]]
+key = "M2-9"
+milestone = "M2"
+title = "Simulation performance benchmarks"
+labels = ["type:test", "area:sim", "priority:P1", "size:S"]
+summary = "Measure simulation throughput before optimizing anything."
+tasks = [
+  "pytest-benchmark: world step throughput for N = 1, 64, 1024",
+  "Benchmark job on `main` with results uploaded as an artifact",
+  "Results table in the README",
+]
+acceptance = ["Baseline numbers are recorded and reproducible on the dev machine"]
+depends_on = ["M2-5", "M0-5"]
+
+# --------------------------------------------------------------------------- #
+# M3: RL environment
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M3-1"
+milestone = "M3"
+title = "Raycast distance sensors"
+labels = ["type:feature", "area:sim", "priority:P0", "size:M"]
+summary = "Lidar-like sensors: how the agent sees the track."
+tasks = [
+  "Configurable ray count, field of view, and maximum range, relative to car heading",
+  "Batched intersection of N cars x R rays against boundary segments",
+  "Broad phase: only test segments in a window around each car's progress index",
+  "Normalized distances; rays drawn by the debug overlay",
+]
+acceptance = [
+  "Unit tests on hand-made geometry with known distances",
+  "Throughput for 64 cars x 15 rays is benchmarked and recorded",
+]
+depends_on = ["M2-4"]
+
+[[issues]]
+key = "M3-2"
+milestone = "M3"
+title = "Composable observation builder"
+labels = ["type:feature", "area:env", "priority:P0", "size:M"]
+summary = "Build normalized observation vectors from configurable features."
+tasks = [
+  "Features: rays, speed, lateral offset, heading error, yaw rate, previous action, look-ahead curvature",
+  "Normalization to roughly [-1, 1]",
+  "`ObservationSpec` with feature names, shapes, and a content hash",
+  "Feature selection via config",
+]
+acceptance = [
+  "The spec hash changes when features change",
+  "All features are finite and bounded under fuzzed states",
+]
+depends_on = ["M3-1", "M2-5"]
+
+[[issues]]
+key = "M3-3"
+milestone = "M3"
+title = "Reward components and termination rules"
+labels = ["type:feature", "area:env", "priority:P0", "size:M"]
+summary = "Configurable reward made of named components, each one observable for tuning."
+tasks = [
+  "Components: progress (delta s), time penalty, off-track penalty, wrong-way penalty, action smoothness, lap bonus",
+  "Weighted sum from config",
+  "Per-component values in `info`",
+  "Termination vs. truncation: off-track, stuck timeout, max steps",
+  "Document why progress-based reward beats raw speed reward",
+]
+acceptance = [
+  "Every component has unit tests",
+  "Per-component sums are visible in `info`",
+]
+depends_on = ["M2-5"]
+
+[[issues]]
+key = "M3-4"
+milestone = "M3"
+title = "Gymnasium single-agent RacingEnv"
+labels = ["type:feature", "area:env", "priority:P0", "size:M"]
+summary = "A standards-compliant Gymnasium environment on top of the World."
+tasks = [
+  "`RacingEnv(gymnasium.Env)` with Box action space [-1, 1]^2 and Box observations",
+  "`reset(seed, options={track, start})`",
+  "Render modes `human` and `rgb_array`",
+  "Register as `MLRacecar-v0`",
+]
+acceptance = [
+  "Passes `gymnasium.utils.env_checker.check_env`",
+  "A random agent runs 10k steps without errors",
+  "Episodes are reproducible from a seed",
+]
+depends_on = ["M3-2", "M3-3"]
+
+[[issues]]
+key = "M3-5"
+milestone = "M3"
+title = "Batched vectorized environment"
+labels = ["type:feature", "area:env", "priority:P0", "size:L"]
+summary = "N parallel environments in one World for roughly the cost of one (ADR-0005)."
+tasks = [
+  "`BatchedRacingEnv` implementing the Gymnasium `VectorEnv` API with autoreset",
+  "Adapter to Stable-Baselines3 `VecEnv`",
+  "Throughput comparison against `SyncVectorEnv` of N single envs",
+]
+acceptance = [
+  "Equivalence test: identical transitions to N independent single envs with the same seeds",
+  "At least 5x throughput vs. `SyncVectorEnv` at N = 64 (recorded in the README)",
+]
+depends_on = ["M3-4"]
+
+[[issues]]
+key = "M3-6"
+milestone = "M3"
+title = "RL fundamentals guide for this project"
+labels = ["type:docs", "area:env", "priority:P1", "size:S"]
+summary = "A learning page tying RL concepts to this codebase. It doubles as interview prep."
+tasks = [
+  "Agent-environment loop, MDPs, observations, actions, rewards, as they appear in our code",
+  "Episodes, termination vs. truncation",
+  "Policy and value functions; PPO intuition; metrics to watch while training",
+  "Curated links (Spinning Up, SB3 docs, PPO paper)",
+]
+acceptance = ["You can explain each reward term and why PPO clips its updates, in your own words"]
+depends_on = ["M3-4"]
+
+# --------------------------------------------------------------------------- #
+# M4: MVP - First lap
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M4-1"
+milestone = "M4"
+title = "Training dependencies with CUDA support"
+labels = ["type:chore", "area:training", "priority:P0", "size:S"]
+summary = "Install PyTorch with CUDA locally and CPU-only in CI, without burdening the core install."
+tasks = [
+  "`train` extra: torch (CUDA 12.x index via uv), stable-baselines3, tensorboard",
+  "CPU-only torch for CI",
+  "`racecar doctor`: prints versions, CUDA availability, and GPU name",
+]
+acceptance = [
+  "`uv sync --extra train` gives CUDA-enabled torch on the RTX 4060",
+  "Core and env tests run without torch installed",
+]
+depends_on = ["M0-2"]
+
+[[issues]]
+key = "M4-2"
+milestone = "M4"
+title = "Stable-Baselines3 agent adapter with model cards"
+labels = ["type:feature", "area:agents", "priority:P0", "size:S"]
+summary = "Wrap SB3 behind our `Agent` protocol (ADR-0006) and make saved models self-describing."
+tasks = [
+  "`SB3Agent` implementing `Agent`",
+  "Model card saved with every model: observation spec hash, action spec, env config, versions, git SHA",
+  "Refuse to load a model into an incompatible environment",
+]
+acceptance = [
+  "A loaded agent acts deterministically in deterministic mode",
+  "A spec mismatch produces a clear error naming the differing fields",
+]
+depends_on = ["M4-1", "M3-5"]
+
+[[issues]]
+key = "M4-3"
+milestone = "M4"
+title = "Reproducible training pipeline"
+labels = ["type:feature", "area:training", "priority:P0", "size:L"]
+summary = "`racecar train <config>` produces a self-describing run directory (architecture.md section 4.10)."
+tasks = [
+  "Run directory with resolved config, git SHA and dirty flag, versions, seeds",
+  "Periodic checkpoints and best-model-by-eval",
+  "Resume from checkpoint; Ctrl+C saves a checkpoint gracefully",
+  "Tiny smoke config that trains for about 2k steps in CI",
+]
+acceptance = [
+  "Re-running the same config and seed on CPU reproduces the eval metrics",
+  "The CI smoke training run takes under 60 seconds",
+]
+depends_on = ["M4-2", "M2-1"]
+
+[[issues]]
+key = "M4-4"
+milestone = "M4"
+title = "Experiment tracking with TensorBoard"
+labels = ["type:feature", "area:training", "priority:P0", "size:M"]
+summary = "See what the agent is learning, with racing-specific metrics."
+tasks = [
+  "Log SB3 metrics plus custom metrics: lap completion rate, best lap time, off-track rate, per-reward-component sums, steps/sec",
+  "Periodic evaluation videos in TensorBoard",
+  "`Tracker` interface so Weights & Biases can be added later",
+]
+acceptance = ["TensorBoard shows the custom racing metrics during a training run"]
+depends_on = ["M4-3"]
+
+[[issues]]
+key = "M4-5"
+milestone = "M4"
+title = "Evaluation harness"
+labels = ["type:feature", "area:training", "priority:P0", "size:M"]
+summary = "Score any agent on any set of tracks with deterministic seeds."
+tasks = [
+  "`racecar eval --model <path> --tracks <glob> --episodes N`",
+  "Metrics: completion rate, mean and best lap time, off-track count, average speed",
+  "Reports as JSON and a Markdown table",
+]
+acceptance = [
+  "The same model and seeds produce identical reports",
+  "Reports from two models can be diffed side by side",
+]
+depends_on = ["M4-2"]
+
+[[issues]]
+key = "M4-6"
+milestone = "M4"
+title = "Replay recording and playback"
+labels = ["type:feature", "area:render", "priority:P0", "size:M"]
+summary = "Record snapshot streams to files and play them back. These feed ghosts (M5) and the web demo (M6)."
+tasks = [
+  "Compact, versioned replay format (decide between npz and MessagePack)",
+  "`racecar replay <file>`: play/pause, scrub, speed x0.25 to x4",
+]
+acceptance = [
+  "The replay of an eval episode matches the live run",
+  "A one-lap replay is under 1 MB",
+]
+depends_on = ["M2-6"]
+
+[[issues]]
+key = "M4-7"
+milestone = "M4"
+title = "Video and GIF export"
+labels = ["type:feature", "area:render", "priority:P1", "size:S"]
+summary = "Turn replays into shareable media for the README and social posts."
+tasks = [
+  "`racecar replay <file> --export out.mp4|out.gif`",
+  "Chase and overview camera options",
+]
+acceptance = ["The README hero GIF is generated by a single command"]
+depends_on = ["M4-6"]
+
+[[issues]]
+key = "M4-8"
+milestone = "M4"
+title = "Train the first agent to lap your track"
+labels = ["type:research", "area:training", "priority:P0", "size:L"]
+summary = "The MVP moment. Iterate on reward, observations, and hyperparameters, and document every step."
+tasks = [
+  "Baseline PPO hyperparameters",
+  "Iterate on reward and observations",
+  "Keep `docs/experiments/log.md`: hypothesis, change, result, conclusion for each run",
+  "Compare the agent's lap time against your own best lap",
+]
+acceptance = [
+  "The agent completes at least 95% of laps over 20 evaluation episodes on your custom track",
+  "The experiment log documents at least 3 iterations",
+  "Human vs. agent lap time comparison is recorded",
+]
+depends_on = ["M4-3", "M4-4", "M4-5"]
+
+[[issues]]
+key = "M4-9"
+milestone = "M4"
+title = "README v1 and release v0.1.0"
+labels = ["type:docs", "area:infra", "priority:P0", "size:M"]
+summary = "Make the first impression count, then ship the MVP."
+tasks = [
+  "README: hero GIF, pitch, features, quickstart (edit, drive, train, eval), architecture diagram, benchmarks",
+  "CHANGELOG entry, tag v0.1.0, GitHub Release",
+]
+acceptance = ["Fresh clone, then follow the README, then driving a track in under 5 minutes on Windows and Linux"]
+depends_on = ["M4-7", "M4-8"]
+
+# --------------------------------------------------------------------------- #
+# M5: Generalize and play (epic-level; refine before starting)
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M5-1"
+milestone = "M5"
+title = "Procedural track generator"
+labels = ["type:feature", "area:track", "priority:P0", "size:M"]
+summary = "Seeded generator for unlimited training tracks with tunable difficulty."
+tasks = [
+  "Random points, convex hull, perturbation, smoothing",
+  "Difficulty parameters: corner density, minimum radius, width",
+  "Always passes validation (reject and retry)",
+  "`racecar generate --seed S --count N`",
+]
+acceptance = ["1,000 generated tracks with consecutive seeds all pass validation"]
+depends_on = ["M1-4"]
+
+[[issues]]
+key = "M5-2"
+milestone = "M5"
+title = "Multi-track training and held-out evaluation"
+labels = ["type:feature", "area:training", "priority:P0", "size:M"]
+summary = "Train on many tracks and prove generalization on tracks the agent never saw."
+tasks = [
+  "Track pools and generator-backed sampling in the env",
+  "Fixed held-out evaluation set: generated seeds plus your handmade tracks",
+  "Generalization report",
+]
+acceptance = ["At least 80% lap completion on 20 held-out tracks"]
+depends_on = ["M5-1", "M4-8"]
+
+[[issues]]
+key = "M5-3"
+milestone = "M5"
+title = "Curriculum learning experiment"
+labels = ["type:research", "area:training", "priority:P1", "size:M"]
+summary = "Does training from easy to hard tracks beat uniform sampling?"
+tasks = ["Difficulty schedule", "Compare against no curriculum across seeds"]
+acceptance = ["Written result in the experiment log, with learning curves"]
+depends_on = ["M5-2"]
+
+[[issues]]
+key = "M5-4"
+milestone = "M5"
+title = "Domain randomization"
+labels = ["type:feature", "area:env", "priority:P2", "size:S"]
+summary = "Randomize grip, mass, actuator noise, and sensor noise for robustness."
+tasks = ["Randomization ranges in config", "Robustness evaluation"]
+acceptance = ["The robustness report compares randomized and non-randomized agents"]
+depends_on = ["M5-2"]
+
+[[issues]]
+key = "M5-5"
+milestone = "M5"
+title = "Play against the AI"
+labels = ["type:feature", "area:agents", "priority:P0", "size:L"]
+summary = "`racecar race --vs <model>`: you against one or more trained agents."
+tasks = [
+  "Human car plus AI cars (non-colliding until M7)",
+  "Countdown start, live positions, finish results screen",
+]
+acceptance = ["A full race against the AI can be completed, with results shown"]
+depends_on = ["M2-7", "M4-2"]
+
+[[issues]]
+key = "M5-6"
+milestone = "M5"
+title = "Ghost laps"
+labels = ["type:feature", "area:render", "priority:P1", "size:M"]
+summary = "Chase the AI's best lap, or your own, as a translucent ghost car."
+tasks = ["Ghost playback from replays", "Personal best saved per track"]
+acceptance = ["Ghost and live car stay in sync from the start line"]
+depends_on = ["M4-6", "M5-5"]
+
+[[issues]]
+key = "M5-7"
+milestone = "M5"
+title = "Release v0.2.0"
+labels = ["type:docs", "area:infra", "priority:P0", "size:S"]
+summary = "Changelog, README update with generalization results, tag, and GitHub Release."
+acceptance = ["v0.2.0 is published with release notes"]
+depends_on = ["M5-2", "M5-5"]
+
+# --------------------------------------------------------------------------- #
+# M6: Browser demo (epic-level)
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M6-1"
+milestone = "M6"
+title = "Spike: choose the browser runtime"
+labels = ["type:research", "area:web", "priority:P0", "size:M"]
+summary = "Pyodide running our real Python core, or a TypeScript port with conformance tests? Prototype both minimally and decide with data."
+tasks = [
+  "Minimal Pyodide prototype: load time and FPS",
+  "Minimal TypeScript prototype: FPS and porting effort",
+  "Write the ADR",
+]
+acceptance = ["ADR accepted with measured load time and FPS for both options"]
+depends_on = ["M4-9"]
+
+[[issues]]
+key = "M6-2"
+milestone = "M6"
+title = "ONNX policy export with parity test"
+labels = ["type:feature", "area:agents", "priority:P0", "size:S"]
+summary = "Export trained policies to ONNX and prove they behave identically."
+tasks = ["`racecar export-onnx <model>`", "`OnnxAgent` implementation"]
+acceptance = ["Max absolute difference between PyTorch and onnxruntime actions is below 1e-5 on 10k observations"]
+depends_on = ["M4-2"]
+
+[[issues]]
+key = "M6-3"
+milestone = "M6"
+title = "Web demo application"
+labels = ["type:feature", "area:web", "priority:P0", "size:L"]
+summary = "Vite + TypeScript + Canvas app: pick a track and watch the agent race."
+tasks = ["Track selection", "Live agent with toggleable sensor rays", "Optional: drive against the AI with the keyboard"]
+acceptance = ["Runs at 60 FPS in current Chrome and Firefox on the dev laptop"]
+depends_on = ["M6-1", "M6-2"]
+
+[[issues]]
+key = "M6-4"
+milestone = "M6"
+title = "Deploy the web demo to GitHub Pages"
+labels = ["type:chore", "area:web", "priority:P0", "size:S"]
+summary = "Automated deploy alongside the docs site; linked from the README."
+acceptance = ["Merging to `main` updates the live demo"]
+depends_on = ["M6-3"]
+
+[[issues]]
+key = "M6-5"
+milestone = "M6"
+title = "Release v0.3.0"
+labels = ["type:docs", "area:infra", "priority:P0", "size:S"]
+summary = "Changelog, README demo link, tag, and GitHub Release."
+acceptance = ["v0.3.0 is published with release notes"]
+depends_on = ["M6-4"]
+
+# --------------------------------------------------------------------------- #
+# M7: Multi-car racing (epic-level)
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M7-1"
+milestone = "M7"
+title = "Car-to-car collision detection and response"
+labels = ["type:feature", "area:sim", "priority:P0", "size:L"]
+summary = "Vectorized collisions between cars, toggleable in config."
+tasks = ["Broad phase plus oriented-box or circle narrow phase", "Impulse-based response", "Collision events"]
+acceptance = ["No tunnelling at top speed; collisions conserve momentum within tolerance"]
+depends_on = ["M2-5"]
+
+[[issues]]
+key = "M7-2"
+milestone = "M7"
+title = "Multi-agent environment (PettingZoo ParallelEnv)"
+labels = ["type:feature", "area:env", "priority:P0", "size:M"]
+summary = "N colliding cars, each its own agent."
+acceptance = ["Passes the PettingZoo `parallel_api_test`"]
+depends_on = ["M7-1", "M3-4"]
+
+[[issues]]
+key = "M7-3"
+milestone = "M7"
+title = "Opponent-aware observations"
+labels = ["type:feature", "area:env", "priority:P0", "size:M"]
+summary = "Agents perceive nearby cars: relative position and velocity of the k nearest, plus rays that hit cars."
+acceptance = ["Observation spec covers opponents; fuzz tests show bounded values"]
+depends_on = ["M7-2"]
+
+[[issues]]
+key = "M7-4"
+milestone = "M7"
+title = "Self-play training with a shared policy"
+labels = ["type:research", "area:training", "priority:P0", "size:L"]
+summary = "Train against a pool of past selves; track skill with Elo or TrueSkill."
+acceptance = ["The self-play agent wins more than 70% of head-to-heads against the frozen v0.2.0 agent"]
+depends_on = ["M7-3"]
+
+[[issues]]
+key = "M7-5"
+milestone = "M7"
+title = "Race mode: grid start, positions, results"
+labels = ["type:feature", "area:sim", "priority:P1", "size:M"]
+summary = "A proper race format for multi-car events."
+acceptance = ["Six-car race from grid to results screen"]
+depends_on = ["M7-2"]
+
+[[issues]]
+key = "M7-6"
+milestone = "M7"
+title = "Release v0.4.0"
+labels = ["type:docs", "area:infra", "priority:P0", "size:S"]
+summary = "Changelog, multi-car race GIF, tag, and GitHub Release."
+acceptance = ["v0.4.0 is published with release notes"]
+depends_on = ["M7-4"]
+
+# --------------------------------------------------------------------------- #
+# M8: ML deep dive (epic-level)
+# --------------------------------------------------------------------------- #
+
+[[issues]]
+key = "M8-1"
+milestone = "M8"
+title = "PPO from scratch in PyTorch"
+labels = ["type:feature", "area:training", "priority:P0", "size:L"]
+summary = "Our own PPO behind the `Agent` interface: GAE, clipped objective, value loss, entropy bonus, advantage normalization, learning-rate annealing."
+acceptance = [
+  "Unit tests for GAE against hand-computed values",
+  "Learns CartPole and our racing env",
+]
+depends_on = ["M4-8"]
+
+[[issues]]
+key = "M8-2"
+milestone = "M8"
+title = "Benchmark own PPO against Stable-Baselines3"
+labels = ["type:research", "area:training", "priority:P0", "size:M"]
+summary = "Rigorous comparison: 5+ seeds each, interquartile mean (IQM) with bootstrap confidence intervals (rliable), learning curves."
+acceptance = ["Report shows our PPO within the confidence intervals of SB3, or explains why not"]
+depends_on = ["M8-1"]
+
+[[issues]]
+key = "M8-3"
+milestone = "M8"
+title = "Hyperparameter optimization with Optuna"
+labels = ["type:feature", "area:training", "priority:P1", "size:M"]
+summary = "Automated sweeps with pruning; results tracked and reproducible."
+acceptance = ["Best-found configuration beats the hand-tuned baseline"]
+depends_on = ["M8-1"]
+
+[[issues]]
+key = "M8-4"
+milestone = "M8"
+title = "Ablation study: rewards and observations"
+labels = ["type:research", "area:training", "priority:P0", "size:M"]
+summary = "Which reward components and observation features actually matter?"
+acceptance = ["Ablation table with confidence intervals in the docs"]
+depends_on = ["M8-2"]
+
+[[issues]]
+key = "M8-5"
+milestone = "M8"
+title = "SAC comparison"
+labels = ["type:research", "area:training", "priority:P1", "size:M"]
+summary = "An off-policy alternative for continuous control: sample efficiency vs. wall-clock time."
+acceptance = ["Comparison report against PPO"]
+depends_on = ["M8-2"]
+
+[[issues]]
+key = "M8-6"
+milestone = "M8"
+title = "Technical write-up"
+labels = ["type:docs", "area:training", "priority:P0", "size:M"]
+summary = "Blog-style report: design, engineering decisions, results, lessons learned."
+acceptance = ["Published and linked from the README"]
+depends_on = ["M8-4"]
+
+[[issues]]
+key = "M8-7"
+milestone = "M8"
+title = "Release v1.0.0"
+labels = ["type:docs", "area:infra", "priority:P0", "size:S"]
+summary = "The complete project."
+acceptance = ["v1.0.0 is published with release notes"]
+depends_on = ["M8-6"]
