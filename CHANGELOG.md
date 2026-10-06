@@ -23,3 +23,5 @@ All notable changes to this project are documented here. The format is based on
   allow-list test keeping `core` to the standard library and NumPy.
 - Issue forms (feature, bug, research spike) that label new tickets and add them to the board,
   and a pull request template with the Definition of Done.
+- Documentation website (MkDocs Material) with Mermaid diagrams and an API reference generated
+  from docstrings; built in strict mode on every PR and published to GitHub Pages from `main`.

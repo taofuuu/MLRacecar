@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
-- **Related:** [CONTRIBUTING.md](../../CONTRIBUTING.md), ticket M0-7
+- **Related:** [CONTRIBUTING.md](https://github.com/taofuuu/MLRacecar/blob/main/CONTRIBUTING.md), ticket M0-7
 
 > **In plain words:** Every piece of work is a ticket on GitHub. You do it on a short-lived branch, merge it through a pull request that names the ticket, and the ticket closes and the board updates by itself. Commit messages follow one standard format.
 

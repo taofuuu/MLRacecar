@@ -114,5 +114,5 @@ The tables below list each milestone's tickets: key, ticket, type, priority, siz
 | [**M8**](https://github.com/taofuuu/MLRacecar/milestone/9) ML deep dive        | PPO from scratch · Benchmark vs. SB3 (multi-seed, CIs) · Optuna sweeps (P1) · Ablation study · SAC comparison (P1) · Technical write-up · Release v1.0.0 |
 
 Each ticket links to its GitHub issue, which holds the tasks, acceptance criteria, and dependencies.
-The issues were created from [`scripts/backlog/backlog.toml`](../scripts/backlog/backlog.toml), the record of the initial plan;
+The issues were created from [`scripts/backlog/backlog.toml`](https://github.com/taofuuu/MLRacecar/blob/main/scripts/backlog/backlog.toml), the record of the initial plan;
 GitHub is the source of truth from here on.

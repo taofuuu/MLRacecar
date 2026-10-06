@@ -95,6 +95,8 @@
 | **import-linter** | A tool that fails the build if code breaks the "floors" rule. | Enforces the layered architecture. |
 | **Lockfile** | A file listing the exact version of every installed library, so everyone gets identical installs. | `uv.lock` |
 | **uv** | A fast tool that installs Python and libraries and manages the project environment. | `uv sync`, `uv run …` |
+| **MkDocs / GitHub Pages** | MkDocs turns our Markdown docs into a website; GitHub Pages hosts it for free. | [taofuuu.github.io/MLRacecar](https://taofuuu.github.io/MLRacecar/) |
+| **Docstring** | The description written at the top of a module, class, or function in the code. | The [API reference](reference.md) is generated from them. |
 
 ## Reinforcement learning (RL)
 

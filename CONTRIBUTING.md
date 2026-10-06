@@ -43,8 +43,9 @@ Every PR and every push to `main` runs [`.github/workflows/ci.yml`](.github/work
 | Lint and type check   | All pre-commit hooks (the same ones that run on your commits)           |
 | Tests (ubuntu-latest) | `pytest` with coverage; the coverage table appears in the run summary   |
 | Tests (windows-latest)| The same, on Windows                                                    |
+| Build docs            | `mkdocs build --strict`: broken links or anchors fail ([docs.yml](.github/workflows/docs.yml)); on `main` it also publishes the site |
 
-`main` is protected: changes land only through a PR, all three jobs must pass, and PRs are
+`main` is protected: changes land only through a PR, all four jobs must pass, and PRs are
 squash-merged.
 
 ## Board columns
@@ -116,4 +117,5 @@ Day-to-day commands:
 | `uv run ruff format .`                    | Format all code                                                |
 | `uv run mypy`                             | Strict type check of `src/`, `tests/`, `scripts/`              |
 | `uv run lint-imports`                     | Architecture check: each layer only imports the layers below it |
+| `uv run --group docs mkdocs serve`        | Preview the docs site at http://127.0.0.1:8000 while editing   |
 | `uv run pre-commit run --all-files`       | Everything the commit hook runs, on the whole repo             |
