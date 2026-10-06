@@ -68,13 +68,21 @@ uv sync                       # create .venv and install the project
 uv run racecar --version      # check the install
 ```
 
-These commands become available as the rest of milestone M0 lands:
+Once after cloning, turn on the automatic checks for every commit:
 
 ```bash
-uv sync --all-extras          # install everything
-uv run pytest                 # tests + coverage
-uv run ruff check . && uv run ruff format --check .
-uv run mypy
-uv run lint-imports           # architecture rules
-uv run pre-commit install     # run checks on every commit
+uv run pre-commit install
 ```
+
+Day-to-day commands:
+
+| Command                                   | What it does                                                   |
+|-------------------------------------------|----------------------------------------------------------------|
+| `uv run pytest`                           | Fast tests + coverage report (fails below 80%)                 |
+| `uv run pytest -m slow` / `-m gpu` / `-m benchmark` | Opt-in slow, GPU, or speed-measurement tests         |
+| `uv run ruff check --fix .`               | Lint, auto-fixing what it safely can                           |
+| `uv run ruff format .`                    | Format all code                                                |
+| `uv run mypy`                             | Strict type check of `src/`, `tests/`, `scripts/`              |
+| `uv run pre-commit run --all-files`       | Everything the commit hook runs, on the whole repo             |
+
+Coming later in M0: `uv run lint-imports` (architecture rules, #6).

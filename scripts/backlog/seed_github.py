@@ -49,7 +49,9 @@ def validate(backlog: dict[str, Any]) -> list[str]:
         if issue.get("milestone") not in milestones:
             problems.append(f"{key}: unknown milestone {issue.get('milestone')!r}")
         problems.extend(
-            f"{key}: unknown label {label!r}" for label in issue.get("labels", []) if label not in labels
+            f"{key}: unknown label {label!r}"
+            for label in issue.get("labels", [])
+            if label not in labels
         )
         # Dependencies must point to earlier entries so issue numbers are known at creation time.
         problems.extend(
@@ -101,7 +103,10 @@ class GitHub:
         if self.dry_run:
             return set()
         out = self.run(
-            "api", f"repos/{self.repo}/milestones?state=all&per_page=100", "--paginate", mutates=False
+            "api",
+            f"repos/{self.repo}/milestones?state=all&per_page=100",
+            "--paginate",
+            mutates=False,
         )
         return {m["title"] for m in json.loads(out or "[]")}
 
@@ -154,7 +159,11 @@ def seed(backlog: dict[str, Any], gh: GitHub, project: int | None) -> None:
                 args += ["--label", label]
             url = gh.run(*args, stdin=render_body(issue, refs))
             number = int(url.rstrip("/").rsplit("/", 1)[-1]) if url else 0
-            print(f"  created: #{number} {title}" if url else f"  would create: {issue['key']} {title}")
+            print(
+                f"  created: #{number} {title}"
+                if url
+                else f"  would create: {issue['key']} {title}"
+            )
             if issue.get("status") == "done" and url:
                 gh.run("issue", "close", str(number), "--repo", gh.repo, "--reason", "completed")
             if project is not None and url:
@@ -163,19 +172,25 @@ def seed(backlog: dict[str, Any], gh: GitHub, project: int | None) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--repo", default="OWNER/NAME", help="GitHub repository, e.g. octocat/MLRacecar")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--repo", default="OWNER/NAME", help="GitHub repository, e.g. octocat/MLRacecar"
+    )
     parser.add_argument("--project", type=int, help="Project number to add newly created issues to")
     parser.add_argument("--file", type=Path, default=BACKLOG_FILE, help="Backlog TOML file")
-    parser.add_argument("--dry-run", action="store_true", help="Validate and print actions without calling GitHub")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Validate and print actions without calling GitHub"
+    )
     args = parser.parse_args()
 
     backlog = load_backlog(args.file)
     if problems := validate(backlog):
         print("Backlog is invalid:", *problems, sep="\n  ", file=sys.stderr)
         return 1
-    issues = backlog["issues"]
-    print(f"Backlog OK: {len(backlog['labels'])} labels, {len(backlog['milestones'])} milestones, {len(issues)} issues")
+    counts = {name: len(backlog[name]) for name in ("labels", "milestones", "issues")}
+    print("Backlog OK: " + ", ".join(f"{n} {name}" for name, n in counts.items()))
 
     if not args.dry_run and args.repo == "OWNER/NAME":
         parser.error("--repo is required unless --dry-run is given")
