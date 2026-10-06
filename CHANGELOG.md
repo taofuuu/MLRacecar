@@ -28,6 +28,9 @@ All notable changes to this project are documented here. The format is based on
   one control point per line, and a published JSON Schema (`docs/schemas/`).
 - Sample tracks in `tracks/`: an oval and a 3.5 km GP circuit, both free of track-check issues.
 - `racecar check <file>`: reads a track file and runs the track checks on it.
+- `mlracecar.editor.draft.TrackDraft`: the track editor's headless model. Immutable drafts
+  (ADR-0011) with append, insert-into-stretch, move, delete, width, reverse-direction, and
+  set-start edits, cached track and validation per draft, and conversion to and from track files.
 - A realistic 3.5 km GP-style test circuit (`tests/circuits.py`) that validation is checked
   against, both as designed and pushed past its limits.
 - `mlracecar.core.geometry.polyline_crossings`, and a bounding-box broad phase for all crossing
