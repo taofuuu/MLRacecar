@@ -36,6 +36,14 @@ All notable changes to this project are documented here. The format is based on
   point), drag to move, right-click to delete, shift+wheel or `[`/`]`
   for road width, pan and zoom, grid snap (G), fit (F), reverse (R), start line (S), and a help
   panel (H). Opens existing track files; saving comes next.
+- Saving and live track checks in the editor: Ctrl+S saves (asking for a file name the first
+  time; untitled tracks are named after their file), Ctrl+Shift+S saves as (asking before
+  replacing another file), F2 renames, and closing with unsaved changes asks first (the title
+  bar shows `*`). Track problems are marked on the map while you draw (red errors, orange
+  warnings) and listed in a corner; pointing at a marker shows the full message, and the status
+  bar says whether the track can be raced. Tracks with errors can still be saved, with a
+  warning. The checks run on a worker thread (ADR-0013), so dragging stays at 60 fps on a
+  3.5 km track.
 - `mlracecar.render`: an immutable `Camera` (metres to pixels, pan, zoom around the cursor,
   fit, grid spacing) and pygame drawing of the grid and the track (road, edges, start line,
   direction arrow) that fills only what's on screen, for a few milliseconds per frame at any

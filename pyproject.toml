@@ -146,6 +146,8 @@ source_modules = [
   "mlracecar.render.camera",
   "mlracecar.editor.draft",
   "mlracecar.editor.controller",
+  "mlracecar.editor.document",
+  "mlracecar.editor.checks",
 ]
 forbidden_modules = ["pygame"]
 

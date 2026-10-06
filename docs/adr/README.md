@@ -26,3 +26,4 @@ To add one, copy [`0000-template.md`](0000-template.md), take the next number, a
 | [0010](0010-c2-cubic-spline-centerline.md)           | Smooth-bend (C2) cubic spline for the track centerline        | Accepted |
 | [0011](0011-immutable-editor-drafts.md)              | The editor edits immutable drafts                             | Accepted |
 | [0012](0012-pygame-ce-for-windows-and-drawing.md)    | pygame-ce for windows and drawing                             | Accepted |
+| [0013](0013-track-checks-in-the-background.md)       | The editor runs the track checks in the background            | Accepted |

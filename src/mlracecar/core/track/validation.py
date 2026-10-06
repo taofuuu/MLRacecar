@@ -6,8 +6,9 @@ highlight. An empty list means the track is fine. Validation never raises for ba
 never modifies them: reshaping a bend automatically would move the road away from the points
 the user placed, so the user decides how to fix it (see ticket #12).
 
-The editor runs this on every edit, so it is built to be fast: about 30 ms of crossing checks
-on a 1.5 km track, thanks to the broad phase in `mlracecar.core.geometry`.
+The editor runs this after every edit (on a worker thread, ADR-0013), so it is built to be
+fast: about 30 ms of crossing checks on a 1.5 km track, thanks to the broad phase in
+`mlracecar.core.geometry`.
 """
 
 from dataclasses import dataclass

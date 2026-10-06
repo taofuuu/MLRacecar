@@ -285,11 +285,21 @@ window, the replay recorder, the video writer, and later the web demo.
   zoom around the cursor, shift+wheel to change the road width at a point, and **G** to snap
   to the grid.
 - **Window:** `EditorWindow` (`mlracecar.editor.app`) is the only part that handles pygame
-  events. It redraws only after input, so an idle editor uses no CPU. Its keyboard shortcuts
-  are one table that also fills the help panel, so the help can't drift from the keys.
-  `racecar edit [file]` opens it.
+  events. It redraws only when something changed, so an idle editor uses no CPU. Its keyboard
+  shortcuts are one table that also fills the help panel, so the help can't drift from the
+  keys. `racecar edit [file]` opens it.
+- **File:** `TrackDocument` (`mlracecar.editor.document`) knows the file and what was last
+  saved; "unsaved changes" is just *draft on screen != draft saved*. Ctrl+S saves (asking for a
+  file name the first time), Ctrl+Shift+S saves as, and closing with unsaved changes asks first.
+  Tracks with errors can be saved, since a draft is work in progress, and the message says
+  they can't be raced yet.
 
-Validation runs on every edit, so mistakes show up while you draw.
+**Track problems show while you draw.** The checks run on a worker thread, newest draft first
+([ADR-0013](adr/0013-track-checks-in-the-background.md)), so a 3.5 km track still drags at 60
+frames per second. Each problem is marked where it is: a ring round a point, coloured road
+edges along a stretch (plus a ring if it's too short to see), or a circle on a spot; red for
+errors, orange for warnings. A compact list sits in the corner (I hides it), pointing at a
+marker shows its full message, and the status bar says "ready to race" or why not.
 
 ### 4.13 Browser demo (M6, open question)
 

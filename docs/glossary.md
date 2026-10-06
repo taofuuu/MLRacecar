@@ -108,6 +108,7 @@
 | **Smoke test** | A quick end-to-end run that just checks nothing crashes. | A 2,000-step training run in CI. |
 | **Benchmark** | A measurement of speed. | Simulation steps per second. |
 | **Coverage** | What percentage of the code is run by the tests. | Target ≥ 90% for `core`. |
+| **Thread / worker thread** | A second line of work running at the same time as the main one. | The editor checks tracks on a worker thread so the window never waits ([ADR-0013](adr/0013-track-checks-in-the-background.md)). |
 | **Headless** | Running without a screen or window. | Training, CI, and the editor's tests (pygame's windows open off-screen). |
 | **Pre-commit hook** | Checks that run automatically every time you commit. | ruff, mypy, import-linter. |
 | **import-linter** | A tool that fails the build if code breaks the "floors" rule. | Enforces the layered architecture, and keeps pygame out of code that must run headless. |
