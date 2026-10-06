@@ -1,8 +1,12 @@
 # ADR-0004: Tracks as closed splines with a width profile, stored as versioned JSON
 
-- **Status:** Accepted
+- **Status:** Accepted; curve type superseded by [ADR-0010](0010-c2-cubic-spline-centerline.md)
 - **Date:** 2026-10-06
 - **Related:** tickets M1-2 to M1-6
+
+> **Superseded in part:** the curve type below (centripetal Catmull-Rom) was replaced by a C2
+> cubic spline in [ADR-0010](0010-c2-cubic-spline-centerline.md). Storing tracks as control
+> points with widths in versioned JSON, with everything else derived, still stands.
 
 > **In plain words:** A track is saved as the list of dots you click, each with a road width. The program draws a smooth curve through the dots and calculates everything else (edges, checkpoints, starting positions) from them. Files stay small and readable, and each one records its format version so old tracks keep working.
 

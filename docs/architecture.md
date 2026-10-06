@@ -118,7 +118,7 @@ core's import allow-list by `tests/unit/test_architecture.py`):
 ### 4.2 Track
 
 ```
-control points ──► centripetal Catmull-Rom (closed) ──► resample every Δs metres
+control points ──► closed C2 cubic spline ──► resample every Δs metres
   (x, y, width)                                        │
                                                        ▼
                      centerline samples: xy, s (arc length), tangent, normal, curvature, width
