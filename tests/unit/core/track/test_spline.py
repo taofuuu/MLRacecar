@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 
 from mlracecar.core.geometry import FloatArray, cross, norm
 from mlracecar.core.track.spline import ALPHA, DEFAULT_SPACING, ClosedSpline
+from strategies import track_like_points
 
 
 def circle(count: int, radius: float = 50.0, clockwise: bool = False) -> FloatArray:
@@ -16,22 +17,6 @@ def circle(count: int, radius: float = 50.0, clockwise: bool = False) -> FloatAr
     if clockwise:
         angles = -angles
     return radius * np.column_stack([np.cos(angles), np.sin(angles)])
-
-
-@st.composite
-def track_like_points(draw: st.DrawFn) -> FloatArray:
-    """8-16 counter-clockwise points on an ellipse of 50-200 m with up to 10% radial jitter.
-
-    The shapes resemble hand-drawn tracks; their splines are smooth simple loops.
-    """
-    count = draw(st.integers(min_value=8, max_value=16))
-    width = draw(st.floats(min_value=50, max_value=200))
-    height = draw(st.floats(min_value=50, max_value=200))
-    jitter = np.array(draw(st.lists(st.floats(-0.1, 0.1), min_size=count, max_size=count)))
-    angles = np.linspace(0, 2 * np.pi, count, endpoint=False)
-    return (1 + jitter)[:, None] * np.column_stack(
-        [width * np.cos(angles), height * np.sin(angles)]
-    )
 
 
 def reference_position(points: FloatArray, piece: int, fraction: float) -> FloatArray:
@@ -213,6 +198,23 @@ def test_resampled_fields_are_consistent(points: FloatArray) -> None:
     )
     assert np.all((centerline.fraction >= 0) & (centerline.fraction < 1))
     assert np.all(np.diff(centerline.piece) >= 0)
+
+
+@given(track_like_points(), st.lists(st.floats(-500, 1500), min_size=1, max_size=10))
+def test_locate_and_arc_length_at_are_inverses(points: FloatArray, distances: list[float]) -> None:
+    spline = ClosedSpline.through(points)
+    piece, fraction = spline.locate(distances)
+    assert np.all((piece >= 0) & (piece < len(points)))
+    np.testing.assert_allclose(
+        spline.arc_length_at(piece, fraction), np.mod(distances, spline.length), atol=1e-6
+    )
+
+
+def test_arc_length_at_control_points_starts_at_zero_and_increases() -> None:
+    spline = ClosedSpline.through(circle(8))
+    at_points = spline.arc_length_at(np.arange(8), 0.0)
+    assert at_points[0] == 0
+    np.testing.assert_allclose(np.diff(at_points), spline.length / 8, rtol=1e-6)
 
 
 def test_default_spacing_is_half_a_metre() -> None:

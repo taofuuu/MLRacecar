@@ -122,6 +122,41 @@ class ClosedSpline:
         result: FloatArray = cross(first, second) / norm(first) ** 3
         return result
 
+    def locate(self, arc_length: ArrayLike) -> tuple[IntArray, FloatArray]:
+        """Piece and fraction at given distances along the loop.
+
+        Distances wrap around: ``-1`` is one metre before the start, ``length + 1`` one metre
+        after it.
+
+        Args:
+            arc_length: Distances along the loop from control point 0, in metres, any shape.
+
+        Returns:
+            ``(piece, fraction)`` arrays with the same shape as ``arc_length``.
+        """
+        distance = np.mod(np.asarray(arc_length, dtype=np.float64), self.length)
+        # Invert the arc-length table: distance along the loop -> global parameter piece+fraction.
+        parameter_grid = np.linspace(0.0, len(self.control_points), len(self.arc_table))
+        parameter = np.asarray(np.interp(distance, self.arc_table, parameter_grid))
+        piece = np.minimum(parameter.astype(np.intp), len(self.control_points) - 1)
+        fraction: FloatArray = parameter - piece
+        return piece, fraction
+
+    def arc_length_at(self, piece: ArrayLike, fraction: ArrayLike) -> FloatArray:
+        """Distance along the loop from control point 0 to the given spots (inverse of `locate`).
+
+        Args:
+            piece: Piece indices, any shape.
+            fraction: Positions within each piece, from 0 to 1, broadcastable against ``piece``.
+
+        Returns:
+            Distances in metres, the broadcast shape of the inputs.
+        """
+        parameter = np.asarray(piece, dtype=np.float64) + np.asarray(fraction, dtype=np.float64)
+        parameter_grid = np.linspace(0.0, len(self.control_points), len(self.arc_table))
+        result: FloatArray = np.asarray(np.interp(parameter, parameter_grid, self.arc_table))
+        return result
+
     def resample(self, spacing: float = DEFAULT_SPACING) -> Centerline:
         """Sample the loop at (almost exactly) even distances.
 
@@ -141,11 +176,7 @@ class ClosedSpline:
             raise ValueError(f"spacing must be positive, got {spacing}")
         count = max(3, round(self.length / spacing))
         arc_length = np.arange(count, dtype=np.float64) * (self.length / count)
-        # Invert the arc-length table: distance along the loop -> global parameter piece+fraction.
-        parameter_grid = np.linspace(0.0, len(self.control_points), len(self.arc_table))
-        parameter = np.interp(arc_length, self.arc_table, parameter_grid)
-        piece = np.minimum(parameter.astype(np.intp), len(self.control_points) - 1)
-        fraction = parameter - piece
+        piece, fraction = self.locate(arc_length)
 
         velocity = self.velocity(piece, fraction)
         tangent = velocity / norm(velocity)[:, None]

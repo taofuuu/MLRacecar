@@ -13,6 +13,9 @@ All notable changes to this project are documented here. The format is based on
   property-tested with Hypothesis.
 - `mlracecar.core.track.spline`: closed C2 cubic spline through control points (ADR-0010) with
   even arc-length resampling, unit tangents and normals, and signed curvature.
+- `mlracecar.core.track.model.Track`: road widths blended smoothly between control points, left
+  and right edges, evenly spaced checkpoints with the start/finish line at control point 0,
+  poses at any distance along the track, and a staggered two-wide starting grid.
 
 - Project vision, architecture, ADRs 0001–0009, roadmap, and contribution workflow.
 - Backlog definition and an idempotent GitHub seeding script.
