@@ -56,7 +56,9 @@
 | Term | Plain meaning | Where it shows up here |
 |------|---------------|------------------------|
 | **Spline** | A smooth curve drawn through a set of points. | The track centerline. |
-| **Catmull-Rom (centripetal)** | A kind of spline that passes exactly through your points without loops or sharp spikes. | How your clicked dots become a smooth track. |
+| **Cubic spline (C2)** | A smooth curve through your points, built from one cubic formula per stretch. "C2" means its position, direction, *and* bend all change smoothly. | How your clicked dots become a smooth track ([ADR-0010](adr/0010-c2-cubic-spline-centerline.md)). |
+| **C1 / C2 continuity** | C1: the direction never jumps (no kinks). C2: the bend (curvature) never jumps either. | Why corners drawn as steady arcs bend steadily. |
+| **Catmull-Rom spline** | A curve through points whose direction is smooth but whose bend jumps at each point (C1). | Our first choice, replaced by the C2 spline. |
 | **Arc length (s)** | Distance travelled along the curve. | How far around the lap a car is. |
 | **Segment / polyline** | A segment is a straight line between two points; a polyline is a chain of segments. | Track edges and the centerline are polylines. |
 | **2D cross product** | One number that says whether vector *b* turns left (positive) or right (negative) from vector *a*. | Which side of the road a car is on; whether two segments cross. |

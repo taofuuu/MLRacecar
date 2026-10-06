@@ -57,7 +57,7 @@ The tables below list each milestone's tickets: key, ticket, type, priority, siz
 | Key  | Ticket                                          | Type    | Pri | Size |
 |------|-------------------------------------------------|---------|-----|------|
 | [M1-1](https://github.com/taofuuu/MLRacecar/issues/9) | Vectorized 2D geometry primitives               | feature | P0  | M    |
-| [M1-2](https://github.com/taofuuu/MLRacecar/issues/10) | Closed centripetal Catmull-Rom spline centerline | feature | P0 | M    |
+| [M1-2](https://github.com/taofuuu/MLRacecar/issues/10) | Closed C2 cubic spline centerline (ADR-0010) | feature | P0 | M    |
 | [M1-3](https://github.com/taofuuu/MLRacecar/issues/11) | Track model: boundaries, checkpoints, start grid | feature | P0 | M    |
 | [M1-4](https://github.com/taofuuu/MLRacecar/issues/12) | Track validation rules                          | feature | P0  | M    |
 | [M1-5](https://github.com/taofuuu/MLRacecar/issues/13) | Versioned JSON track file format                | feature | P0  | S    |

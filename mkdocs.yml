@@ -30,6 +30,7 @@ nav:
       - adr/0007-python-toolchain.md
       - adr/0008-typed-configuration.md
       - adr/0009-development-workflow.md
+      - adr/0010-c2-cubic-spline-centerline.md
       - ADR template: adr/0000-template.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md

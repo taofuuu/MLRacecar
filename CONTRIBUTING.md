@@ -14,7 +14,7 @@ How work flows through this project, from idea to release. The reasoning is in
    `size:L`, consider splitting it first.
 2. **Branch** off `main`: `<type>/<issue>-<short-slug>`, e.g. `feat/10-spline-centerline`.
 3. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/):
-   `feat(track): add centripetal Catmull-Rom resampling`.
+   `feat(track): add arc-length resampling to the spline`.
 4. **Open a PR** early (draft is fine). The PR template asks for a summary, a plain-words
    box, how each acceptance criterion was verified, and the Definition of Done. Keep
    `Closes #<issue>` at the bottom.

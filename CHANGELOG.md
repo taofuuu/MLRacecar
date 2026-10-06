@@ -11,6 +11,8 @@ All notable changes to this project are documented here. The format is based on
 - `mlracecar.core.geometry`: vectorized 2D geometry (cross product, rotation, angle wrapping,
   segment intersection, raycasts, projection onto a polyline, self-intersection detection),
   property-tested with Hypothesis.
+- `mlracecar.core.track.spline`: closed C2 cubic spline through control points (ADR-0010) with
+  even arc-length resampling, unit tangents and normals, and signed curvature.
 
 - Project vision, architecture, ADRs 0001–0009, roadmap, and contribution workflow.
 - Backlog definition and an idempotent GitHub seeding script.
