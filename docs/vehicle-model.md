@@ -13,20 +13,24 @@ This page describes the first car model, the **kinematic bicycle** (`KinematicBi
 
 ## What the default car can do
 
-The default car is a sporty road car: 1300 kg, 200 kW, and road tyres (grip 1.0).
+The default car is a light race car: 1300 kg, 250 kW, tyres that grip at up to 2 g (like a
+race car with aerodynamic downforce), and brakes that stop it at almost 3 g. It started as a
+plain sporty road car (200 kW, grip 1.0, 13 kN brakes). Test drives with the keyboard showed
+that car was hard to control: it was slow to speed up and slow down, and couldn't turn hard
+enough to make the corners. The race car is the tuning that drove well.
 
 | | |
 |---|---|
-| 0–100 km/h | 4.7 s |
-| 0–200 km/h | 14.4 s |
-| Top speed | 280 km/h |
-| Braking 100–0 km/h | 37.5 m |
-| Braking 200–0 km/h | 145 m |
-| Fastest through a bend of radius 12 m / 50 m / 200 m | 39 / 80 / 159 km/h |
+| 0–100 km/h | 3.2 s |
+| 0–200 km/h | 10.6 s |
+| Top speed | 303 km/h |
+| Braking 100–0 km/h | 13.3 m |
+| Braking 200–0 km/h | 53 m |
+| Fastest through a bend of radius 12 m / 50 m / 200 m | 55 / 113 / 226 km/h |
 | Tightest turn (rear-axle radius, at walking pace) | 4.7 m |
-| Steering lock to lock | 0.67 s |
+| Steering lock to lock | 0.33 s |
 
-The tests keep the top speed at about 280 km/h and 0–100 km/h between 4 and 6 seconds, so a
+The tests keep the top speed at about 300 km/h and 0–100 km/h between 2.5 and 4 seconds, so a
 change to the physics that makes the car feel different shows up straight away.
 
 ## The driver's controls
@@ -61,7 +65,7 @@ Each step of length `dt` (1/120 s by default) does this, for all cars at once:
 2. **Speed.** The forces along the car add up to an acceleration:
 
     - **Engine:** `pedal · min(max_drive_force, max_power / v)`, for `pedal > 0`. Below
-      90 km/h the engine pushes with its full force; above that its power runs out, and the push
+      75 km/h the engine pushes with its full force; above that its power runs out, and the push
       falls as the speed rises.
     - **Brakes:** `pedal · max_brake_force`, for `pedal < 0`.
     - **Air drag:** `½ · ρ · Cd · A · v²`, with air density `ρ = 1.225 kg/m³`.

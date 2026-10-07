@@ -49,6 +49,7 @@ flowchart LR
 flowchart TB
   cli["cli<br/>(composition root)"]
   editor[editor]
+  play["play<br/>(racecar drive)"]
   training["training<br/>(train · eval · tracking)"]
   agents[agents]
   env[env]
@@ -58,7 +59,10 @@ flowchart TB
   core["core<br/>(NumPy only)"]
 
   cli --> editor
+  cli --> play
   cli --> training
+  play --> agents
+  play --> render
   training --> agents
   training --> io
   agents --> env
@@ -105,6 +109,7 @@ core's import allow-list by `tests/unit/test_architecture.py`):
 | `training`          | Training runs, evaluation, experiment tracking                     | `TrainingRun`, `Evaluator`, `Tracker`                |
 | `render`            | Drawing snapshots: track, kerbs, cars, HUD, debug overlays; video  | `Camera`, `RaceRenderer`, `Hud`, `VideoWriter`       |
 | `editor`            | Track editor application (MVC with immutable drafts)               | `TrackDraft`, `EditorController`, `EditorWindow`     |
+| `play`              | Driving yourself (`racecar drive`); racing agents later (M5)       | `DriveWindow`                                        |
 | `cli`               | `racecar` command-line entry points (Typer)                        | n/a                                                  |
 
 ## 4. Core domain
@@ -256,7 +261,10 @@ class Agent(Protocol):
 ```
 
 Implementations: `KeyboardAgent` (M2), `SB3Agent` (M4), `OnnxAgent` (M6), `PPOAgent` (M8,
-our own). Every saved model ships a **model card** (observation spec hash, action spec,
+our own). `KeyboardAgent` turns held keys into smooth steering (0.15 s to full lock, 0.1 s back
+to straight) and an immediate pedal; the window tells it which keys are held, so it never
+imports pygame. `racecar drive` (`play.drive.DriveWindow`) runs the race in real time, one
+decision every 0.05 s, while drawing 60 frames a second with the car blended between decisions. Every saved model ships a **model card** (observation spec hash, action spec,
 environment config, library versions, git SHA) that is checked on load.
 
 ### 4.10 Training pipeline

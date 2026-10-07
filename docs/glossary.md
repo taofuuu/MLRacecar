@@ -141,6 +141,7 @@
 |------|---------------|------------------------|
 | **Reinforcement learning** | Learning by trial and error: try actions, get rewarded or penalized, slowly do more of what works. | How the car learns to drive. |
 | **Agent** | The decision-maker: anything that looks at the situation and picks an action. | Keyboard (you), SB3, our PPO. |
+| **Interpolation** | Working out in-between values from two known ones, like where a car is a third of the way between two moments. | Smooth motion: the race moves 20 times a second, the screen draws 60. |
 | **Environment** | The world the agent acts in; it reports what happened after each action. | `RacingEnv` |
 | **Observation** | What the agent "sees" each step. | Ray distances, speed, angle to the track. |
 | **Action** | What the agent does each step. | Steering and gas/brake, each from −1 to 1. |

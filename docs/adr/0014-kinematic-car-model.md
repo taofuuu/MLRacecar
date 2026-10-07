@@ -57,7 +57,8 @@ clipped to `[-1, 1]`.
 
 - **Positive:** cornering speed depends on the corner's radius and the tyres' grip, as in a
   real car, so braking for corners matters from the first training run. The new `grip`
-  setting (1.0 for the default car) is the friction coefficient #19 needs. The rear axle
+  setting (1.0 for the default car then; see `configs/default.yaml` now) is the friction
+  coefficient #19 needs. The rear axle
   still follows a circle of radius `wheelbase / tan(steer)` when grip allows (tested).
 - **Negative / costs:** at the grip limit the car keeps all its speed, where real tyres would
   scrub some off. Braking and accelerating don't reduce cornering grip (no friction circle).

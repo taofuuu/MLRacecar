@@ -1,4 +1,4 @@
-"""The `racecar` command line. Subcommands for driving and training come later."""
+"""The `racecar` command line. Subcommands for training come later."""
 
 import os
 from pathlib import Path
@@ -97,6 +97,58 @@ def edit(
         typer.echo(f"Can't open the track. {error}", err=True)
         raise typer.Exit(1) from None
     run_editor(document)
+
+
+@app.command()
+def drive(
+    track: Annotated[Path, typer.Argument(help="The track to drive, e.g. tracks/gp-circuit.json.")],
+    files: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--config", metavar="FILE", help="A settings file (YAML). Repeat to apply several."
+        ),
+    ] = None,
+    overrides: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--set",
+            metavar="KEY=VALUE",
+            help="Change one setting, e.g. --set race.off_track=reset. Repeat to change several.",
+        ),
+    ] = None,
+) -> None:
+    """Drive a car round a track with the keyboard, with lap times.
+
+    Arrow keys or WASD drive; R restarts. Needs the `render` extra (pygame).
+    """
+    try:
+        config = load_config(files or (), overrides or ())
+    except ConfigError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from None
+    try:
+        track_file = read_track_file(track)
+    except TrackFileError as error:
+        typer.echo(f"Can't open the track. {error}", err=True)
+        raise typer.Exit(1) from None
+    if has_errors(validate(track_file.points, track_file.widths)):
+        typer.echo(
+            f"{track} has problems that make it undrivable. See them with: racecar check {track}",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+    try:
+        from mlracecar.play.drive import run_drive  # here, not at the top: pygame is optional
+    except ModuleNotFoundError as error:
+        if error.name != "pygame":
+            raise
+        typer.echo(
+            "Driving needs pygame. Install it with: pip install 'mlracecar[render]'", err=True
+        )
+        raise typer.Exit(1) from None
+    run_drive(track_file.to_track(), config, title=track_file.name)
 
 
 @app.command(name="config")

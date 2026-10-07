@@ -58,7 +58,8 @@ def test_lock_to_lock_takes_twice_the_lock_over_the_rate() -> None:
         steer = steer_toward(steer, np.array([-1.0]), CAR, DT)
         steps += 1
 
-    assert steps * DT == pytest.approx(2 * CAR.max_steer / CAR.steer_rate, abs=DT)
+    # Whole steps: the last one may finish the turn a fraction of a step late.
+    assert 0 <= steps * DT - 2 * CAR.max_steer / CAR.steer_rate <= DT * (1 + 1e-9)
     assert steer[0] == pytest.approx(-CAR.max_steer)
 
 

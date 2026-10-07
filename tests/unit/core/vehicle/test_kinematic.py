@@ -81,9 +81,10 @@ def test_constant_steering_drives_a_circle_of_radius_wheelbase_over_tan_steer(
 ) -> None:
     angle = math.radians(degrees)
     radius = CAR.wheelbase / math.tan(angle)
-    # Half the speed at which the grip limit would widen the circle, held steady: with the
+    # Half the speed at which even 1 g of grip would widen the circle, held steady: with the
     # speed changing, the steps' small lag in direction would shift the circle as it goes.
-    speed = 0.5 * math.sqrt(CAR.grip * GRAVITY * radius)
+    # (The faster the turn, the more that lag also moves the rear axle off the circle.)
+    speed = 0.5 * math.sqrt(GRAVITY * radius)
     steady = KinematicBicycle(replace(CAR, drag_coefficient=0.0, rolling_resistance=0.0))
     lap = 2 * math.pi * radius / speed
     start = one_car(speed=speed, steer=angle)
@@ -101,7 +102,7 @@ def test_constant_steering_drives_a_circle_of_radius_wheelbase_over_tan_steer(
 def test_full_throttle_reaches_the_top_speed_where_power_meets_drag() -> None:
     state = drive(one_car(), [[0.0, 1.0]], round(240 / DT))[-1]  # four minutes
 
-    assert top_speed(CAR) * 3.6 == pytest.approx(280, abs=5)  # km/h
+    assert top_speed(CAR) * 3.6 == pytest.approx(303, abs=5)  # km/h
     assert state.speed[0] == pytest.approx(top_speed(CAR), rel=1e-4)
 
 
@@ -160,7 +161,7 @@ def test_with_straight_wheels_the_car_drives_straight_along_its_heading() -> Non
 
 
 def test_too_fast_for_the_turn_the_car_runs_wide_at_the_grip_limit() -> None:
-    speed = 30.0
+    speed = 40.0
     state = MODEL.step(one_car(speed=speed, steer=CAR.max_steer), [[1.0, 0.0]], DT)
 
     # tan(sideslip) = tan(turn) / 2, so the rear axle's radius is wheelbase · vx / (2 vy).
@@ -192,7 +193,7 @@ def test_the_default_car_is_quick() -> None:
     states = drive(one_car(), [[0.0, 1.0]], round(10 / DT))
     seconds = DT * next(index for index, state in enumerate(states) if state.speed[0] >= 100 / 3.6)
 
-    assert 4 < seconds < 6  # 0-100 km/h, like a sporty road car
+    assert 2.5 < seconds < 4  # 0-100 km/h, like a hot sporty car
 
 
 def test_bad_actions_are_refused() -> None:
