@@ -194,6 +194,14 @@ sequenceDiagram
   E-->>A: obs, reward, terminated, truncated, info
 ```
 
+`World(track, model, timing, cars, rng)` is the only part that changes as the race goes on.
+Each `step(actions)` holds every car's action for `action_repeat` physics steps and returns a
+`Snapshot` (tick, time, and every car's state) whose arrays are read-only, so the renderer, a
+replay, or the environment can keep it without copying. `reset(mask, start=...)` puts some
+cars back on their own grid spots or at random places along the road, at rest, without
+touching the others; random starts are the only use of the world's random generator. Cars
+are ghosts until collisions arrive in M7.
+
 ### 4.5 Race rules
 
 - **Progress:** each car is projected onto the centerline using a local search window around

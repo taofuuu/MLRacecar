@@ -36,6 +36,11 @@ All notable changes to this project are documented here. The format is based on
   road car (about 280 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
+- The simulation world (`mlracecar.core.world.World`): N cars on a track, stepped one driver
+  decision at a time (each action held for `action_repeat` physics steps), with frozen
+  `Snapshot`s whose arrays are read-only. `reset` puts chosen cars back on their own grid
+  spots or at random places on the road, at rest, without touching the others. The same seed
+  and actions give exactly the same race. One decision for 1024 cars takes about 0.6 ms.
 - Car physics (`mlracecar.core.vehicle`, ADR-0014): `VehicleState` for N cars at once, and
   the `KinematicBicycle` model behind a `DynamicsModel` protocol. Steering turns the wheels
   at a limited rate; the engine's push fades with speed once its power runs out; brakes, air

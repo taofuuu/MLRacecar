@@ -33,7 +33,12 @@ PEDAL = 1
 
 
 class DynamicsModel(Protocol):
-    """Moves N cars forward by one physics step."""
+    """Moves N cars of one kind forward by one physics step."""
+
+    @property
+    def params(self) -> VehicleParams:
+        """The kind of car: its size, engine, brakes, and so on."""
+        ...
 
     def step(self, state: VehicleState, actions: ArrayLike, dt: float) -> VehicleState:
         """The cars' state ``dt`` seconds later, given each car's ``[steer, pedal]`` action."""
