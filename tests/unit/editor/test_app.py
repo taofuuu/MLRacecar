@@ -221,6 +221,8 @@ def test_the_help_lists_every_shortcut_and_no_key_does_two_things() -> None:
     assert len(CHORDS) == len(set(CHORDS))
     labels = [label for label, _ in HELP_LINES]
     assert all(shortcut.label in labels for shortcut in SHORTCUTS)
+    assert "Hold C + wheel" in labels
+    assert all(chord.key != pygame.K_c for chord in CHORDS)  # C is for rounding
 
 
 def test_ctrl_s_is_not_s() -> None:
@@ -241,6 +243,53 @@ def test_resizing_the_window_resizes_the_view() -> None:
     window = open_window(TrackDraft())
     window.handle(pygame.event.Event(pygame.VIDEORESIZE, size=(900, 700), w=900, h=700))
     assert window.controller.camera.size == (900, 700)
+
+
+# --------------------------------------------------------------------------- #
+# Rounding a corner
+# --------------------------------------------------------------------------- #
+
+
+def key_up(code: int) -> pygame.event.Event:
+    return pygame.event.Event(pygame.KEYUP, key=code, mod=0)
+
+
+def test_holding_c_and_turning_the_wheel_rounds_a_corner() -> None:
+    window = open_window()
+    window.handle(mouse(pygame.MOUSEMOTION, on_screen(window, SQUARE.points[0])))
+    for _ in range(3):  # the key repeats while it's held
+        window.handle(key(pygame.K_c))
+    window.handle(wheel(2))
+    window.handle(wheel(1))
+    rounding = window.controller.rounding
+    assert rounding is not None
+    assert rounding.radius == 33.0
+    assert window.controller.camera.scale == open_window().controller.camera.scale  # no zoom
+    window.handle(key_up(pygame.K_c))
+    assert window.controller.rounding is None
+    assert len(window.controller.draft.points) > 4
+    window.handle(key(pygame.K_z, ctrl=True))
+    assert window.controller.draft == SQUARE
+
+
+def test_esc_while_rounding_puts_the_corner_back_and_keeps_the_selection() -> None:
+    window = open_window()
+    window.handle(mouse(pygame.MOUSEMOTION, on_screen(window, SQUARE.points[0])))
+    window.handle(key(pygame.K_c))
+    window.handle(key(pygame.K_ESCAPE))
+    assert window.controller.draft == SQUARE
+    assert window.controller.selected == 0
+    window.handle(key_up(pygame.K_c))
+    assert window.controller.draft == SQUARE
+
+
+def test_c_away_from_a_corner_says_what_to_do() -> None:
+    window = open_window()
+    window.handle(mouse(pygame.MOUSEMOTION, (400, 300)))
+    window.handle(key(pygame.K_c))
+    assert window.message == Message("Point at a corner, or select one, to round it.", WARNING)
+    window.handle(key(pygame.K_c, ctrl=True))  # Ctrl+C isn't rounding
+    assert window.controller.rounding is None
 
 
 # --------------------------------------------------------------------------- #

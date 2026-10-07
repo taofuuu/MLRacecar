@@ -15,7 +15,8 @@ from mlracecar.core.track.validation import (
     Stretch,
     ValidationIssue,
 )
-from mlracecar.editor.controller import EditorController
+from mlracecar.editor.controller import EditorController, Rounding
+from mlracecar.editor.corners import CornerLimits
 from mlracecar.editor.draft import Point, TrackDraft
 from mlracecar.editor.view import (
     ERROR,
@@ -34,6 +35,7 @@ from mlracecar.editor.view import (
     Overlays,
     _stretch_samples,
     issues_under_cursor,
+    rounding_status,
 )
 from mlracecar.render.camera import Camera
 from mlracecar.render.drawing import BACKGROUND, ROAD
@@ -366,3 +368,21 @@ def test_a_dialog_shows_in_the_middle_with_what_was_typed() -> None:
     question = render(editor, Overlays(dialog=DialogBox("Close?", "Q: close")))
     middle = pygame.Rect(SIZE[0] // 2 - 200, SIZE[1] // 2 - 60, 400, 120)
     assert count(asking, SELECTED, middle) > count(question, SELECTED, middle) > 0
+
+
+def test_while_rounding_the_status_bar_gives_the_radius_and_what_fits() -> None:
+    limits = CornerLimits(8.0, 68.8)
+    assert rounding_status(Rounding(1, 25.0, limits)).startswith("Corner radius 25 m (fits 8-69 m)")
+    assert "(the widest that fits)" in rounding_status(Rounding(1, 68.8, limits))
+    assert "(the tightest the track checks accept)" in rounding_status(Rounding(1, 8.0, limits))
+    assert "let go of C: keep" in rounding_status(Rounding(1, 25.0, limits))
+
+
+def test_while_rounding_the_status_bar_is_highlighted() -> None:
+    editor = square()
+    editor.move(pixel_of(SQUARE[0]))
+    editor.start_rounding()
+    surface = render(editor)
+    width, height = surface.get_size()
+    row = [surface.get_at((x, height - 13))[:3] for x in range(0, width // 2)]
+    assert SELECTED in row

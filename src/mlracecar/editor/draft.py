@@ -18,6 +18,8 @@ from pydantic import JsonValue
 from mlracecar.core.geometry import FloatArray, norm, project_onto_polyline
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import ValidationIssue, has_errors, validate
+from mlracecar.editor import corners
+from mlracecar.editor.corners import CornerLimits
 from mlracecar.io.track_file import TrackFile
 
 type Point = tuple[float, float]
@@ -196,12 +198,42 @@ class TrackDraft:
             self.points[index:] + self.points[:index], self.widths[index:] + self.widths[:index]
         )
 
+    def corner_limits(self, index: int) -> CornerLimits:
+        """The radii the corner at a point can be rounded to (see `round_corner`).
+
+        Raises:
+            mlracecar.editor.corners.CornerError: If the point isn't a corner, or no radius
+                fits there.
+        """
+        self._check(index)
+        return corners.corner_limits(self._point_array(), np.array(self.widths), index)
+
+    def round_corner(self, index: int, radius: float) -> tuple[Self, int]:
+        """Replace a sharp point with points along a smooth bend of ``radius`` metres.
+
+        The bend eases into a circular arc of that radius and out again, touching the straights
+        to the neighbouring corners, whose points are replaced too (see
+        `mlracecar.editor.corners`). Returns the new draft and the index of the bend's middle
+        point.
+
+        Raises:
+            mlracecar.editor.corners.CornerError: If the point isn't a corner, or ``radius``
+                doesn't fit (`corner_limits` gives the radii that do).
+        """
+        self._check(index)
+        rounded = corners.round_corner(self._point_array(), np.array(self.widths), index, radius)
+        draft = self._with(
+            tuple((float(x), float(y)) for x, y in rounded.points),
+            tuple(float(width) for width in rounded.widths),
+        )
+        return draft, rounded.middle
+
     def rename(self, name: str) -> Self:
         """Change the track's name (an empty name keeps the old one)."""
         return replace(self, name=name.strip() or self.name)
 
     def rounded(self, decimals: int) -> Self:
-        """Round every position and width to ``decimals`` decimal places (2 is a centimetre)."""
+        """Round every position and width to ``decimals`` decimal places (3 is a millimetre)."""
 
         def tidy(value: float) -> float:
             return round(value, decimals) + 0.0  # + 0.0 turns -0.0 into 0.0
@@ -217,6 +249,9 @@ class TrackDraft:
 
     def _with(self, points: tuple[Point, ...], widths: tuple[float, ...]) -> Self:
         return replace(self, points=points, widths=widths)
+
+    def _point_array(self) -> FloatArray:
+        return np.array(self.points, dtype=np.float64).reshape(-1, 2)
 
     def _check(self, index: int) -> None:
         if not 0 <= index < len(self.points):

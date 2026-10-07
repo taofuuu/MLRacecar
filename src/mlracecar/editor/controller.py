@@ -13,10 +13,13 @@ Mouse:
 - **Right-click** a point to delete it.
 - **Right-drag** or **middle-drag** pans; the **wheel** zooms around the cursor.
 - **Shift+wheel** widens or narrows the road at the point under the cursor (or the selected one).
+- **Hold C and turn the wheel** to round the corner under the cursor (or the selected one): the
+  wheel changes the radius, the rounded corner shows as you go, and letting go of C keeps it.
 
 Every edit can be undone (`EditorController.undo`). One undo step is one whole action: a click,
 or a drag with the point the click may have added. Widening or narrowing the road at a point
-notch by notch, with the wheel or the keys, is one step too.
+notch by notch, with the wheel or the keys, is one step too, and so is rounding a corner,
+however much the wheel turned.
 """
 
 from collections.abc import Hashable
@@ -25,6 +28,7 @@ from enum import IntEnum
 
 import numpy as np
 
+from mlracecar.editor.corners import CornerError, CornerLimits
 from mlracecar.editor.draft import Point, TrackDraft
 from mlracecar.editor.history import History
 from mlracecar.render.camera import Camera
@@ -45,6 +49,12 @@ ZOOM_STEP = 1.2
 
 PAN_STEP = 60.0
 """Pixels per arrow key press."""
+
+DEFAULT_RADIUS = 25.0
+"""Radius, in metres, the first corner is rounded to; after that, the one used last."""
+
+RADIUS_STEP = 1.1
+"""Factor the corner radius changes by per wheel notch."""
 
 
 class Button(IntEnum):
@@ -72,6 +82,33 @@ class _Pan:
     last: Pixel
 
 
+@dataclass
+class _Rounding:
+    before: TrackDraft
+    """The draft before rounding started, so the whole rounding is one undo step."""
+    index: int
+    """The corner being rounded, in ``before``."""
+    limits: CornerLimits
+    wanted: float
+    """The radius the wheel has asked for, before rounding it to whole metres."""
+
+    @property
+    def radius(self) -> float:
+        """The radius used: ``wanted`` in whole metres, within the limits."""
+        return float(np.clip(round(self.wanted), self.limits.smallest, self.limits.largest))
+
+
+@dataclass(frozen=True)
+class Rounding:
+    """The corner being rounded, for the status bar."""
+
+    point: int
+    """Index of the corner in the track before rounding."""
+    radius: float
+    """Metres."""
+    limits: CornerLimits
+
+
 class EditorController:
     """The editor's state: the draft, the camera, and what the user is pointing at or holding.
 
@@ -88,7 +125,9 @@ class EditorController:
         self.selected: int | None = None
         self.cursor: Pixel = (camera.size[0] / 2, camera.size[1] / 2)
         """The mouse position in window pixels."""
-        self._gesture: _PointDrag | _Pan | None = None
+        self.last_radius = DEFAULT_RADIUS
+        """The radius the last corner was rounded to; the next one starts there."""
+        self._gesture: _PointDrag | _Pan | _Rounding | None = None
 
     # ------------------------------------------------------------------ #
     # What's under the cursor
@@ -104,6 +143,13 @@ class EditorController:
     def hovered(self) -> int | None:
         """The point under the cursor, if any."""
         return self.draft.point_near(self.cursor_world, GRAB_RADIUS / self.camera.scale)
+
+    @property
+    def rounding(self) -> Rounding | None:
+        """The corner being rounded, while C is held."""
+        if not isinstance(self._gesture, _Rounding):
+            return None
+        return Rounding(self._gesture.index, self._gesture.radius, self._gesture.limits)
 
     @property
     def grid_step(self) -> float:
@@ -161,8 +207,11 @@ class EditorController:
         """The wheel turned ``notches`` (positive is away from the user) at the cursor.
 
         Zooms around the cursor; with shift, changes the road width at the point under the
-        cursor, or at the selected point.
+        cursor, or at the selected point. While a corner is being rounded, changes its radius.
         """
+        if isinstance(self._gesture, _Rounding):
+            self._change_radius(self._gesture, notches)
+            return
         if not shift:
             self.camera = self.camera.zoom_at(self.cursor, ZOOM_STEP**notches)
             return
@@ -181,8 +230,10 @@ class EditorController:
     def edit(self, draft: TrackDraft, *, merge: Hashable | None = None) -> None:
         """Make an edited draft the current one, as one undo step.
 
-        Edits in a row with the same ``merge`` key make one step (see `History.record`).
+        Edits in a row with the same ``merge`` key make one step (see `History.record`). A
+        gesture in progress (a drag, or rounding a corner) is finished first.
         """
+        self._finish_gesture()
         self.history.record(self.draft, draft, merge=merge)
         self.draft = draft
 
@@ -198,6 +249,44 @@ class EditorController:
         """Put back the last edit undone; returns whether there was one."""
         self._finish_gesture()
         return self._go_to(self.history.redo(self.draft))
+
+    # ------------------------------------------------------------------ #
+    # Rounding a corner (hold C, turn the wheel, let go)
+    # ------------------------------------------------------------------ #
+
+    def start_rounding(self) -> None:
+        """Round the corner under the cursor (or the selected one) at the radius used last.
+
+        Does nothing if a corner is already being rounded (a held key repeats).
+
+        Raises:
+            mlracecar.editor.corners.CornerError: If there's no point to round, it isn't a
+                corner, or no radius fits there. The message says which.
+        """
+        if isinstance(self._gesture, _Rounding):
+            return
+        self._finish_gesture()
+        hovered = self.hovered
+        index = hovered if hovered is not None else self.selected
+        if index is None:
+            raise CornerError("point at a corner, or select one, to round it")
+        limits = self.draft.corner_limits(index)
+        rounding = _Rounding(self.draft, index, limits, self.last_radius)
+        self._gesture = rounding
+        self.draft, self.selected = rounding.before.round_corner(index, rounding.radius)
+
+    def finish_rounding(self) -> None:
+        """Keep the rounded corner (C was let go), as one undo step."""
+        if isinstance(self._gesture, _Rounding):
+            self._finish_gesture()
+
+    def cancel_rounding(self) -> bool:
+        """Put the corner back as it was; returns whether a corner was being rounded."""
+        if not isinstance(self._gesture, _Rounding):
+            return False
+        self.draft, self.selected = self._gesture.before, self._gesture.index
+        self._gesture = None
+        return True
 
     # ------------------------------------------------------------------ #
     # Keyboard actions
@@ -258,11 +347,25 @@ class EditorController:
     # ------------------------------------------------------------------ #
 
     def _finish_gesture(self) -> None:
-        """End the gesture in progress. A drag, with the point its press may have added, is one
-        undo step."""
-        if isinstance(self._gesture, _PointDrag):
-            self.history.record(self._gesture.before, self.draft)
+        """End the gesture in progress. A drag (with the point its press may have added) or a
+        rounding is one undo step."""
+        match self._gesture:
+            case _PointDrag(before=before):
+                self.history.record(before, self.draft)
+            case _Rounding(before=before) as rounding:
+                self.history.record(before, self.draft)
+                self.last_radius = rounding.radius
         self._gesture = None
+
+    def _change_radius(self, rounding: _Rounding, notches: float) -> None:
+        limits = rounding.limits
+        old = rounding.radius
+        wanted = rounding.wanted * RADIUS_STEP**notches
+        rounding.wanted = float(np.clip(wanted, limits.smallest, limits.largest))
+        if rounding.radius != old:
+            self.draft, self.selected = rounding.before.round_corner(
+                rounding.index, rounding.radius
+            )
 
     def _go_to(self, draft: TrackDraft | None) -> bool:
         """Switch to a draft from the history, if there is one."""

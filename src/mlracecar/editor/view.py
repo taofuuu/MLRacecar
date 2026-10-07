@@ -22,7 +22,7 @@ from mlracecar.core.track.validation import (
     Stretch,
     ValidationIssue,
 )
-from mlracecar.editor.controller import EditorController
+from mlracecar.editor.controller import EditorController, Rounding
 from mlracecar.render.drawing import BACKGROUND, Color, draw_grid, draw_track
 
 POINT: Color = (96, 165, 250)
@@ -213,6 +213,10 @@ class EditorView:
         bar = pygame.Rect(0, height - STATUS_HEIGHT, width, STATUS_HEIGHT)
         surface.fill(PANEL[:3], bar)
 
+        if editor.rounding is not None:
+            text = rounding_status(editor.rounding)
+            self._text(surface, text, (10, bar.centery), SELECTED, anchor="midleft")
+            return
         draft = editor.draft
         track = draft.track
         x, y = editor.cursor_world
@@ -316,6 +320,19 @@ def _stretch_samples(track: Track, start: float, end: float) -> IntArray:
         return inside[np.argsort(ahead[inside])]
     first = int(np.argmin(ahead))
     return np.array([first, (first + 1) % len(ahead)])
+
+
+def rounding_status(rounding: Rounding) -> str:
+    """What the status bar says while a corner is being rounded."""
+    limits = rounding.limits
+    text = f"Corner radius {rounding.radius:.0f} m"
+    if rounding.radius >= limits.largest:
+        text += " (the widest that fits)"
+    elif rounding.radius <= limits.smallest:
+        text += " (the tightest the track checks accept)"
+    else:
+        text += f" (fits {limits.smallest:.0f}-{limits.largest:.0f} m)"
+    return text + "   wheel: change   let go of C: keep   Esc: put it back"
 
 
 def issues_under_cursor(

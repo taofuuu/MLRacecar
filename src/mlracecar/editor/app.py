@@ -17,6 +17,7 @@ import pygame
 from mlracecar.core.track.validation import Severity
 from mlracecar.editor.checks import BackgroundChecks
 from mlracecar.editor.controller import PAN_STEP, WIDTH_STEP, Button, EditorController
+from mlracecar.editor.corners import CornerError
 from mlracecar.editor.document import TrackDocument
 from mlracecar.editor.draft import TrackDraft
 from mlracecar.editor.view import (
@@ -43,6 +44,9 @@ MESSAGE_SECONDS = 4.0
 """How long a message (like "Saved ...") stays on screen."""
 
 ENTER_KEYS = (pygame.K_RETURN, pygame.K_KP_ENTER)
+
+CTRL_KEYS = pygame.KMOD_CTRL | pygame.KMOD_META
+"""Ctrl, or Cmd on a Mac."""
 
 
 @dataclass
@@ -127,8 +131,14 @@ class EditorWindow:
                 editor.scroll(event.y or event.x, shift=True)  # some systems send shift+wheel as x
             case pygame.MOUSEWHEEL:
                 editor.scroll(event.precise_y)
+            case pygame.KEYDOWN if event.key == pygame.K_c and not event.mod & CTRL_KEYS:
+                self.start_rounding()
+            case pygame.KEYUP if event.key == pygame.K_c:
+                editor.finish_rounding()
+            case pygame.KEYDOWN if event.key == pygame.K_ESCAPE and editor.rounding is not None:
+                editor.cancel_rounding()
             case pygame.KEYDOWN:
-                ctrl = bool(event.mod & (pygame.KMOD_CTRL | pygame.KMOD_META))  # Cmd on a Mac
+                ctrl = bool(event.mod & CTRL_KEYS)
                 shifted = bool(event.mod & pygame.KMOD_SHIFT)
                 action = _KEY_ACTIONS.get(Chord(event.key, ctrl, shifted)) or _KEY_ACTIONS.get(
                     Chord(event.key, ctrl)  # e.g. "+" is shift+= on many keyboards
@@ -208,6 +218,13 @@ class EditorWindow:
         """Put back the last edit undone."""
         if not self.controller.redo():
             self._show("Nothing to redo.", WARNING)
+
+    def start_rounding(self) -> None:
+        """Start rounding the corner under the cursor, or say why it can't be rounded."""
+        try:
+            self.controller.start_rounding()
+        except CornerError as error:
+            self._show(_sentence(str(error)), WARNING)
 
     def toggle_help(self) -> None:
         """Show or hide the help panel."""
@@ -449,6 +466,7 @@ MOUSE_HELP = (
     ("Right-drag", "pan"),
     ("Wheel", "zoom"),
     ("Shift+wheel", "narrow / widen the road at a point"),
+    ("Hold C + wheel", "round the corner at a point (let go of C to keep it)"),
 )
 
 HELP_LINES = (
@@ -459,6 +477,12 @@ HELP_LINES = (
 _KEY_ACTIONS = {
     chord: action for shortcut in SHORTCUTS for chord, action in shortcut.actions.items()
 }
+
+
+def _sentence(text: str) -> str:
+    """``text`` with a capital letter and a full stop, for a message."""
+    text = text[:1].upper() + text[1:]
+    return text if text.endswith((".", "!", "?")) else text + "."
 
 
 def _fitting_window_size() -> tuple[int, int]:

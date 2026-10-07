@@ -66,6 +66,8 @@
 | **C1 / C2 continuity** | C1: the direction never jumps (no kinks). C2: the bend (curvature) never jumps either. | Why corners drawn as steady arcs bend steadily. |
 | **Catmull-Rom spline** | A curve through points whose direction is smooth but whose bend jumps at each point (C1). | Our first choice, replaced by the C2 spline. |
 | **Arc length (s)** | Distance travelled along the curve. | How far around the lap a car is. |
+| **Easing section (transition curve)** | A stretch where a road's bend tightens gradually from straight to a circle, or opens out again, instead of all at once. Real roads and railways use them. | How the editor rounds a corner, so the smooth curve can follow it ([ADR-0014](adr/0014-rounded-corners.md)). |
+| **Fillet** | Rounding off a sharp corner where two straight lines meet with a curve that touches both. | Rounding a corner in the editor (#79). |
 | **Segment / polyline** | A segment is a straight line between two points; a polyline is a chain of segments. | Track edges and the centerline are polylines. |
 | **2D cross product** | One number that says whether vector *b* turns left (positive) or right (negative) from vector *a*. | Which side of the road a car is on; whether two segments cross. |
 | **Projection (onto a polyline)** | Finding the closest point on a line to a given point. | Progress along the lap and distance from the road's middle. |

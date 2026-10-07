@@ -41,7 +41,7 @@ format is in [ADR-0004](adr/0004-track-representation.md).
 
 Unknown fields are rejected, so a typo like `"widht"` is caught instead of silently ignored.
 Numbers must be finite. Any precision is accepted, but the editor saves positions and widths
-to the centimetre (2 decimal places) to keep files readable. The formal definition is the
+to the millimetre (3 decimal places) to keep files readable. The formal definition is the
 JSON Schema: [`track-file-v1.json`](schemas/track-file-v1.json).
 
 ## Well-formed versus valid

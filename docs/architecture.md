@@ -292,14 +292,24 @@ window, the replay recorder, the video writer, and later the web demo.
   saved; "unsaved changes" is just *draft on screen != draft saved*. Ctrl+S saves (asking for a
   file name the first time), Ctrl+Shift+S saves as, and closing with unsaved changes asks first.
   Tracks with errors can be saved, since a draft is work in progress, and the message says
-  they can't be raced yet. Positions and widths are saved to the centimetre, so files stay
-  readable (`-314.08`, not `-314.0837535325377`).
+  they can't be raced yet. Positions and widths are saved to the millimetre, so files stay
+  readable (`-314.084`, not `-314.0837535325377`). Not coarser: a rounded corner's points can be
+  a metre apart, and centimetre steps that close together shift its tightest radius by up to
+  9% (1% for millimetres).
 - **Undo:** `History` (`mlracecar.editor.history`) keeps up to 500 earlier drafts. The
   controller records one step per finished action: a click, a whole drag (with the point its
   click may have added), or a run of width changes at one point, notch by notch. Kept drafts
   drop their cached track (about 1.2 MB on a 3.5 km circuit, rebuilt in about 13 ms), so the
   whole history takes about a megabyte. Ctrl+Z undoes; Ctrl+Y or Ctrl+Shift+Z redoes. Saving
   isn't a step, though it may name the track after its file and round its numbers.
+- **Rounding corners:** sketch one point per corner, then **hold C and turn the wheel** over a
+  corner. `mlracecar.editor.corners` swaps the point for points along a bend that eases into a
+  circular arc of the chosen radius and out again, and rebuilds the straights on either side
+  with gaps that grow away from the bend. The actual track's tightest radius comes out within
+  6% of the radius chosen, from 10-degree kinks to 165-degree hairpins
+  ([ADR-0014](adr/0014-rounded-corners.md)). The preview updates as the wheel turns, the status
+  bar shows the radius and the range that fits, letting go of C keeps it as one undo step, and
+  Esc puts the corner back. The next corner starts at the radius used last.
 
 **Track problems show while you draw.** The checks run on a worker thread, newest draft first
 ([ADR-0013](adr/0013-track-checks-in-the-background.md)), so a 3.5 km track still drags at 60

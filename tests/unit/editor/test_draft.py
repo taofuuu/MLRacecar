@@ -1,5 +1,6 @@
 """Tests for mlracecar.editor.draft: the editor's headless model."""
 
+import contextlib
 import math
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from hypothesis import strategies as st
 
 from circuits import gp_circuit
 from mlracecar.core.track.validation import has_errors
+from mlracecar.editor.corners import CornerError
 from mlracecar.editor.draft import DEFAULT_WIDTH, MAX_WIDTH, MIN_WIDTH, Point, TrackDraft
 from mlracecar.io.track_file import (
     TrackFileError,
@@ -157,6 +159,30 @@ def test_rename() -> None:
     assert draft.rename("   ").name == draft.name  # an empty name keeps the old one
 
 
+def test_round_corner_gives_the_new_draft_and_the_middle_of_the_bend() -> None:
+    square = TrackDraft(
+        points=((100.0, -100.0), (100.0, 100.0), (-100.0, 100.0), (-100.0, -100.0)),
+        widths=(12.0,) * 4,
+        name="Square",
+    )
+    limits = square.corner_limits(1)
+    rounded, middle = square.round_corner(1, 30.0)
+    assert limits.smallest <= 30.0 <= limits.largest
+    assert rounded.name == "Square"
+    assert len(rounded.points) == len(rounded.widths) > 4
+    assert all(type(x) is float and type(y) is float for x, y in rounded.points)  # not numpy
+    distances = [math.dist(point, (100.0, 100.0)) for point in rounded.points]
+    assert middle == distances.index(min(distances))
+    assert rounded.track is not None
+
+
+def test_round_corner_checks_the_point_exists() -> None:
+    with pytest.raises(IndexError):
+        TrackDraft().corner_limits(0)
+    with pytest.raises(IndexError):
+        TrackDraft().round_corner(0, 10.0)
+
+
 def test_rounding_tidies_positions_and_widths() -> None:
     draft = TrackDraft(points=((1.23456, -0.004), (-314.0837535325377, 7.0)), widths=(12.378, 9.0))
     rounded = draft.rounded(2)
@@ -271,6 +297,7 @@ edits = st.lists(
         st.tuples(st.just("width"), st.integers(0, 50), st.floats(-30, 30)),
         st.tuples(st.just("reverse")),
         st.tuples(st.just("start"), st.integers(0, 50)),
+        st.tuples(st.just("round"), st.integers(0, 50), st.floats(5, 100)),
     ),
     max_size=25,
 )
@@ -296,6 +323,10 @@ def test_any_editing_session_keeps_the_draft_consistent(session: list[tuple[obje
                 draft = draft.reverse()
             case ("start", int(i)) if count:
                 draft = draft.set_start(i % count)
+            case ("round", int(i), float(radius)) if count:
+                # Not a corner, or the radius doesn't fit: then the draft stays as it was.
+                with contextlib.suppress(CornerError):
+                    draft, _ = draft.round_corner(i % count, radius)
     assert len(draft.points) == len(draft.widths)
     assert all(MIN_WIDTH <= width <= MAX_WIDTH for width in draft.widths)
     assert isinstance(draft.issues, list)  # validation copes with whatever the session made

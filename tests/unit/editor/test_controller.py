@@ -9,6 +9,7 @@ from hypothesis import strategies as st
 
 from circuits import gp_circuit
 from mlracecar.editor.controller import (
+    DEFAULT_RADIUS,
     DRAG_THRESHOLD,
     PAN_STEP,
     WIDTH_STEP,
@@ -16,6 +17,7 @@ from mlracecar.editor.controller import (
     Button,
     EditorController,
 )
+from mlracecar.editor.corners import CornerError
 from mlracecar.editor.draft import DEFAULT_WIDTH, Point, TrackDraft
 from mlracecar.render.camera import Camera
 
@@ -332,6 +334,14 @@ def test_snap_toggles_and_the_window_can_resize() -> None:
 # --------------------------------------------------------------------------- #
 
 
+def round_with_c(editor: EditorController) -> None:
+    editor.move(pixel_of(editor.draft.points[0]))
+    editor.start_rounding()
+    for _ in range(3):
+        editor.scroll(1)
+    editor.finish_rounding()
+
+
 def widen_with_the_wheel(editor: EditorController) -> None:
     editor.move(pixel_of(editor.draft.points[1]))
     editor.scroll(1, shift=True)
@@ -351,6 +361,7 @@ EDITS: dict[str, Callable[[EditorController], object]] = {
     "reverse": EditorController.reverse,
     "move the start": EditorController.start_at_selected,
     "rename": lambda editor: editor.edit(editor.draft.rename("Renamed")),
+    "round a corner": round_with_c,
 }
 
 
@@ -429,6 +440,7 @@ session_actions = st.lists(
         st.tuples(st.just("drag"), pixels, pixels),
         st.tuples(st.just("right-click"), pixels),
         st.tuples(st.just("wheel"), pixels, st.integers(-3, 3)),
+        st.tuples(st.just("round"), pixels, st.integers(-4, 4)),
         st.sampled_from([("delete",), ("narrow",), ("reverse",), ("start",), ("undo",)]),
     ),
     max_size=20,
@@ -462,6 +474,14 @@ def test_any_session_can_be_undone_to_the_start_and_redone_to_the_end(
                 editor.start_at_selected()
             case ("undo",):
                 editor.undo()
+            case ("round", (int(x), int(y)), int(notches)):
+                editor.move((x, y))
+                try:
+                    editor.start_rounding()
+                except CornerError:
+                    continue
+                editor.scroll(notches)
+                editor.finish_rounding()
     end = editor.draft
     steps = 0
     while editor.undo():
@@ -470,3 +490,117 @@ def test_any_session_can_be_undone_to_the_start_and_redone_to_the_end(
     for _ in range(steps):
         assert editor.redo()
     assert editor.draft == end
+
+
+# --------------------------------------------------------------------------- #
+# Rounding a corner (hold C, turn the wheel, let go)
+# --------------------------------------------------------------------------- #
+
+
+def start_rounding_at(editor: EditorController, index: int) -> None:
+    editor.move(pixel_of(editor.draft.points[index]))
+    editor.start_rounding()
+
+
+def test_holding_c_on_a_corner_shows_it_rounded_at_once() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    rounding = editor.rounding
+    assert rounding is not None
+    assert rounding.point == 0
+    assert rounding.radius == DEFAULT_RADIUS
+    assert len(editor.draft.points) > 4  # the preview is the draft on screen
+    assert editor.selected == 0  # the middle of the bend, which is point 0 here
+
+
+def test_the_wheel_changes_the_radius_and_letting_go_keeps_it_as_one_step() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    editor.scroll(3)  # 25 m * 1.1 ** 3 = 33.3 m
+    rounding = editor.rounding
+    assert rounding is not None
+    assert rounding.radius == 33.0
+    assert editor.draft == square_editor().draft.round_corner(0, 33.0)[0]
+    editor.finish_rounding()
+    assert editor.rounding is None
+    assert editor.last_radius == 33.0
+    assert editor.undo()
+    assert editor.draft == square_editor().draft
+    assert not editor.undo()
+
+
+def test_the_next_corner_starts_at_the_radius_used_last() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    editor.scroll(-2)
+    editor.finish_rounding()
+    index = editor.draft.points.index((-100.0, 100.0))
+    start_rounding_at(editor, index)
+    rounding = editor.rounding
+    assert rounding is not None
+    assert rounding.radius == 21.0  # round(25 / 1.1 ** 2)
+
+
+def test_the_wheel_stops_at_the_radii_that_fit() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    editor.scroll(50)
+    rounding = editor.rounding
+    assert rounding is not None
+    assert rounding.radius == rounding.limits.largest
+    editor.scroll(-1)  # straight back down, not after 50 notches
+    assert editor.rounding is not None
+    assert editor.rounding.radius < rounding.limits.largest
+    editor.scroll(-100)
+    assert editor.rounding.radius == rounding.limits.smallest
+
+
+def test_esc_puts_the_corner_back() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    editor.scroll(2)
+    assert editor.cancel_rounding()
+    assert editor.draft == square_editor().draft
+    assert editor.rounding is None
+    assert editor.selected == 0
+    assert not editor.undo()  # nothing happened
+    assert not editor.cancel_rounding()
+
+
+def test_a_held_key_repeating_keeps_the_same_rounding() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    editor.scroll(3)
+    editor.start_rounding()  # the key repeats while held
+    assert editor.rounding is not None
+    assert editor.rounding.radius == 33.0
+
+
+def test_rounding_uses_the_selected_point_when_none_is_under_the_cursor() -> None:
+    editor = square_editor()
+    editor.selected = 2
+    editor.move((400, 300))  # the middle of the square
+    editor.start_rounding()
+    assert editor.rounding is not None
+    assert editor.rounding.point == 2
+
+
+def test_rounding_needs_a_corner() -> None:
+    editor = square_editor()
+    editor.move((400, 300))
+    with pytest.raises(CornerError, match="point at a corner"):
+        editor.start_rounding()
+    assert editor.rounding is None
+
+
+def test_clicking_or_undoing_while_rounding_keeps_the_rounding_first() -> None:
+    editor = square_editor()
+    start_rounding_at(editor, 0)
+    rounded = editor.draft
+    click(editor, (400, 300))  # adds a point; the rounding was kept first
+    assert editor.rounding is None
+    assert editor.undo()
+    assert editor.draft == rounded
+    start_rounding_at(editor, editor.draft.points.index((-100.0, -100.0)))
+    editor.undo()  # undoes that rounding, kept first
+    assert editor.draft == rounded

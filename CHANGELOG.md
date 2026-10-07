@@ -47,7 +47,11 @@ All notable changes to this project are documented here. The format is based on
 - Undo and redo in the editor: Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes, up to 500 steps.
   One step is one whole action: a click, a drag, or a run of width changes at one point.
   Undoing back to the saved track clears the unsaved-changes star. The editor now saves
-  positions and widths to the centimetre, so track files stay readable.
+  positions and widths to the millimetre, so track files stay readable.
+- Rounding a corner in the editor: hold C and turn the wheel over a corner to replace it with a
+  smooth bend of the chosen radius, previewed live; letting go of C keeps it (one undo step) and
+  Esc puts it back. Bends ease in and out like real roads and come out within 6% of the radius
+  chosen (ADR-0014). The status bar shows the radius and the range that fits.
 - `mlracecar.render`: an immutable `Camera` (metres to pixels, pan, zoom around the cursor,
   fit, grid spacing) and pygame drawing of the grid and the track (road, edges, start line,
   direction arrow) that fills only what's on screen, for a few milliseconds per frame at any

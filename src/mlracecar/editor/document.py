@@ -15,9 +15,10 @@ from mlracecar.io.track_file import read_track_file, write_track_file
 TRACK_FOLDER = Path("tracks")
 """Where new tracks are suggested to go, if that folder exists."""
 
-SAVED_DECIMALS = 2
-"""Positions and widths are saved to this many decimal places: the nearest centimetre, far finer
-than anyone places a point, so files stay readable (``-314.08``, not ``-314.0837535325377``)."""
+SAVED_DECIMALS = 3
+"""Positions and widths are saved to this many decimal places: the nearest millimetre, so files
+stay readable (``-314.084``, not ``-314.0837535325377``). Not coarser: a rounded corner's points
+can be a metre or two apart, and centimetre steps that close together bend the curve visibly."""
 
 
 @dataclass
