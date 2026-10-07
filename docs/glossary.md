@@ -78,6 +78,10 @@
 | **Curvature** | How sharply a curve bends (1 / radius). | Tight corners have high curvature. |
 | **Pose** | Where something is *and* which way it faces: a position plus a heading angle. | Starting-grid slots; car positions. |
 | **Checkpoint** | A line across the road. A lap only counts if the car crosses every checkpoint in order. | Evenly spaced around the lap; checkpoint 0 is the start/finish line. |
+| **Valid lap** | A lap in which the car crossed every checkpoint in order. Only valid laps count and set lap times. | `LapCompleted.valid` |
+| **Sector** | One of the three parts a lap is split into, each timed separately, as in real racing. | `LapCompleted.sectors` |
+| **Amortized O(1)** | The work per step stays the same small amount on average, however big the input (here: however long the track). | Finding each car on the road. |
+| **Pure pursuit** | A simple way to steer along a path: aim at a point a few metres ahead on it and steer onto the arc that reaches it. | The test-only scripted driver. |
 | **Starting grid / pole position** | The cars' starting spots: two lanes, staggered, behind the start line. Pole position is the front spot. | `Track.start_grid`. |
 | **Smoothstep** | A blend between two values that starts and ends gently (flat), instead of in a straight ramp. | How road width changes between dots: no kinks in the edges. |
 | **Boundary folding** | When a corner is so tight the inner edge of the road crosses over itself. | A track validation rule. |

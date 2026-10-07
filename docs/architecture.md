@@ -206,10 +206,12 @@ are ghosts until collisions arrive in M7.
 
 - **Progress:** each car is projected onto the centerline using a local search window around
   its previous position (amortized O(1) per car). This gives arc length `s`, lateral offset
-  `d`, and heading error relative to the track.
-- **Checkpoints** must be crossed in order. A lap only counts if every checkpoint was
-  crossed, which blocks reverse-over-the-line and corner-cutting exploits (agents *will*
-  find these).
+  `d`, and heading error relative to the track, plus the distance driven since the start.
+- **Checkpoints** are lines across the road that end at its edges, and must be crossed in
+  order. A lap only counts if every checkpoint was crossed; crossing one backwards undoes
+  crossing it. This blocks reverse-over-the-line and corner-cutting exploits (agents *will*
+  find these). Lap and sector times are interpolated between updates.
+  See [Race rules](race-rules.md).
 - **Off-track policy** is configurable: `none | slowdown | reset | terminate`.
 - **Events** (`LapCompleted`, `OffTrack`, `WrongWay`, `Collision`) are returned as plain
   data, not callbacks, so they are easy to log, test, and replay.
