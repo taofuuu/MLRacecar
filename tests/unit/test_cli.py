@@ -172,3 +172,37 @@ def test_edit_does_not_hide_other_import_errors(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setitem(sys.modules, "mlracecar.editor.app", None)
     result = runner.invoke(app, ["edit"])
     assert isinstance(result.exception, ModuleNotFoundError)
+
+
+# --------------------------------------------------------------------------- #
+# racecar config
+# --------------------------------------------------------------------------- #
+
+DEFAULT_CONFIG = Path(__file__).parents[2] / "configs" / "default.yaml"
+
+
+def test_config_shows_the_default_settings() -> None:
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0
+    assert result.output == DEFAULT_CONFIG.read_text(encoding="utf-8")
+
+
+def test_config_applies_files_then_set(tmp_path: Path) -> None:
+    path = tmp_path / "heavy-car.yaml"
+    path.write_text("vehicle:\n  mass: 1800\n  width: 1.9\n", encoding="utf-8")
+    result = runner.invoke(app, ["config", str(path), "--set", "vehicle.mass=1500"])
+    assert result.exit_code == 0
+    assert "  mass: 1500 " in result.output
+    assert "  width: 1.9 " in result.output
+
+
+def test_config_lists_invalid_settings() -> None:
+    result = runner.invoke(app, ["config", "--set", "vehicle.mass=-5"])
+    assert result.exit_code == 1
+    assert "vehicle.mass: must be greater than 0, got -5 (from --set)" in result.output
+
+
+def test_config_reports_an_unreadable_file(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["config", str(tmp_path / "missing.yaml")])
+    assert result.exit_code == 1
+    assert "missing.yaml: can't read the file" in result.output

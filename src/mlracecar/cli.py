@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from mlracecar import __version__
+from mlracecar.config.files import ConfigError, format_config, load_config
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
 from mlracecar.editor.document import TrackDocument
@@ -96,3 +97,33 @@ def edit(
         typer.echo(f"Can't open the track. {error}", err=True)
         raise typer.Exit(1) from None
     run_editor(document)
+
+
+@app.command(name="config")
+def show_config(
+    files: Annotated[
+        list[Path] | None,
+        typer.Argument(
+            help="Settings files (YAML), applied in order. Each only needs the settings it changes."
+        ),
+    ] = None,
+    overrides: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--set",
+            metavar="KEY=VALUE",
+            help="Change one setting, e.g. --set vehicle.mass=1500. Repeat to change several.",
+        ),
+    ] = None,
+) -> None:
+    """Show the settings that would be used: the defaults, changed by the files (in order) and
+    then by --set.
+
+    Exits with status 1 if a file can't be read or a setting is invalid.
+    """
+    try:
+        config = load_config(files or (), overrides or ())
+    except ConfigError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from None
+    typer.echo(format_config(config), nl=False)

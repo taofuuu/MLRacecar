@@ -98,7 +98,7 @@ core's import allow-list by `tests/unit/test_architecture.py`):
 | `core.race`         | Progress, checkpoints, laps, timing, off-track rules, collisions   | `RaceState`, `RaceRules`, `RaceEvent`                |
 | `core.sensors`      | Raycast distance sensors                                           | `RaySensor`                                          |
 | `core.world`        | Fixed-timestep simulation of N cars                                | `World`, `Snapshot`                                  |
-| `config`            | Typed configuration (pydantic) to core dataclasses                 | `VehicleConfig`, `EnvConfig`, `TrainConfig`          |
+| `config`            | Typed configuration (pydantic) to core dataclasses                 | `RacecarConfig`, `VehicleConfig`, `load_config`      |
 | `io`                | Versioned file formats: tracks, replays, model cards               | `TrackFile`, `ReplayWriter`, `ModelCard`             |
 | `env`               | Gymnasium / PettingZoo adapters, observations, rewards             | `RacingEnv`, `BatchedRacingEnv`, `ObservationSpec`   |
 | `agents`            | Anything that maps observations to actions                         | `Agent`, `KeyboardAgent`, `SB3Agent`, `OnnxAgent`    |
@@ -323,7 +323,7 @@ The NumPy-only rule for `core` keeps option 1 open.
 
 | Concern          | Approach                                                                                                       |
 |------------------|----------------------------------------------------------------------------------------------------------------|
-| Configuration    | Pydantic models + YAML; precedence: defaults < file < `--set key=value`; resolved config always saved ([ADR-0008](adr/0008-typed-configuration.md)). |
+| Configuration    | Pydantic models + YAML; precedence: defaults < file < `--set key=value`; resolved config always saved ([ADR-0008](adr/0008-typed-configuration.md), [Settings](configuration.md)). |
 | Determinism      | No global RNG. Every component receives an `np.random.Generator`; child seeds come from `SeedSequence.spawn`. The simulation is bitwise reproducible on a given platform; GPU training reproducibility is best-effort and documented. |
 | Versioned formats| Track files, replays, and model cards carry `schema_version`, with a migration registry for old versions.      |
 | Errors           | Validation returns structured issues. I/O errors name the file and field. No bare `except`.                    |
@@ -348,7 +348,7 @@ The NumPy-only rule for `core` keeps option 1 open.
 ```
 MLRacecar/
 ├── .github/            # CI workflows, issue and PR templates
-├── configs/            # YAML configs: vehicle/, env/, train/
+├── configs/            # YAML settings; default.yaml lists every setting
 ├── docs/               # vision, architecture, ADRs, roadmap, guides, experiment log
 ├── scripts/            # one-off and maintenance scripts (e.g. backlog seeding)
 ├── src/mlracecar/
