@@ -24,6 +24,8 @@ class VehicleParams:
     """How far the front wheels turn at full lock, in radians."""
     steer_rate: float
     """How fast the front wheels can turn, in radians per second."""
+    grip: float
+    """Tyre friction coefficient: the tyres hold the car in a turn up to ``grip · g`` sideways."""
     max_drive_force: float
     """The most the engine can push, in newtons. At high speed `max_power` limits it instead."""
     max_power: float

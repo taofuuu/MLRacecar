@@ -283,6 +283,7 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         mass=draw(positive),
         max_steer=draw(st.floats(0, 90, exclude_min=True, exclude_max=True)),
         steer_rate=draw(positive),
+        grip=draw(positive),
         max_drive_force=draw(positive),
         max_power=draw(positive),
         max_brake_force=draw(positive),

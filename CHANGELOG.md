@@ -36,6 +36,12 @@ All notable changes to this project are documented here. The format is based on
   road car (about 280 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
+- Car physics (`mlracecar.core.vehicle`, ADR-0014): `VehicleState` for N cars at once, and
+  the `KinematicBicycle` model behind a `DynamicsModel` protocol. Steering turns the wheels
+  at a limited rate; the engine's push fades with speed once its power runs out; brakes, air
+  drag and rolling resistance slow the car, which has no reverse gear. A new `grip` setting
+  limits cornering, so a car too fast for a bend runs wide. The default car does 0-100 km/h
+  in 4.7 s and stops from 100 km/h in 37.5 m. See the new Car physics page.
 - `mlracecar.editor.draft.TrackDraft`: the track editor's headless model. Immutable drafts
   (ADR-0011) with append, insert-into-stretch, move, delete, width, reverse-direction, and
   set-start edits, cached track and validation per draft, and conversion to and from track files.
@@ -86,6 +92,8 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- `wrap_angle` returns angles that are already in range unchanged. Before, it could change
+  them by a rounding error, which would have made a car driving straight drift off course.
 - Control points closer than a micrometre now count as on top of each other: the track checks
   report them, and the track code refuses them, instead of dividing by zero.
 - Track files saved as UTF-16 (what Windows PowerShell 5.1's `>` and `Out-File` write) or as

@@ -34,9 +34,11 @@ nav:
       - adr/0011-immutable-editor-drafts.md
       - adr/0012-pygame-ce-for-windows-and-drawing.md
       - adr/0013-track-checks-in-the-background.md
+      - adr/0014-kinematic-car-model.md
       - ADR template: adr/0000-template.md
   - Track file format: track-format.md
   - Settings: configuration.md
+  - Car physics: vehicle-model.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md
   - API reference: reference.md
