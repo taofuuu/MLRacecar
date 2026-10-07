@@ -165,20 +165,27 @@ def read_track_file(path: str | Path) -> TrackFile:
     """
     path = Path(path)
     try:
-        text = path.read_text(encoding="utf-8")
+        # As bytes, so JSON can tell UTF-8 from UTF-16 (what Windows PowerShell 5.1's `>` writes).
+        content = path.read_bytes()
     except OSError as error:
         raise TrackFileError(f"{path}: can't read the file ({error.strerror})") from error
-    return parse_track_file(text, source=str(path))
+    return parse_track_file(content, source=str(path))
 
 
-def parse_track_file(text: str, source: str = "track file") -> TrackFile:
+def parse_track_file(text: str | bytes, source: str = "track file") -> TrackFile:
     """Check the text of a track file; ``source`` names it in error messages.
+
+    Bytes may be UTF-8, or UTF-16 with a byte-order mark.
 
     Raises:
         TrackFileError: If the text isn't a well-formed track file.
     """
     try:
         data = json.loads(text)
+    except UnicodeDecodeError as error:
+        raise TrackFileError(
+            f"{source}: not readable text ({error.reason} at position {error.start})"
+        ) from None
     except json.JSONDecodeError as error:
         raise TrackFileError(
             f"{source}: not valid JSON (line {error.lineno}, column {error.colno}): {error.msg}"

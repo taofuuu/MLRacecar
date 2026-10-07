@@ -88,3 +88,6 @@ All notable changes to this project are documented here. The format is based on
 
 - Control points closer than a micrometre now count as on top of each other: the track checks
   report them, and the track code refuses them, instead of dividing by zero.
+- Track files saved as UTF-16 (what Windows PowerShell 5.1's `>` and `Out-File` write) or as
+  UTF-8 with a byte-order mark now open. A file that isn't text at all gets the usual
+  "Can't open the track." message from `racecar check` and `racecar edit`, instead of a crash.
