@@ -39,6 +39,7 @@ nav:
   - Track file format: track-format.md
   - Settings: configuration.md
   - Car physics: vehicle-model.md
+  - Race rules: race-rules.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md
   - API reference: reference.md

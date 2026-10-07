@@ -36,6 +36,11 @@ All notable changes to this project are documented here. The format is based on
   road car (about 280 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
+- Race rules (`mlracecar.core.race`), part 1: each car's position along the lap, distance
+  driven, offset from the middle of the road and heading error; checkpoints that must be
+  crossed in order (backwards undoes, missing one invalidates the lap); laps, lap and sector
+  times, and best and latest lap; `LapCompleted` events in each snapshot. See the new Race
+  rules page.
 - The simulation world (`mlracecar.core.world.World`): N cars on a track, stepped one driver
   decision at a time (each action held for `action_repeat` physics steps), with frozen
   `Snapshot`s whose arrays are read-only. `reset` puts chosen cars back on their own grid

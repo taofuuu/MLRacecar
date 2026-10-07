@@ -1,12 +1,14 @@
 """Tests for mlracecar.core.world: timing, steps, resets, frozen snapshots, and determinism."""
 
 from dataclasses import fields
+from typing import Any
 
 import numpy as np
 import pytest
 
 from mlracecar.config.models import VehicleConfig
-from mlracecar.core.geometry import FloatArray, wrap_angle
+from mlracecar.core.geometry import BoolArray, FloatArray, wrap_angle
+from mlracecar.core.race.rules import RaceState
 from mlracecar.core.track.model import GridLayout, Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.vehicle.state import VehicleState
@@ -29,12 +31,16 @@ def random_actions(rng: np.random.Generator, cars: int) -> FloatArray:
     return rng.uniform(-1.0, 1.0, (cars, 2))
 
 
-def assert_same_cars(first: VehicleState, second: VehicleState) -> None:
-    """Bitwise equal, field by field."""
-    for field in fields(VehicleState):
+def assert_same(first: Any, second: Any) -> None:
+    """Two car or race states, bitwise equal, field by field."""
+    for field in fields(first):
         np.testing.assert_array_equal(
             getattr(first, field.name), getattr(second, field.name), err_msg=field.name
         )
+
+
+def subset[State: (VehicleState, RaceState)](state: State, cars: BoolArray) -> State:
+    return type(state)(**{field.name: getattr(state, field.name)[cars] for field in fields(state)})
 
 
 def assert_at_rest(cars: VehicleState) -> None:
@@ -80,7 +86,7 @@ def test_a_step_holds_each_action_for_one_driver_decision() -> None:
 
     assert snapshot is world.snapshot
     assert (snapshot.tick, snapshot.time) == (6, 0.05)
-    assert_same_cars(snapshot.cars, expected)
+    assert_same(snapshot.cars, expected)
 
 
 def test_a_step_refuses_bad_actions() -> None:
@@ -98,9 +104,11 @@ def test_snapshots_are_frozen() -> None:
     world.step(np.tile([1.0, 1.0], (8, 1)))
     world.reset()
 
-    assert_same_cars(first.cars, kept)
+    assert_same(first.cars, kept)
     with pytest.raises(ValueError, match="read-only"):
         first.cars.x[0] = 0.0
+    with pytest.raises(ValueError, match="read-only"):
+        first.race.distance[0] = 0.0
 
 
 # --------------------------------------------------------------------------- #
@@ -128,7 +136,9 @@ def test_the_same_seed_and_actions_give_exactly_the_same_race(seed: int) -> None
     assert len(first) == len(second) == 66
     for one, other in zip(first, second, strict=True):
         assert (one.tick, one.time) == (other.tick, other.time)
-        assert_same_cars(one.cars, other.cars)
+        assert_same(one.cars, other.cars)
+        assert_same(one.race, other.race)
+        assert repr(one.events) == repr(other.events)  # repr: NaN sector times compare equal
 
 
 def test_another_seed_starts_cars_elsewhere() -> None:
@@ -150,12 +160,15 @@ def test_resetting_some_cars_does_not_affect_the_others(start: StartPosition) ->
     after = reset.reset(chosen, start=start)
 
     assert_at_rest(after.cars.select(chosen))
-    assert_same_cars(after.cars.select(~chosen), untouched.snapshot.cars.select(~chosen))
+    assert_same(after.cars.select(~chosen), untouched.snapshot.cars.select(~chosen))
+    assert_same(subset(after.race, ~chosen), subset(untouched.snapshot.race, ~chosen))
+    np.testing.assert_array_equal(after.race.checkpoint[chosen], -1)  # their race restarts
+    np.testing.assert_array_equal(after.race.distance[chosen], 0.0)
     for _ in range(20):
         actions = random_actions(choices, 8)
-        assert_same_cars(
-            reset.step(actions).cars.select(~chosen), untouched.step(actions).cars.select(~chosen)
-        )
+        one, other = reset.step(actions), untouched.step(actions)
+        assert_same(one.cars.select(~chosen), other.cars.select(~chosen))
+        assert_same(subset(one.race, ~chosen), subset(other.race, ~chosen))
 
 
 # --------------------------------------------------------------------------- #
