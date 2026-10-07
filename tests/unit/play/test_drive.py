@@ -205,3 +205,14 @@ def test_run_drive_opens_a_window_and_returns_when_it_is_closed() -> None:
     run_drive(CIRCLE, RacecarConfig(), "Circle")
 
     assert not pygame.display.get_init()
+
+
+def test_at_speed_a_held_key_turns_the_wheels_only_a_little(window: DriveWindow) -> None:
+    drive(window, HeldKeys(throttle=True), 2.0)
+    speed = window.world.snapshot.cars.speed[0]
+
+    cars = drive(window, HeldKeys(throttle=True, left=True), 0.3).cars
+
+    max_steer = window.world.model.params.max_steer
+    assert speed > 15  # m/s
+    assert 0 < cars.steer[0] < 0.3 * max_steer  # a slow car's keys would reach full lock

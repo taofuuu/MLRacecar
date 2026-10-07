@@ -45,9 +45,6 @@ OVERLAY_KEYS = {
 
 HINT = "Arrows or WASD: drive  ·  R: restart  ·  C: camera  ·  1-3: overlays  ·  P: pause"
 
-_NO_OBSERVATIONS = np.zeros((1, 0), dtype=np.float32)
-"""The keyboard agent needs no observations: the person sees the screen."""
-
 
 def held_keys(pressed: Callable[[int], bool]) -> HeldKeys:
     """The driving keys held down, from a lookup of whether each key is pressed."""
@@ -82,7 +79,7 @@ class DriveWindow:
             np.random.default_rng(seed),
             settings=config.race.to_settings(),
         )
-        self.agent = KeyboardAgent(self.timing.decision_dt)
+        self.agent = KeyboardAgent(self.timing.decision_dt, car)
         self.renderer = RaceRenderer(track, (car.length, car.width), self._screen.get_size())
         self.title = title
         self.running = True
@@ -132,7 +129,9 @@ class DriveWindow:
             self._owed -= self.timing.decision_dt
             self.agent.keys = keys
             self._previous = self.world.snapshot
-            snapshot = self.world.step(self.agent.act(_NO_OBSERVATIONS))
+            # The keyboard's only observation is the car's speed, for speed-sensitive steering.
+            speed = self._previous.cars.speed[:, None].astype(np.float32)
+            snapshot = self.world.step(self.agent.act(speed))
             laps = [
                 event.time
                 for event in snapshot.events

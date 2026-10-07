@@ -44,7 +44,8 @@ All notable changes to this project are documented here. The format is based on
   window draws 60 frames a second, blending the car between decisions. The follow camera
   looks ahead of the car and zooms out with speed to keep 2.5 seconds of road in view.
 - The `Agent` protocol (`mlracecar.agents.base`) and `KeyboardAgent`, which turns held keys
-  into smooth steering and a pedal.
+  into smooth steering and a pedal. Its steering is speed-sensitive: at speed, a held key
+  turns the wheels only about as far as the tyres can use, so taps make small corrections.
 - The race renderer (`mlracecar.render.race.RaceRenderer`): draws snapshots only, with the
   track and its kerbs, the cars, a HUD (speed, lap, current, last and best lap times,
   off-track and wrong-way warnings), three cameras (follow, overview, free), and toggleable
