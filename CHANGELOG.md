@@ -36,6 +36,12 @@ All notable changes to this project are documented here. The format is based on
   road car (about 280 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
+- The race renderer (`mlracecar.render.race.RaceRenderer`): draws snapshots only, with the
+  track and its kerbs, the cars, a HUD (speed, lap, current, last and best lap times,
+  off-track and wrong-way warnings), three cameras (follow, overview, free), and toggleable
+  debug overlays (centerline, checkpoints, velocity, sensor rays). It draws into a window or
+  offscreen as RGB arrays, headless too, at 6-9 ms a frame with 16 cars. `Snapshot` and
+  `RaceState` moved to data-only modules (`core.snapshot`, `core.race.state`).
 - Race rules, part 2: a car whose centre leaves the road is off track (`OffTrack` event), and
   the `race.off_track` setting says what happens: nothing, the grass slows it down (default,
   `race.grass_slowdown` m/s per second), it is put back on the road, or its run ends until it
