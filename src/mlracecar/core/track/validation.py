@@ -28,7 +28,7 @@ from mlracecar.core.geometry import (
     self_intersections,
 )
 from mlracecar.core.track.model import Track
-from mlracecar.core.track.spline import DEFAULT_SPACING
+from mlracecar.core.track.spline import COINCIDENT_GAP, DEFAULT_SPACING
 
 
 class Severity(StrEnum):
@@ -214,7 +214,7 @@ def _check_inputs(
         )
     if len(points) >= 2 and np.all(np.isfinite(points)):
         gaps = norm(np.roll(points, -1, axis=0) - points)
-        for index in np.flatnonzero(gaps == 0):
+        for index in np.flatnonzero(gaps < COINCIDENT_GAP):
             following = (index + 1) % len(points)
             issues.append(
                 _error(
