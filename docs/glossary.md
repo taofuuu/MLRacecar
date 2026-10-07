@@ -55,6 +55,9 @@
 | **Migration** | Code that upgrades an old file format to the new one, so old files keep working. | Track and replay formats. |
 | **Idempotent** | Running it twice gives the same result as running it once. Safe to re-run. | The backlog seeding script. |
 | **Typed config** | Settings files whose values get checked (right type, valid range) when loaded. | `configs/*.yaml` checked by pydantic. |
+| **YAML** | A plain-text format for settings: `key: value` lines, indented to group them into sections. | Settings files, e.g. `configs/default.yaml`. |
+| **Override / layers** | Settings are built in layers: defaults, then files, then `--set`. A later layer overrides (wins over) an earlier one, but only for the settings it mentions. | `racecar config my.yaml --set vehicle.mass=1500` |
+| **SI units** | The standard scientific units: metres, kilograms, seconds, newtons, watts, radians. | Inside the simulation; settings files use degrees and kilowatts instead. |
 | **Model card** | A small file saved with a trained AI that describes what it expects (inputs, settings, versions). | Prevents loading a model into the wrong setup. |
 
 ## Simulation and math

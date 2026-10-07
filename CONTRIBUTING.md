@@ -118,6 +118,7 @@ Day-to-day commands:
 | `uv run mypy`                             | Strict type check of `src/`, `tests/`, `scripts/`              |
 | `uv run racecar check tracks/oval.json`  | Read a track file and run the track checks on it               |
 | `uv run python scripts/export_track_schema.py` | Re-publish the track file JSON Schema after changing the format |
+| `uv run python scripts/export_default_config.py` | Rewrite `configs/default.yaml` after adding or changing a setting |
 | `uv run lint-imports`                     | Architecture check: each layer only imports the layers below it |
 | `uv run --group docs mkdocs serve`        | Preview the docs site at http://127.0.0.1:8000 while editing   |
 | `uv run pre-commit run --all-files`       | Everything the commit hook runs, on the whole repo             |

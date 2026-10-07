@@ -33,3 +33,18 @@ frozen dataclasses (`VehicleParams`, …) before reaching the simulation.
 - **Positive:** invalid configs fail before training starts, with errors like
   `vehicle.max_steer: must be > 0`. The schema documents itself.
 - **Negative / costs:** no built-in hyperparameter sweeps; we'll use Optuna for that (M8-3).
+
+## Amendments
+
+- **2026-10-07 (#17):** details settled while building it.
+  - The defaults live in the pydantic models. `configs/default.yaml` is written from them
+    (`scripts/export_default_config.py`), with each setting's docstring as its comment, and a
+    test fails if it is out of date.
+  - Settings files use units that are easy to picture: angles in degrees, power in kilowatts.
+    The conversion to core dataclasses (`VehicleParams`, `Timing`) turns them into SI units.
+  - YAML is read with PyYAML's safe loader plus two fixes: `1e3` reads as a number (as in
+    YAML 1.2), and a key written twice in one mapping is an error.
+  - Error messages name the file (or `--set`) each invalid value came from, and suggest the
+    nearest setting name for a typo.
+  - Sections are added by the tickets that need them; #17 has `vehicle` and `simulation`.
+    Environment and training settings arrive with M3 and M4.
