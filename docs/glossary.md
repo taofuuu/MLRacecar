@@ -80,8 +80,11 @@
 | **Smoothstep** | A blend between two values that starts and ends gently (flat), instead of in a straight ramp. | How road width changes between dots: no kinks in the edges. |
 | **Boundary folding** | When a corner is so tight the inner edge of the road crosses over itself. | A track validation rule. |
 | **Kinematic bicycle model** | Simple car physics: the car goes where its wheels point, with no skidding. | First car model (M2-2). |
+| **Grip / friction coefficient** | How hard the tyres can push sideways before sliding, as a multiple of the car's weight. 1.0 means the car can corner at up to 1 g. | The `grip` setting; it limits how fast a car can take a corner. |
+| **g** | The acceleration of gravity, 9.81 m/s². Forces in cars are often measured in g: 1 g sideways pushes you into the door as hard as gravity pulls you down. | Cornering limits. |
+| **Sideslip angle** | The small angle between where a car points and where its middle is actually moving while it turns. | The kinematic model's centre moves at this angle. |
 | **Dynamic bicycle model / Pacejka** | More realistic car physics where tires can slip, so drifting and understeer happen. Pacejka is a standard tire-grip formula. | Second car model (M2-3). |
-| **Understeer / oversteer** | The car turns less than you steer (front slides) / more than you steer (rear slides). | Emerges from the dynamic model. |
+| **Understeer / oversteer** | The car turns less than you steer (front slides) / more than you steer (rear slides). | The kinematic model understeers at the grip limit; the dynamic model adds both. |
 | **Fixed timestep** | The simulation always advances by the same tiny time slice (e.g. 1/120 s), so results don't depend on computer speed. | The World loop. |
 | **Semi-implicit Euler** | A simple, stable way to step physics forward in time. | Vehicle integration. |
 | **Action repeat** | The AI decides 20 times per second; each decision is held for several physics steps. | 120 Hz physics, 20 Hz decisions. |

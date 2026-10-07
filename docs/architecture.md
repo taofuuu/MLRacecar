@@ -155,13 +155,16 @@ instead of raising, so the editor can highlight problems while you draw.
 
 ### 4.3 Vehicle
 
-- **State:** `x, y, yaw, vx, vy, yaw_rate, steer_angle` (body-frame velocities).
+- **State:** `x, y, yaw, vx, vy, yaw_rate, steer` (body-frame velocities), one array per
+  quantity (`VehicleState`). The position is the centre of the wheelbase.
 - **Action:** two continuous values in `[-1, 1]`: `steer` and `pedal`
-  (positive = throttle, negative = brake).
-- **Actuators:** steering rate limit, motor force curve, braking force, aerodynamic drag,
-  rolling resistance.
+  (positive = throttle, negative = brake). There is no reverse gear.
+- **Actuators:** steering rate limit, motor force curve (full force up to the power limit,
+  then `max_power / v`), braking force, aerodynamic drag, rolling resistance.
 - **Dynamics models** sit behind a `DynamicsModel` protocol so they can be swapped in config:
-  - `KinematicBicycle` (M2): simple and stable, good for the first agent.
+  - `KinematicBicycle` (M2): simple and stable, good for the first agent. Its turn is limited
+    by tyre grip, so the car runs wide when it's too fast for a corner
+    ([ADR-0014](adr/0014-kinematic-car-model.md), [Car physics](vehicle-model.md)).
   - `DynamicBicycle` (M2, P1): tire slip via a simplified Pacejka model, so drifting and
     understeer emerge naturally. Blends into the kinematic model at low speed to avoid the
     singularity at zero velocity.

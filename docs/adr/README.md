@@ -27,3 +27,4 @@ To add one, copy [`0000-template.md`](0000-template.md), take the next number, a
 | [0011](0011-immutable-editor-drafts.md)              | The editor edits immutable drafts                             | Accepted |
 | [0012](0012-pygame-ce-for-windows-and-drawing.md)    | pygame-ce for windows and drawing                             | Accepted |
 | [0013](0013-track-checks-in-the-background.md)       | The editor runs the track checks in the background            | Accepted |
+| [0014](0014-kinematic-car-model.md)                  | A kinematic car with grip-limited turning and no reverse gear | Accepted |
