@@ -292,7 +292,14 @@ window, the replay recorder, the video writer, and later the web demo.
   saved; "unsaved changes" is just *draft on screen != draft saved*. Ctrl+S saves (asking for a
   file name the first time), Ctrl+Shift+S saves as, and closing with unsaved changes asks first.
   Tracks with errors can be saved, since a draft is work in progress, and the message says
-  they can't be raced yet.
+  they can't be raced yet. Positions and widths are saved to the centimetre, so files stay
+  readable (`-314.08`, not `-314.0837535325377`).
+- **Undo:** `History` (`mlracecar.editor.history`) keeps up to 500 earlier drafts. The
+  controller records one step per finished action: a click, a whole drag (with the point its
+  click may have added), or a run of width changes at one point, notch by notch. Kept drafts
+  drop their cached track (about 1.2 MB on a 3.5 km circuit, rebuilt in about 13 ms), so the
+  whole history takes about a megabyte. Ctrl+Z undoes; Ctrl+Y or Ctrl+Shift+Z redoes. Saving
+  isn't a step, though it may name the track after its file and round its numbers.
 
 **Track problems show while you draw.** The checks run on a worker thread, newest draft first
 ([ADR-0013](adr/0013-track-checks-in-the-background.md)), so a 3.5 km track still drags at 60

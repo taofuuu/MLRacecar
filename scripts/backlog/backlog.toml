@@ -455,17 +455,19 @@ depends_on = ["M1-4", "M1-5", "M0-6"]
 [[issues]]
 key = "M1-7"
 milestone = "M1"
-title = "Editor undo/redo and help overlay"
+title = "Editor undo/redo"
 labels = ["type:feature", "area:editor", "priority:P1", "size:M"]
-summary = "Command pattern for every edit, plus discoverable shortcuts."
+summary = "Undo and redo for every edit in the track editor."
+# Rewritten for ADR-0011 (immutable drafts replace the command pattern). The help panel and the
+# unsaved-changes prompt shipped with M1-6.
 tasks = [
-  "Every edit is a `Command` with do/undo; Ctrl+Z / Ctrl+Y",
+  "History of drafts (ADR-0011): one entry per finished gesture, so a whole drag is one undo step",
+  "Ctrl+Z / Ctrl+Y (and Ctrl+Shift+Z)",
   "Bounded history",
-  "`?` toggles a keyboard-shortcut overlay",
-  "Unsaved-changes prompt on quit",
+  "Listed in the help panel",
 ]
 acceptance = [
-  "Every edit operation is undoable and redoable (unit-tested on the model)",
+  "Every edit operation is undoable and redoable (unit-tested on the model and controller)",
 ]
 depends_on = ["M1-6"]
 
@@ -481,6 +483,27 @@ tasks = [
   "Format reference generated from the JSON Schema",
 ]
 acceptance = ["A new user can create and save a track using only the guide"]
+depends_on = ["M1-6"]
+
+# Added during M1, from the review of the editor (M1-6).
+[[issues]]
+key = "M1-9"
+milestone = "M1"
+title = "Round a corner: turn a sharp dot into an arc of a chosen radius"
+labels = ["type:feature", "area:editor", "priority:P1", "size:M"]
+summary = "Sketch a track with one click per corner, then round each corner to a chosen radius."
+tasks = [
+  "Model: `TrackDraft.round_corner(index, radius)` replaces a point with dots along an arc that touches both neighbouring stretches (a fillet), keeping the road width",
+  "Place the arc's dots so the smooth curve actually follows the arc",
+  "Refuse radii that don't fit with a clear message, and offer the largest that fits",
+  "Editor: select a corner dot and set its radius with a live preview; letting go is one undo step",
+  "Unit tests on the model (no window), including both turning directions",
+]
+acceptance = [
+  "Rounding a 90 degree corner to radius r gives a centerline whose tightest radius is within 10% of r",
+  "Hairpins (about 180 degrees) and kinks (about 20 degrees) round correctly, turning left and right",
+  "A track sketched as a rough polygon and rounded at every corner passes validation with no errors",
+]
 depends_on = ["M1-6"]
 
 # --------------------------------------------------------------------------- #

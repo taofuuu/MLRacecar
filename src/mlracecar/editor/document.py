@@ -15,6 +15,10 @@ from mlracecar.io.track_file import read_track_file, write_track_file
 TRACK_FOLDER = Path("tracks")
 """Where new tracks are suggested to go, if that folder exists."""
 
+SAVED_DECIMALS = 2
+"""Positions and widths are saved to this many decimal places: the nearest centimetre, far finer
+than anyone places a point, so files stay readable (``-314.08``, not ``-314.0837535325377``)."""
+
 
 @dataclass
 class TrackDocument:
@@ -45,9 +49,10 @@ class TrackDocument:
     def save(self, draft: TrackDraft, path: Path | None = None) -> Path:
         """Save ``draft`` to ``path`` (by default the document's own path) and return where.
 
-        A track still called `DEFAULT_NAME` is named after the file, so afterwards `saved` (not
-        ``draft``) is what's on disk. Missing folders are created. Saving works with track
-        errors, since a draft is work in progress.
+        Positions and widths are rounded to `SAVED_DECIMALS`, and a track still called
+        `DEFAULT_NAME` is named after the file, so afterwards `saved` (not ``draft``) is what's
+        on disk. Missing folders are created. Saving works with track errors, since a draft is
+        work in progress.
 
         Raises:
             ValueError: If there's nowhere to save (no ``path`` and the document has none).
@@ -60,6 +65,7 @@ class TrackDocument:
             raise ValueError("the track has no file yet; choose where to save it")
         if draft.name == DEFAULT_NAME:
             draft = draft.rename(target.stem)
+        draft = draft.rounded(SAVED_DECIMALS)
         track_file = draft.to_track_file()
         target.parent.mkdir(parents=True, exist_ok=True)
         write_track_file(track_file, target)

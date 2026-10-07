@@ -40,8 +40,9 @@ format is in [ADR-0004](adr/0004-track-representation.md).
 | `metadata`       | JSON object               | no       | Free-form data for tools (an editor's view settings, for example). MLRacecar ignores it. |
 
 Unknown fields are rejected, so a typo like `"widht"` is caught instead of silently ignored.
-Numbers must be finite. The formal definition is the JSON Schema:
-[`track-file-v1.json`](schemas/track-file-v1.json).
+Numbers must be finite. Any precision is accepted, but the editor saves positions and widths
+to the centimetre (2 decimal places) to keep files readable. The formal definition is the
+JSON Schema: [`track-file-v1.json`](schemas/track-file-v1.json).
 
 ## Well-formed versus valid
 

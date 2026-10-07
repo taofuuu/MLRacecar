@@ -70,6 +70,20 @@ def test_saving_names_an_untitled_track_after_its_file(tmp_path: Path) -> None:
     assert read_track_file(tmp_path / "corner-test.json").name == "corner-test"
 
 
+def test_saving_rounds_to_the_centimetre(tmp_path: Path) -> None:
+    document = TrackDocument(tmp_path / "square.json", SQUARE)
+    rough = SQUARE.move_point(0, (90.123456, -0.001)).set_width(1, 12.378633)
+    document.save(rough)
+    assert document.saved.points[0] == (90.12, 0.0)
+    assert document.saved.widths[1] == 12.38
+    text = (tmp_path / "square.json").read_text(encoding="utf-8")
+    assert '{"x": 90.12, "y": 0.0, "width": 12.0}' in text  # 0.0, not -0.0
+    on_disk = TrackDraft.from_track_file(read_track_file(tmp_path / "square.json"))
+    assert on_disk == document.saved
+    assert document.is_modified(rough)  # the rough draft isn't what's on disk
+    assert not document.is_modified(on_disk)
+
+
 def test_saving_keeps_a_name_the_user_chose(tmp_path: Path) -> None:
     document = TrackDocument.open()
     document.save(SQUARE.rename("Square"), tmp_path / "square.json")
