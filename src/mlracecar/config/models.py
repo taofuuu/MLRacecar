@@ -32,7 +32,7 @@ NonNegative = Annotated[float, Field(ge=0)]
 
 
 class VehicleConfig(BaseModel):
-    """The car. The defaults describe a hot sporty car: 0-100 km/h in about 3 seconds."""
+    """The car. The defaults describe a light race car: quick, and very grippy and hard-braking."""
 
     model_config = _SETTINGS
 
@@ -48,13 +48,13 @@ class VehicleConfig(BaseModel):
     """How far the front wheels turn at full lock, in degrees."""
     steer_rate: Positive = 180.0
     """How fast the front wheels can turn, in degrees per second."""
-    grip: Positive = 1.2
+    grip: Positive = 2.0
     """Tyre grip: the hardest the car can corner, in g (gravity = 1)."""
     max_drive_force: Positive = 12000.0
     """The engine's push at low speed, in newtons."""
     max_power: Positive = 250.0
     """Engine power in kilowatts; it limits the push at high speed."""
-    max_brake_force: Positive = 16000.0
+    max_brake_force: Positive = 37000.0
     """The brakes' strongest push, in newtons."""
     drag_coefficient: NonNegative = 0.32
     """Air resistance of the car's shape (Cd, no unit)."""

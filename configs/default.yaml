@@ -10,10 +10,10 @@ vehicle:
   mass: 1300                 # The car's mass, in kilograms.
   max_steer: 30              # How far the front wheels turn at full lock, in degrees.
   steer_rate: 180            # How fast the front wheels can turn, in degrees per second.
-  grip: 1.2                  # Tyre grip: the hardest the car can corner, in g (gravity = 1).
+  grip: 2                    # Tyre grip: the hardest the car can corner, in g (gravity = 1).
   max_drive_force: 12000     # The engine's push at low speed, in newtons.
   max_power: 250             # Engine power in kilowatts; it limits the push at high speed.
-  max_brake_force: 16000     # The brakes' strongest push, in newtons.
+  max_brake_force: 37000     # The brakes' strongest push, in newtons.
   drag_coefficient: 0.32     # Air resistance of the car's shape (Cd, no unit).
   frontal_area: 2            # Size of the car seen from the front, in square metres.
   rolling_resistance: 0.015  # Tyre rolling resistance, as a fraction of the car's weight.

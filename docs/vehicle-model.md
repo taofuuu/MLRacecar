@@ -13,18 +13,20 @@ This page describes the first car model, the **kinematic bicycle** (`KinematicBi
 
 ## What the default car can do
 
-The default car is a hot sporty car: 1300 kg, 250 kW, and sticky tyres (grip 1.2). It started
-as a plain sporty road car (200 kW, grip 1.0); after the first test drive with the keyboard it
-was tuned to accelerate, brake, and steer more quickly, which makes driving it more fun.
+The default car is a light race car: 1300 kg, 250 kW, tyres that grip at up to 2 g (like a
+race car with aerodynamic downforce), and brakes that stop it at almost 3 g. It started as a
+plain sporty road car (200 kW, grip 1.0, 13 kN brakes). Test drives with the keyboard showed
+that car was hard to control: it was slow to speed up and slow down, and couldn't turn hard
+enough to make the corners. The race car is the tuning that drove well.
 
 | | |
 |---|---|
 | 0–100 km/h | 3.2 s |
 | 0–200 km/h | 10.6 s |
 | Top speed | 303 km/h |
-| Braking 100–0 km/h | 30.6 m |
-| Braking 200–0 km/h | 119 m |
-| Fastest through a bend of radius 12 m / 50 m / 200 m | 43 / 87 / 175 km/h |
+| Braking 100–0 km/h | 13.3 m |
+| Braking 200–0 km/h | 53 m |
+| Fastest through a bend of radius 12 m / 50 m / 200 m | 55 / 113 / 226 km/h |
 | Tightest turn (rear-axle radius, at walking pace) | 4.7 m |
 | Steering lock to lock | 0.33 s |
 
