@@ -49,6 +49,8 @@
 | **Command pattern** | Each edit is stored as an object that knows how to do *and* undo itself. A classic way to build undo/redo. | Considered for the editor, replaced by immutable drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Observer pattern** | One thing publishes updates and many listeners receive them. | Snapshots go to the screen, replay recorder, and video writer at once. |
 | **Snapshot** | A frozen picture of the whole race at one moment: every car's position, speed, lap. | Drawn, recorded, and sent to the web demo. |
+| **Ghost cars** | Cars that drive through each other instead of colliding, so many can learn on the same track at once without getting in each other's way. | Every car until collisions arrive (M7). |
+| **Read-only array** | An array that refuses to be changed: writing to it raises an error. | Snapshot arrays, so nothing that keeps a snapshot can change the race. |
 | **JSON** | A plain-text format for structured data that almost every program can read. | Track files (`tracks/*.json`). |
 | **JSON Schema** | A formal, machine-readable description of what a JSON file must contain. Other tools can use it to check files. | [`track-file-v1.json`](schemas/track-file-v1.json). |
 | **Schema / schema version** | The agreed structure of a file, plus a number saying which version of that structure it uses. | Track files: `"schema_version": 1`. |

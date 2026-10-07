@@ -46,7 +46,8 @@ class Checkpoints(NamedTuple):
 
 
 class GridLayout(NamedTuple):
-    """Spacing of the starting grid. Car sizes are placeholders until vehicle parameters exist."""
+    """Spacing of the starting grid. The default car size is the default car's; `World` passes
+    the size of the car it simulates."""
 
     car_length: float = 4.5
     """Length of a car in metres."""
