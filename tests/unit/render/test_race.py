@@ -1,5 +1,6 @@
 """Tests for mlracecar.render.race: drawing a race offscreen, cameras, kerbs, and overlays."""
 
+import math
 from dataclasses import replace
 
 import numpy as np
@@ -7,13 +8,17 @@ import pygame
 import pytest
 
 from mlracecar.config.models import SimulationConfig, VehicleConfig
+from mlracecar.core.geometry import FloatArray
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.world import World
+from mlracecar.render.camera import Camera
 from mlracecar.render.race import (
+    CAMERA_LAG,
     CAR_COLORS,
     CENTERLINE,
+    EASE_GAP,
     FOLLOW_MARGIN,
     FOLLOW_SCALE,
     HUD_SPACE,
@@ -91,10 +96,8 @@ def test_the_follow_camera_looks_ahead_of_a_moving_car() -> None:
 
 
 def test_the_follow_camera_zooms_out_to_keep_the_road_ahead_on_screen() -> None:
-    drawing = renderer()
-
     for speed in (40.0, 80.0):
-        snapshot = moving_at(speed)
+        drawing, snapshot = renderer(), moving_at(speed)
         camera = drawing.camera(snapshot)
         far_ahead = snapshot.cars.position[0] + (camera.center - snapshot.cars.position[0]) * 2
         pixel = camera.to_screen(far_ahead)
@@ -104,6 +107,56 @@ def test_the_follow_camera_zooms_out_to_keep_the_road_ahead_on_screen() -> None:
         car = camera.to_screen(snapshot.cars.position[0])
         assert (car >= FOLLOW_MARGIN - 1e-6).all()  # and the car itself still shows
         assert (car <= np.asarray(SIZE) - FOLLOW_MARGIN + 1e-6).all()
+
+
+def lead(camera: Camera, snapshot: Snapshot) -> FloatArray:
+    """How far ahead of the followed car the camera is centred, in metres."""
+    ahead: FloatArray = np.asarray(camera.center) - snapshot.cars.position[0]
+    return ahead
+
+
+def test_braking_eases_the_camera_back_instead_of_jumping() -> None:
+    drawing = renderer()
+    drawing.camera(moving_at(40.0))
+    braked = replace(moving_at(10.0), time=0.1)  # 30 m/s slower a tenth of a second later
+
+    camera = drawing.camera(braked)
+
+    before, target = 40.0 * VIEW_AHEAD / 2, 10.0 * VIEW_AHEAD / 2
+    eased = before + (target - before) * (1 - math.exp(-0.1 / CAMERA_LAG))
+    assert np.hypot(*lead(camera, braked)) == pytest.approx(eased)
+    assert eased > 0.8 * before  # it has barely started to move
+
+
+def test_the_camera_follows_the_heading_not_the_flick_of_the_steering() -> None:
+    drawing, snapshot = renderer(), moving_at(30.0)
+    sliding = replace(snapshot, cars=replace(snapshot.cars, vy=np.array([5.0])))
+
+    ahead = lead(drawing.camera(sliding), sliding)
+
+    heading = sliding.cars.yaw[0]
+    np.testing.assert_allclose(ahead / np.hypot(*ahead), [np.cos(heading), np.sin(heading)])
+
+
+@pytest.mark.parametrize("change", ["pause", "back in time", "other car"])
+def test_the_camera_jumps_into_place_when_easing_makes_no_sense(change: str) -> None:
+    drawing, fast = renderer(), race(cars=2, decisions=0)
+    moving = replace(fast, cars=replace(fast.cars, vx=np.array([40.0, 10.0])), time=1.0)
+    drawing.camera(moving)
+    later = replace(moving, cars=replace(moving.cars, vx=np.array([10.0, 10.0])))
+    if change == "pause":
+        later = replace(later, time=1.0 + 2 * EASE_GAP)
+    elif change == "back in time":
+        later = replace(later, time=0.5)  # restarted
+    else:
+        drawing.followed = 1
+        later = replace(later, time=1.05)
+
+    camera = drawing.camera(later)
+
+    car = drawing.followed
+    ahead = np.asarray(camera.center) - later.cars.position[car]
+    assert np.hypot(*ahead) == pytest.approx(10.0 * VIEW_AHEAD / 2)
 
 
 def test_the_overview_shows_the_whole_track_clear_of_the_hud() -> None:

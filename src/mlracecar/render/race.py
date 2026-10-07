@@ -5,6 +5,7 @@ video. It never runs or changes the simulation (an import-linter contract checks
 draw into a window or, offscreen, return each frame as an RGB array.
 """
 
+import math
 from dataclasses import replace
 from enum import StrEnum
 
@@ -51,6 +52,13 @@ FOLLOW_SCALE = 6.0
 VIEW_AHEAD = 2.5
 """Seconds of road ahead of the followed car that the follow camera keeps on screen: it
 looks further ahead, and zooms out if it must, as the car speeds up."""
+
+CAMERA_LAG = 0.5
+"""Seconds the follow camera takes to make most of a move (63%): it eases towards where it
+should be instead of jumping when the car brakes hard or the steering flicks."""
+
+EASE_GAP = 1.0
+"""Seconds without a frame after which the follow camera jumps straight to its place."""
 
 FOLLOW_MARGIN = 40
 """Pixels the follow camera keeps between the road ahead and the edge of the window."""
@@ -114,6 +122,9 @@ class RaceRenderer:
         self._overview = _overview(self._edges, size)
         self._free = self._overview
         self._follow_scale = FOLLOW_SCALE
+        self._lead: FloatArray | None = None  # the follow camera's offset ahead of the car
+        self._lead_car = -1
+        self._lead_time = 0.0
         self._kerbs, self._kerb_colors = _kerb_blocks(track)
         self._hud = Hud()
         self._offscreen: pygame.Surface | None = None
@@ -139,19 +150,40 @@ class RaceRenderer:
             return self._overview
         if self.mode is CameraMode.FREE:
             return self._free
-        return self._follow_camera(snapshot.cars, self.followed % len(snapshot.cars))
+        return self._follow_camera(snapshot, self.followed % len(snapshot.cars))
 
-    def _follow_camera(self, cars: VehicleState, car: int) -> Camera:
-        """Centred `VIEW_AHEAD` / 2 seconds ahead of the car, along the way it's going, and zoomed
-        out from the chosen zoom if that's needed to show `VIEW_AHEAD` seconds of road."""
-        position = cars.position[car]
-        ahead = float(cars.speed[car]) * VIEW_AHEAD / 2
-        course = float(cars.yaw[car] + np.arctan2(cars.vy[car], cars.vx[car]))
-        center = position + ahead * np.array([np.cos(course), np.sin(course)])
+    def _follow_camera(self, snapshot: Snapshot, car: int) -> Camera:
+        """About `VIEW_AHEAD` / 2 seconds ahead of the car, the way it points, zoomed out from the
+        chosen zoom if that's needed to show `VIEW_AHEAD` seconds of road.
+
+        The camera eases towards that place (`CAMERA_LAG`) rather than jumping there, and follows
+        the car's heading rather than the exact direction it moves in, which flicks with every
+        tap of the steering.
+        """
+        cars = snapshot.cars
+        heading = float(cars.yaw[car])
+        target = (
+            float(cars.speed[car]) * VIEW_AHEAD / 2 * np.array([np.cos(heading), np.sin(heading)])
+        )
+        lead = self._ease(target, car, snapshot.time)
+        center = cars.position[car] + lead
+        ahead = float(np.hypot(lead[0], lead[1]))
         scale = self._follow_scale
         if ahead > 0:
             scale = min(scale, (min(self.size) / 2 - FOLLOW_MARGIN) / ahead)
         return Camera(center=(float(center[0]), float(center[1])), scale=scale, size=self.size)
+
+    def _ease(self, target: FloatArray, car: int, time: float) -> FloatArray:
+        """The follow camera's offset ahead of the car, moved part of the way towards
+        ``target`` for the time since the last frame; all the way for a new car, or after a
+        pause in the frames or a jump back in time."""
+        elapsed = time - self._lead_time
+        if self._lead is None or car != self._lead_car or not 0 <= elapsed <= EASE_GAP:
+            lead = target
+        else:
+            lead = self._lead + (target - self._lead) * (1 - math.exp(-elapsed / CAMERA_LAG))
+        self._lead, self._lead_car, self._lead_time = lead, car, time
+        return lead
 
     def next_camera(self) -> CameraMode:
         """Switch to the next camera mode: follow, overview, free, and round again."""
