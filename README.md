@@ -36,7 +36,7 @@ uv run racecar check tracks/gp-circuit.json
 ```
 
 `racecar edit` opens the track editor: click to add points, the road appears as you draw, and
-any problems are marked in red or orange. Ctrl+S saves. Press **H** in the editor for all the
+any problems are marked in red or orange. Ctrl+Z undoes, Ctrl+S saves. Press **H** in the editor for all the
 controls. `racecar check` reads a track file and runs the
 track checks on it. The sample tracks are in [`tracks/`](tracks/); the format is described in
 [docs/track-format.md](docs/track-format.md).

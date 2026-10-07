@@ -199,6 +199,16 @@ class EditorWindow:
             answers={**dict.fromkeys(ENTER_KEYS, save_and_close), pygame.K_q: self._stop},
         )
 
+    def undo(self) -> None:
+        """Take back the last edit."""
+        if not self.controller.undo():
+            self._show("Nothing to undo.", WARNING)
+
+    def redo(self) -> None:
+        """Put back the last edit undone."""
+        if not self.controller.redo():
+            self._show("Nothing to redo.", WARNING)
+
     def toggle_help(self) -> None:
         """Show or hide the help panel."""
         self.show_help = not self.show_help
@@ -229,7 +239,9 @@ class EditorWindow:
         except (TrackFileError, OSError) as error:
             self._show(f"Can't save: {error}", ERROR)
             return
-        self.controller.draft = self.document.saved  # it may have been named after the file
+        # Saving may name the track after the file and round its numbers. That's part of the
+        # save, not an edit to undo.
+        self.controller.draft = self.document.saved
         errors = sum(issue.severity is Severity.ERROR for issue in self.document.saved.issues)
         if errors:
             plural = "s" if errors > 1 else ""
@@ -242,7 +254,7 @@ class EditorWindow:
             then()
 
     def _rename_to(self, name: str) -> None:
-        self.controller.draft = self.controller.draft.rename(name)
+        self.controller.edit(self.controller.draft.rename(name))
 
     def _stop(self) -> None:
         self.running = False
@@ -339,6 +351,15 @@ def _on_editor(action: Callable[[EditorController], None]) -> Action:
 
 
 SHORTCUTS = (
+    Shortcut(
+        "Ctrl+Z / Ctrl+Y",
+        "undo / redo (Ctrl+Shift+Z also redoes)",
+        {
+            Chord(pygame.K_z, ctrl=True): EditorWindow.undo,
+            Chord(pygame.K_y, ctrl=True): EditorWindow.redo,
+            Chord(pygame.K_z, ctrl=True, shift=True): EditorWindow.redo,
+        },
+    ),
     Shortcut("Ctrl+S", "save", {Chord(pygame.K_s, ctrl=True): EditorWindow.save}),
     Shortcut(
         "Ctrl+Shift+S",

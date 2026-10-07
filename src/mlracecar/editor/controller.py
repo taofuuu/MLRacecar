@@ -13,14 +13,20 @@ Mouse:
 - **Right-click** a point to delete it.
 - **Right-drag** or **middle-drag** pans; the **wheel** zooms around the cursor.
 - **Shift+wheel** widens or narrows the road at the point under the cursor (or the selected one).
+
+Every edit can be undone (`EditorController.undo`). One undo step is one whole action: a click,
+or a drag with the point the click may have added. Widening or narrowing the road at a point
+notch by notch, with the wheel or the keys, is one step too.
 """
 
+from collections.abc import Hashable
 from dataclasses import dataclass
 from enum import IntEnum
 
 import numpy as np
 
 from mlracecar.editor.draft import Point, TrackDraft
+from mlracecar.editor.history import History
 from mlracecar.render.camera import Camera
 
 type Pixel = tuple[float, float]
@@ -51,6 +57,8 @@ class Button(IntEnum):
 
 @dataclass
 class _PointDrag:
+    before: TrackDraft
+    """The draft before the press, so the whole gesture is one undo step."""
     index: int
     offset: Point
     """From the cursor to the point at the press, in metres, so the point doesn't jump."""
@@ -67,11 +75,13 @@ class _Pan:
 class EditorController:
     """The editor's state: the draft, the camera, and what the user is pointing at or holding.
 
-    The draft itself is immutable (ADR-0011); the controller swaps in a new one on every edit.
+    The draft itself is immutable (ADR-0011); the controller swaps in a new one on every edit,
+    and keeps the earlier ones in `history` for undo.
     """
 
     def __init__(self, draft: TrackDraft, camera: Camera, *, snap: bool = False) -> None:
         self.draft = draft
+        self.history = History()
         self.camera = camera
         self.snap = snap
         """Whether new and moved points jump to the nearest grid crossing."""
@@ -107,15 +117,16 @@ class EditorController:
     def press(self, pixel: Pixel, button: Button, *, shift: bool = False) -> None:
         """A mouse button went down at ``pixel``."""
         self.cursor = pixel
-        self._gesture = None  # a new press ends any gesture whose release never arrived
+        self._finish_gesture()  # a new press ends any gesture whose release never arrived
         hovered = self.hovered
         if button is Button.LEFT:
+            before = self.draft
             if hovered is None:
                 hovered = self._add_point(shift=shift)
             self.selected = hovered
             x, y = self.draft.points[hovered]
             cursor_x, cursor_y = self.cursor_world
-            self._gesture = _PointDrag(hovered, (x - cursor_x, y - cursor_y), pixel)
+            self._gesture = _PointDrag(before, hovered, (x - cursor_x, y - cursor_y), pixel)
         elif button is Button.RIGHT and hovered is not None:
             self._delete(hovered)
         else:
@@ -142,9 +153,9 @@ class EditorController:
         self.move(pixel)
         match self._gesture:
             case _PointDrag() if button is Button.LEFT:
-                self._gesture = None
+                self._finish_gesture()
             case _Pan(button=held) if button is held:
-                self._gesture = None
+                self._finish_gesture()
 
     def scroll(self, notches: float, *, shift: bool = False) -> None:
         """The wheel turned ``notches`` (positive is away from the user) at the cursor.
@@ -159,7 +170,34 @@ class EditorController:
         target = hovered if hovered is not None else self.selected
         if target is not None:
             self.selected = target
-            self.draft = self.draft.change_width(target, notches * WIDTH_STEP)
+            self.edit(
+                self.draft.change_width(target, notches * WIDTH_STEP), merge=("width", target)
+            )
+
+    # ------------------------------------------------------------------ #
+    # Editing and undo
+    # ------------------------------------------------------------------ #
+
+    def edit(self, draft: TrackDraft, *, merge: Hashable | None = None) -> None:
+        """Make an edited draft the current one, as one undo step.
+
+        Edits in a row with the same ``merge`` key make one step (see `History.record`).
+        """
+        self.history.record(self.draft, draft, merge=merge)
+        self.draft = draft
+
+    def undo(self) -> bool:
+        """Take back the last edit; returns whether there was one.
+
+        A drag still in progress counts as finished first, so undoing it puts the point back.
+        """
+        self._finish_gesture()
+        return self._go_to(self.history.undo(self.draft))
+
+    def redo(self) -> bool:
+        """Put back the last edit undone; returns whether there was one."""
+        self._finish_gesture()
+        return self._go_to(self.history.redo(self.draft))
 
     # ------------------------------------------------------------------ #
     # Keyboard actions
@@ -192,19 +230,19 @@ class EditorController:
     def change_selected_width(self, by: float) -> None:
         """Widen (positive) or narrow the road at the selected point, in metres."""
         if self.selected is not None:
-            self.draft = self.draft.change_width(self.selected, by)
+            self.edit(self.draft.change_width(self.selected, by), merge=("width", self.selected))
 
     def reverse(self) -> None:
         """Drive the track the other way round. The selection stays on the same point."""
         count = len(self.draft.points)
-        self.draft = self.draft.reverse()
+        self.edit(self.draft.reverse())
         if self.selected is not None:
             self.selected = (count - self.selected) % count
 
     def start_at_selected(self) -> None:
         """Move the start/finish line to the selected point."""
         if self.selected is not None:
-            self.draft = self.draft.set_start(self.selected)
+            self.edit(self.draft.set_start(self.selected))
             self.selected = 0
 
     def deselect(self) -> None:
@@ -218,6 +256,22 @@ class EditorController:
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #
+
+    def _finish_gesture(self) -> None:
+        """End the gesture in progress. A drag, with the point its press may have added, is one
+        undo step."""
+        if isinstance(self._gesture, _PointDrag):
+            self.history.record(self._gesture.before, self.draft)
+        self._gesture = None
+
+    def _go_to(self, draft: TrackDraft | None) -> bool:
+        """Switch to a draft from the history, if there is one."""
+        if draft is None:
+            return False
+        self.draft = draft
+        if self.selected is not None and self.selected >= len(draft.points):
+            self.selected = None
+        return True
 
     def _snapped(self, position: Point) -> Point:
         if not self.snap:
@@ -238,7 +292,7 @@ class EditorController:
         return next((i for i, (old, new) in enumerate(pairs) if old != new), len(before))
 
     def _delete(self, index: int) -> None:
-        self.draft = self.draft.delete_point(index)
+        self.edit(self.draft.delete_point(index))
         if self.selected == index:
             self.selected = None
         elif self.selected is not None and self.selected > index:

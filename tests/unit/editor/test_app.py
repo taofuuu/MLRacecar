@@ -244,6 +244,49 @@ def test_resizing_the_window_resizes_the_view() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Undo and redo
+# --------------------------------------------------------------------------- #
+
+
+def test_ctrl_z_undoes_and_ctrl_y_or_ctrl_shift_z_redoes(tmp_path: Path) -> None:
+    window = open_window(path=tmp_path / "square.json")
+    click(window, on_screen(window, (0.0, 0.0)))  # adds a point
+    added = window.controller.draft
+    window.draw()
+    assert pygame.display.get_caption()[0].endswith(" * - Track editor")
+    window.handle(key(pygame.K_z, ctrl=True))
+    assert window.controller.draft == SQUARE
+    window.draw()
+    assert " * " not in pygame.display.get_caption()[0]  # back to what's saved
+    window.handle(key(pygame.K_y, ctrl=True))
+    assert window.controller.draft == added
+    window.handle(key(pygame.K_z, ctrl=True))
+    window.handle(key(pygame.K_z, ctrl=True, shift=True))
+    assert window.controller.draft == added
+
+
+def test_with_nothing_to_undo_or_redo_the_window_says_so() -> None:
+    window = open_window()
+    window.handle(key(pygame.K_z, ctrl=True))
+    assert window.message == Message("Nothing to undo.", WARNING)
+    window.handle(key(pygame.K_y, ctrl=True))
+    assert window.message == Message("Nothing to redo.", WARNING)
+
+
+def test_saving_is_not_a_step_to_undo(tmp_path: Path) -> None:
+    window = open_window(TrackDraft(points=SQUARE.points, widths=SQUARE.widths))
+    click(window, on_screen(window, (0.0, 0.0)))
+    window.save_as()
+    type_text(window, (tmp_path / "named.json").as_posix())
+    saved = window.controller.draft
+    assert saved.name == "named"
+    window.handle(key(pygame.K_z, ctrl=True))
+    assert window.controller.draft.points == SQUARE.points  # the click, not the naming
+    window.handle(key(pygame.K_y, ctrl=True))
+    assert window.controller.draft == saved
+
+
+# --------------------------------------------------------------------------- #
 # Saving
 # --------------------------------------------------------------------------- #
 
@@ -352,6 +395,8 @@ def test_f2_renames_the_track() -> None:
     assert window.dialog.text == "Square"
     type_text(window, "Silverstone-ish")
     assert window.controller.draft.name == "Silverstone-ish"
+    window.handle(key(pygame.K_z, ctrl=True))
+    assert window.controller.draft.name == "Square"
 
 
 # --------------------------------------------------------------------------- #

@@ -1,7 +1,11 @@
 """Tests for mlracecar.editor.controller: mouse and keyboard input, without a window."""
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from circuits import gp_circuit
 from mlracecar.editor.controller import (
@@ -321,3 +325,148 @@ def test_snap_toggles_and_the_window_can_resize() -> None:
     assert editor.camera.size == (1000, 700)
     assert editor.camera.center == (0.0, 0.0)
     assert editor.grid_step == 10.0
+
+
+# --------------------------------------------------------------------------- #
+# Undo and redo
+# --------------------------------------------------------------------------- #
+
+
+def widen_with_the_wheel(editor: EditorController) -> None:
+    editor.move(pixel_of(editor.draft.points[1]))
+    editor.scroll(1, shift=True)
+
+
+EDITS: dict[str, Callable[[EditorController], object]] = {
+    "click to add a point": lambda editor: click(editor, (400, 300)),
+    "click on the road to insert one": lambda editor: click(editor, on_the_road(editor, after=0)),
+    "hold the click to place a new point": lambda editor: drag(editor, (400, 300), (420, 280)),
+    "drag a point": lambda editor: drag(editor, pixel_of(editor.draft.points[0]), (500, 250)),
+    "right-click a point": lambda editor: click(
+        editor, pixel_of(editor.draft.points[1]), Button.RIGHT
+    ),
+    "delete the selected point": EditorController.delete_selected,
+    "widen with a key": lambda editor: editor.change_selected_width(WIDTH_STEP),
+    "widen with the wheel": widen_with_the_wheel,
+    "reverse": EditorController.reverse,
+    "move the start": EditorController.start_at_selected,
+    "rename": lambda editor: editor.edit(editor.draft.rename("Renamed")),
+}
+
+
+@pytest.mark.parametrize("edit", EDITS.values(), ids=EDITS.keys())
+def test_every_edit_is_one_step_to_undo_and_redo(
+    edit: Callable[[EditorController], object],
+) -> None:
+    editor = square_editor()
+    editor.selected = 2
+    before = editor.draft
+    edit(editor)
+    after = editor.draft
+    assert after != before
+    assert editor.undo()
+    assert editor.draft == before
+    assert not editor.undo()  # one step, however many mouse movements it took
+    assert editor.redo()
+    assert editor.draft == after
+
+
+def test_with_no_edits_there_is_nothing_to_undo_or_redo() -> None:
+    editor = square_editor()
+    assert not editor.undo()
+    assert not editor.redo()
+    assert editor.draft == square_editor().draft
+
+
+def test_clicking_a_point_to_select_it_is_not_an_edit() -> None:
+    editor = square_editor()
+    click(editor, pixel_of(editor.draft.points[1]))
+    assert editor.selected == 1
+    assert not editor.undo()
+
+
+def test_widening_notch_by_notch_is_undone_at_once() -> None:
+    editor = square_editor()
+    editor.move(pixel_of(editor.draft.points[1]))
+    for _ in range(3):
+        editor.scroll(1, shift=True)
+    editor.change_selected_width(WIDTH_STEP)  # the keys add to the same step
+    assert editor.draft.widths[1] == 12.0 + 4 * WIDTH_STEP
+    editor.move(pixel_of(editor.draft.points[2]))
+    editor.scroll(1, shift=True)  # another point: another step
+    editor.undo()
+    assert editor.draft.widths == (12.0, 12.0 + 4 * WIDTH_STEP, 12.0, 12.0)
+    editor.undo()
+    assert editor.draft == square_editor().draft
+
+
+def test_undo_in_the_middle_of_a_drag_puts_the_point_back() -> None:
+    editor = square_editor()
+    before = editor.draft
+    editor.press(pixel_of(before.points[0]), Button.LEFT)
+    editor.move((500, 250))
+    assert editor.undo()
+    assert editor.draft == before
+    editor.move((450, 250))  # the drag is over: the mouse no longer moves the point
+    editor.release((450, 250), Button.LEFT)
+    assert editor.draft == before
+
+
+def test_undo_forgets_a_selected_point_that_is_gone() -> None:
+    editor = square_editor()
+    click(editor, (400, 300))  # adds point 4 and selects it
+    editor.undo()
+    assert editor.selected is None
+    editor.selected = 1
+    editor.redo()
+    assert editor.selected == 1  # still there, so still selected
+
+
+pixels = st.tuples(st.integers(0, 800), st.integers(0, 600))
+session_actions = st.lists(
+    st.one_of(
+        st.tuples(st.just("click"), pixels),
+        st.tuples(st.just("drag"), pixels, pixels),
+        st.tuples(st.just("right-click"), pixels),
+        st.tuples(st.just("wheel"), pixels, st.integers(-3, 3)),
+        st.sampled_from([("delete",), ("narrow",), ("reverse",), ("start",), ("undo",)]),
+    ),
+    max_size=20,
+)
+
+
+@given(session_actions)
+def test_any_session_can_be_undone_to_the_start_and_redone_to_the_end(
+    session: list[tuple[object, ...]],
+) -> None:
+    editor = square_editor()
+    start = editor.draft
+    for action in session:
+        match action:
+            case ("click", (int(x), int(y))):
+                click(editor, (x, y))
+            case ("drag", (int(x), int(y)), (int(to_x), int(to_y))):
+                drag(editor, (x, y), (to_x, to_y))
+            case ("right-click", (int(x), int(y))):
+                click(editor, (x, y), Button.RIGHT)
+            case ("wheel", (int(x), int(y)), int(notches)):
+                editor.move((x, y))
+                editor.scroll(notches, shift=True)
+            case ("delete",):
+                editor.delete_selected()
+            case ("narrow",):
+                editor.change_selected_width(-WIDTH_STEP)
+            case ("reverse",):
+                editor.reverse()
+            case ("start",):
+                editor.start_at_selected()
+            case ("undo",):
+                editor.undo()
+    end = editor.draft
+    steps = 0
+    while editor.undo():
+        steps += 1
+    assert editor.draft == start
+    for _ in range(steps):
+        assert editor.redo()
+    assert editor.draft == end
