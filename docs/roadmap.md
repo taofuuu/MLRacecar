@@ -62,8 +62,9 @@ The tables below list each milestone's tickets: key, ticket, type, priority, siz
 | [M1-4](https://github.com/taofuuu/MLRacecar/issues/12) | Track validation rules                          | feature | P0  | M    |
 | [M1-5](https://github.com/taofuuu/MLRacecar/issues/13) | Versioned JSON track file format                | feature | P0  | S    |
 | [M1-6](https://github.com/taofuuu/MLRacecar/issues/14) | Track editor v1                                 | feature | P0  | L    |
-| [M1-7](https://github.com/taofuuu/MLRacecar/issues/15) | Editor undo/redo and help overlay               | feature | P1  | M    |
+| [M1-7](https://github.com/taofuuu/MLRacecar/issues/15) | Editor undo/redo                                | feature | P1  | M    |
 | [M1-8](https://github.com/taofuuu/MLRacecar/issues/16) | Track format and editor user guide              | docs    | P1  | S    |
+| [M1-9](https://github.com/taofuuu/MLRacecar/issues/79) | Round a corner to a chosen radius               | feature | P1  | M    |
 
 ## M2: Drivable simulation
 
