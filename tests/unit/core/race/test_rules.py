@@ -9,8 +9,14 @@ from numpy.typing import ArrayLike
 
 from drivers import CenterlineDriver
 from mlracecar.config.models import SimulationConfig, VehicleConfig
-from mlracecar.core.race.events import LapCompleted
-from mlracecar.core.race.rules import SECTORS, RaceRules, RaceState
+from mlracecar.core.race.events import LapCompleted, OffTrack, RaceEvent, WrongWay
+from mlracecar.core.race.rules import (
+    SECTORS,
+    OffTrackPolicy,
+    RaceRules,
+    RaceSettings,
+    RaceState,
+)
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.vehicle.state import VehicleState
@@ -40,7 +46,7 @@ class Drive:
         self.spot = cars_at(np.atleast_1d(arc_length))
         self.race: RaceState = RULES.start(self.spot)
         self.time = 0.0
-        self.events: list[LapCompleted] = []
+        self.events: list[RaceEvent] = []
 
     def to(self, arc_length: ArrayLike, offset: float = 0.0) -> None:
         """Move every car to these spots (one for all, or one each)."""
@@ -57,7 +63,7 @@ class Drive:
         self.to(stop, offset)
 
     def laps(self) -> list[LapCompleted]:
-        return list(self.events)  # for now every event is a lap
+        return [event for event in self.events if isinstance(event, LapCompleted)]
 
 
 def drive_world(track: Track, speed: float) -> tuple[World, CenterlineDriver]:
@@ -124,7 +130,8 @@ def test_the_scripted_driver_laps_in_the_expected_time() -> None:
     world, driver = drive_world(CIRCLE, speed)
     laps: list[LapCompleted] = []
     while len(laps) < 3:
-        laps += world.step(driver.act(world.snapshot)).events
+        events = world.step(driver.act(world.snapshot)).events
+        laps += [event for event in events if isinstance(event, LapCompleted)]
 
     assert all(lap.valid for lap in laps)
     # The first lap starts slowly, from the grid; the others are at full speed.
@@ -243,3 +250,119 @@ def test_events_come_in_the_order_they_happened() -> None:
     first, second = drive.laps()
     assert (first.car, second.car) == (1, 0)
     assert first.at < second.at
+
+
+# --------------------------------------------------------------------------- #
+# Off track and wrong way
+# --------------------------------------------------------------------------- #
+
+
+def test_a_car_is_off_track_while_its_centre_is_off_the_road() -> None:
+    drive = Drive(50.0)
+    drive.to(52.0, offset=5.9)  # the road is 12 m wide
+    assert not drive.race.off_track[0]
+
+    drive.to(54.0, offset=6.1)
+    drive.to(56.0, offset=8.0)
+    assert drive.race.off_track[0]
+    drive.to(58.0, offset=-2.0)
+    drive.to(60.0, offset=-7.0)  # off the other side
+
+    excursions = [event for event in drive.events if isinstance(event, OffTrack)]
+    assert [(event.car, round(event.arc_length)) for event in excursions] == [(0, 54), (0, 60)]
+    assert excursions[0].at == pytest.approx(0.2)
+
+
+def test_a_car_starting_off_the_road_is_off_track_from_the_start() -> None:
+    assert RULES.start(cars_at([50.0, 50.0], [0.0, 10.0])).off_track.tolist() == [False, True]
+
+
+def test_driving_backwards_along_the_track_is_the_wrong_way() -> None:
+    drive = Drive(100.0)
+    drive.to(99.95)  # 0.5 m/s backwards: creeping, not driving the wrong way
+    assert not drive.race.wrong_way[0]
+
+    drive.along(99.95, 80.0)
+    assert drive.race.wrong_way[0]
+    drive.along(80.0, 90.0)
+    assert not drive.race.wrong_way[0]
+
+    (wrong_way,) = [event for event in drive.events if isinstance(event, WrongWay)]
+    assert wrong_way.car == 0
+    assert wrong_way.arc_length == pytest.approx(97.95, abs=0.01)
+
+
+def test_facing_backwards_without_moving_is_not_the_wrong_way() -> None:
+    cars = cars_at([50.0])
+    backwards = VehicleState.at_rest(cars.position, cars.yaw + np.pi)
+    race = RULES.start(backwards)
+
+    race, events = RULES.update(race, backwards, backwards, 0.0, 0.1)
+
+    assert not race.wrong_way[0]
+    assert events == ()
+
+
+def moving(arc_length: float, offset: float, speed: float) -> VehicleState:
+    cars = cars_at([arc_length], offset)
+    return VehicleState(**{**vars(cars), "vx": np.array([speed]), "yaw_rate": np.array([0.1])})
+
+
+def off_and_on(policy: OffTrackPolicy) -> tuple[VehicleState, RaceState]:
+    """Two cars at 20 m/s, the first off the road, after `enforce`."""
+    rules = RaceRules(CIRCLE, reach=5.0, settings=RaceSettings(off_track=policy))
+    before = VehicleState(
+        **{
+            name: np.concatenate([getattr(moving(50.0, 8.0, 20.0), name),
+                                  getattr(moving(50.0, 2.0, 20.0), name)])
+            for name in vars(moving(0.0, 0.0, 0.0))
+        }
+    )  # fmt: skip
+    race, _ = rules.update(rules.start(before), before, before, 0.0, 0.1)
+    return rules.enforce(before, race, 0.1)
+
+
+def test_with_no_off_track_policy_nothing_happens() -> None:
+    cars, race = off_and_on(OffTrackPolicy.NONE)
+
+    np.testing.assert_array_equal(cars.speed, [20.0, 20.0])
+    assert race.off_track.tolist() == [True, False]
+    assert not race.out.any()
+
+
+def test_the_grass_slows_a_car_down() -> None:
+    cars, race = off_and_on(OffTrackPolicy.SLOWDOWN)
+
+    np.testing.assert_allclose(cars.speed, [20.0 - RaceSettings().grass_slowdown * 0.1, 20.0])
+    np.testing.assert_allclose(cars.yaw_rate, [0.1 * cars.speed[0] / 20.0, 0.1])
+    assert race.off_track[0]
+
+
+def test_the_grass_stops_a_slow_car_without_reversing_it() -> None:
+    rules = RaceRules(CIRCLE, reach=5.0)
+    crawling = moving(50.0, 8.0, 0.2)
+    race, _ = rules.update(rules.start(crawling), crawling, crawling, 0.0, 0.1)
+
+    cars, _ = rules.enforce(crawling, race, 0.1)
+
+    assert cars.speed[0] == 0.0
+
+
+def test_a_reset_puts_the_car_back_in_the_middle_of_the_road_at_rest() -> None:
+    cars, race = off_and_on(OffTrackPolicy.RESET)
+
+    # Within a few centimetres: from 8 m off the middle of a bend, finding the spot along the
+    # road from the 0.5 m centerline pieces is off by up to 8 · (1/60) · 0.5 / 2 = 3 cm.
+    middle = CIRCLE.pose_at([50.0])
+    np.testing.assert_allclose(cars.position[0], middle.position[0], atol=0.05)
+    assert cars.speed[0] == 0.0
+    assert cars.speed[1] == 20.0
+    assert race.offset[0] == race.heading_error[0] == 0.0
+    assert not race.off_track.any()  # back on the road
+
+
+def test_leaving_the_road_ends_the_run_with_terminate() -> None:
+    cars, race = off_and_on(OffTrackPolicy.TERMINATE)
+
+    assert race.out.tolist() == [True, False]
+    np.testing.assert_array_equal(cars.speed, [0.0, 20.0])

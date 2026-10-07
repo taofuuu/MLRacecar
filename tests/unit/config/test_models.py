@@ -2,16 +2,18 @@
 
 import dataclasses
 import math
+import typing
 
 import numpy as np
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from mlracecar.config.models import RacecarConfig, SimulationConfig, VehicleConfig
+from mlracecar.config.models import RacecarConfig, RaceConfig, SimulationConfig, VehicleConfig
+from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.core.world import Timing
 
-SECTIONS: list[type[BaseModel]] = [VehicleConfig, SimulationConfig]
+SECTIONS: list[type[BaseModel]] = [VehicleConfig, SimulationConfig, RaceConfig]
 
 
 def test_every_setting_has_a_default() -> None:
@@ -140,3 +142,19 @@ def test_simulation_settings_convert_to_timing() -> None:
     timing = SimulationConfig(physics_hz=100, action_repeat=4).to_timing()
 
     assert timing == Timing(physics_hz=100, action_repeat=4)
+
+
+def test_race_settings_convert_for_the_race_rules() -> None:
+    settings = RaceConfig(off_track="terminate", grass_slowdown=3.0).to_settings()
+
+    assert settings == RaceSettings(off_track=OffTrackPolicy.TERMINATE, grass_slowdown=3.0)
+
+
+def test_the_race_rules_default_to_the_default_settings() -> None:
+    assert RaceConfig().to_settings() == RaceSettings()
+
+
+def test_every_off_track_policy_can_be_chosen_in_the_settings() -> None:
+    choices = typing.get_args(RaceConfig.model_fields["off_track"].annotation)
+
+    assert set(choices) == {policy.value for policy in OffTrackPolicy}

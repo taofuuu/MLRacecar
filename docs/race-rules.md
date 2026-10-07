@@ -4,7 +4,8 @@
 > far it is from the middle of the road, and which way it points compared with the road. They
 > also count laps and time them. A lap only counts if the car crossed every checkpoint (a line
 > across the road) in order, so tricks like reversing back and forth over the finish line, or
-> cutting across the grass, never count.
+> cutting across the grass, never count. They notice when a car leaves the road, and decide what
+> happens then, and when it drives the wrong way.
 
 The rules live in `mlracecar.core.race` and run after every driver decision (`World.step`).
 Each `Snapshot` carries every car's race (`snapshot.race`) and what happened during that step
@@ -54,7 +55,23 @@ The rules run once per driver decision (every 0.05 s by default), but times are 
 where exactly between two decisions the car crossed the line, so they are far more precise than
 0.05 s.
 
-## Coming next
+## Off the road
 
-The second part of this ticket adds driving off the road (with a choice of what happens: nothing,
-slowing down, being put back on the road, or ending the car's run) and driving the wrong way.
+A car is **off track** while its centre is off the road: further from the middle than half the
+road's width there. With its centre off, half the car is on the grass. Each time a car leaves
+the road, an `OffTrack` event says where, and `race.off_track` stays set until it's back.
+
+What happens then is a setting, `race.off_track` (see [Settings](configuration.md)):
+
+| `off_track` | What happens to a car off the road |
+|-------------|-------------------------------------|
+| `none` | Nothing. The event still says it happened. |
+| `slowdown` (default) | The grass slows it down: it loses `race.grass_slowdown` m/s (6 by default) every second it's off the road, and never goes backwards. |
+| `reset` | It's put back in the middle of the road where it left it, at rest, facing the right way. Its lap carries on. |
+| `terminate` | Its run is over: it stops where it is and stays there, whatever the driver does, until it's reset. `race.out` says so, so that the RL environment can end the car's episode. |
+
+## The wrong way
+
+A car drives the **wrong way** while it moves backwards along the track faster than 1 m/s. A car
+that just faces the wrong way, standing still or creeping, doesn't count. Each time it starts, a
+`WrongWay` event says where, and `race.wrong_way` stays set until the car stops going backwards.

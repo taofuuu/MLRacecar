@@ -19,5 +19,29 @@ class LapCompleted:
     """The world's time when the car crossed the line."""
 
 
-type RaceEvent = LapCompleted
+@dataclass(frozen=True)
+class OffTrack:
+    """A car's centre left the road."""
+
+    car: int
+    """Which car."""
+    arc_length: float
+    """Where along the lap, in metres."""
+    at: float
+    """The world's time at the end of the update in which it happened."""
+
+
+@dataclass(frozen=True)
+class WrongWay:
+    """A car started driving the wrong way round the track."""
+
+    car: int
+    """Which car."""
+    arc_length: float
+    """Where along the lap, in metres."""
+    at: float
+    """The world's time at the end of the update in which it happened."""
+
+
+type RaceEvent = LapCompleted | OffTrack | WrongWay
 """Anything that can happen in a race."""

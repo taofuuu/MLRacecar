@@ -78,6 +78,8 @@
 | **Curvature** | How sharply a curve bends (1 / radius). | Tight corners have high curvature. |
 | **Pose** | Where something is *and* which way it faces: a position plus a heading angle. | Starting-grid slots; car positions. |
 | **Checkpoint** | A line across the road. A lap only counts if the car crosses every checkpoint in order. | Evenly spaced around the lap; checkpoint 0 is the start/finish line. |
+| **Off track** | The car's centre is off the road, so half the car is on the grass. What happens then is a setting: nothing, slow down, back on the road, or the run ends. | `race.off_track` |
+| **Wrong way** | Driving backwards along the track, faster than walking pace. | The `WrongWay` event. |
 | **Valid lap** | A lap in which the car crossed every checkpoint in order. Only valid laps count and set lap times. | `LapCompleted.valid` |
 | **Sector** | One of the three parts a lap is split into, each timed separately, as in real racing. | `LapCompleted.sectors` |
 | **Amortized O(1)** | The work per step stays the same small amount on average, however big the input (here: however long the track). | Finding each car on the road. |

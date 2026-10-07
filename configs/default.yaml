@@ -22,3 +22,8 @@ vehicle:
 simulation:
   physics_hz: 120   # Physics steps per simulated second.
   action_repeat: 6  # Physics steps per driver decision (120 / 6 = 20 decisions a second).
+
+# The race rules: what happens when a car leaves the road.
+race:
+  off_track: slowdown  # When a car's centre leaves the road: none, slowdown, reset, or terminate.
+  grass_slowdown: 6    # How hard grass slows a car, in m/s per second (off_track: slowdown).

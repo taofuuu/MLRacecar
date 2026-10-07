@@ -8,7 +8,7 @@ import pytest
 
 from mlracecar.config.models import VehicleConfig
 from mlracecar.core.geometry import BoolArray, FloatArray, wrap_angle
-from mlracecar.core.race.rules import RaceState
+from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings, RaceState
 from mlracecar.core.track.model import GridLayout, Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.vehicle.state import VehicleState
@@ -224,3 +224,30 @@ def test_random_starts_put_the_whole_car_on_the_road_facing_the_way_round() -> N
     assert (sectors > 20).all()
     assert (offset > room / 2).any()
     assert (offset < -room / 2).any()
+
+
+# --------------------------------------------------------------------------- #
+# Off the road
+# --------------------------------------------------------------------------- #
+
+
+def test_the_grass_slows_cars_down_unless_the_settings_say_otherwise() -> None:
+    assert make_world().rules.settings == RaceSettings(off_track=OffTrackPolicy.SLOWDOWN)
+
+
+def test_a_car_whose_run_is_over_stays_where_it_is_until_it_is_reset() -> None:
+    settings = RaceSettings(off_track=OffTrackPolicy.TERMINATE)
+    world = World(TRACK, MODEL, TIMING, 1, np.random.default_rng(0), settings=settings)
+    while not world.snapshot.race.out[0]:  # full throttle, full left: off the road soon
+        assert world.snapshot.time < 30, "never left the road"
+        world.step([[1.0, 1.0]])
+    stopped = world.snapshot
+    assert stopped.cars.speed[0] == 0.0
+
+    for _ in range(10):
+        world.step([[0.0, 1.0]])
+    assert_same(world.snapshot.cars, stopped.cars)
+
+    world.reset()
+    assert not world.snapshot.race.out[0]
+    assert world.step([[0.0, 1.0]]).cars.speed[0] > 0

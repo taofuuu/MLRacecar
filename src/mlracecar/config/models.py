@@ -9,11 +9,12 @@ Every setting's docstring becomes its comment in the YAML written by
 """
 
 import math
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
 
+from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.core.world import Timing
 
@@ -108,6 +109,23 @@ class SimulationConfig(BaseModel):
         return Timing(physics_hz=self.physics_hz, action_repeat=self.action_repeat)
 
 
+class RaceConfig(BaseModel):
+    """The race rules."""
+
+    model_config = _SETTINGS
+
+    off_track: Literal["none", "slowdown", "reset", "terminate"] = "slowdown"
+    """When a car's centre leaves the road: none, slowdown, reset, or terminate."""
+    grass_slowdown: Positive = 6.0
+    """How hard grass slows a car, in m/s per second (off_track: slowdown)."""
+
+    def to_settings(self) -> RaceSettings:
+        """The settings, for the race rules."""
+        return RaceSettings(
+            off_track=OffTrackPolicy(self.off_track), grass_slowdown=self.grass_slowdown
+        )
+
+
 class RacecarConfig(BaseModel):
     """Every setting, in sections. `mlracecar.config.files.load_config` builds one from files."""
 
@@ -117,3 +135,5 @@ class RacecarConfig(BaseModel):
     """The car: its size, steering, engine and brakes, and what slows it down."""
     simulation: SimulationConfig = Field(default_factory=SimulationConfig)
     """How simulated time moves forward."""
+    race: RaceConfig = Field(default_factory=RaceConfig)
+    """The race rules: what happens when a car leaves the road."""
