@@ -148,6 +148,7 @@ source_modules = [
   "mlracecar.editor.controller",
   "mlracecar.editor.document",
   "mlracecar.editor.checks",
+  "mlracecar.editor.history",
 ]
 forbidden_modules = ["pygame"]
 
