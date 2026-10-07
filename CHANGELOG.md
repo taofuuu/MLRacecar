@@ -44,6 +44,10 @@ All notable changes to this project are documented here. The format is based on
   bar says whether the track can be raced. Tracks with errors can still be saved, with a
   warning. The checks run on a worker thread (ADR-0013), so dragging stays at 60 fps on a
   3.5 km track.
+- Undo and redo in the editor: Ctrl+Z undoes, Ctrl+Y or Ctrl+Shift+Z redoes, up to 500 steps.
+  One step is one whole action: a click, a drag, or a run of width changes at one point.
+  Undoing back to the saved track clears the unsaved-changes star. The editor now saves
+  positions and widths to the centimetre, so track files stay readable.
 - `mlracecar.render`: an immutable `Camera` (metres to pixels, pan, zoom around the cursor,
   fit, grid spacing) and pygame drawing of the grid and the track (road, edges, start line,
   direction arrow) that fills only what's on screen, for a few milliseconds per frame at any
