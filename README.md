@@ -13,8 +13,11 @@ MLRacecar is a top-down 2D racing simulator built from scratch in Python. It com
 visual track editor and a reinforcement-learning pipeline that teaches cars to drive any
 track you design.
 
-> **Status: planning.** Design and [backlog](https://github.com/users/taofuuu/projects/3) are done; implementation starts with
-> [milestone M0](docs/roadmap.md#m0-foundations).
+> **Status: in development.** Milestones M0 (foundations) and M1 (tracks) are done, and so is
+> M2 (drivable simulation) apart from the optional tire-slip car model: you can draw a track in
+> the editor and drive it with the keyboard. Next up is M3, the reinforcement-learning
+> environment. See the [roadmap](docs/roadmap.md) and the
+> [project board](https://github.com/users/taofuuu/projects/3).
 
 ## Planned features
 
