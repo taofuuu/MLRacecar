@@ -61,6 +61,26 @@ def rectangles_overlap(
     return True
 
 
+def road_coordinates(track: Track, points: FloatArray) -> tuple[FloatArray, FloatArray]:
+    """Distance along the track and sideways offset (left = +) of each point, found exactly.
+
+    Projecting onto the sampled centerline alone is off along the road by up to
+    ``offset * curvature * spacing / 2``: about 0.15 m for a point 5 m off-center in a 12 m
+    radius bend. Newton steps on the smooth spline then find the spot whose sideways line
+    passes through the point.
+    """
+    arc_length = project_onto_polyline(points, track.centerline.points, closed=True).arc_length
+    for _ in range(3):
+        pose = track.pose_at(arc_length)
+        tangent = unit_vector(pose.heading)
+        gap = points - pose.position
+        along, offset = np.einsum("ni,ni->n", gap, tangent), cross(tangent, gap)
+        curvature = track.spline.curvature(*track.spline.locate(arc_length))
+        arc_length = arc_length + along / (1 - curvature * offset)  # Newton step towards along = 0
+    pose = track.pose_at(arc_length)
+    return arc_length, cross(unit_vector(pose.heading), points - pose.position)
+
+
 # --------------------------------------------------------------------------- #
 # Building
 # --------------------------------------------------------------------------- #
@@ -220,24 +240,24 @@ def test_grid_cars_face_the_driving_direction_behind_the_start_line(
     track = Track.build(*inputs)
     layout = GridLayout()
     grid = track.start_grid(count, layout)
-    on_center = project_onto_polyline(grid.position, track.centerline.points, closed=True)
+    # Where each car stands on the road, measured independently of how the grid was built.
+    arc_length, offset = road_coordinates(track, grid.position)
 
     # Behind the line: the pole car's center is exactly first_gap + half a car length back.
-    distance_behind = track.length - on_center.arc_length
+    distance_behind = track.length - arc_length
     pole_back = layout.first_gap + layout.car_length / 2
     np.testing.assert_allclose(distance_behind[0], pole_back, atol=0.05)
     np.testing.assert_allclose(np.diff(distance_behind), layout.car_length + layout.gap, atol=0.05)
 
-    # Facing the driving direction: heading matches the road's direction where the car stands
-    # (found by projecting onto the sampled centerline, independently of how the grid was built).
-    road_heading = track.pose_at(on_center.arc_length).heading
+    # Facing the driving direction: heading matches the road's direction where the car stands.
+    road_heading = track.pose_at(arc_length).heading
     np.testing.assert_allclose(wrap_angle(grid.heading - road_heading), 0, atol=1e-3)
 
     # Staggered: pole position on the left, then alternating, with every car on the road.
     expected_side = np.where(np.arange(count) % 2 == 0, 1.0, -1.0)
-    np.testing.assert_array_equal(np.sign(on_center.offset), expected_side)
-    room = track.width_at(on_center.arc_length) / 2 - layout.car_width / 2
-    assert np.all(np.abs(on_center.offset) <= room + 0.01)
+    np.testing.assert_array_equal(np.sign(offset), expected_side)
+    room = track.width_at(arc_length) / 2 - layout.car_width / 2
+    assert np.all(np.abs(offset) <= room + 0.01)
 
 
 def test_narrow_road_moves_lanes_inwards_to_keep_cars_on_it() -> None:
