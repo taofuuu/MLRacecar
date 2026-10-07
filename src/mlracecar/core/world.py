@@ -10,13 +10,20 @@ given, so the same seed and the same actions always give exactly the same race.
 
 from dataclasses import dataclass, fields
 from enum import StrEnum
+from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from mlracecar.core.geometry import BoolArray
+from mlracecar.core.race.events import RaceEvent
+from mlracecar.core.race.rules import RaceRules, RaceState
 from mlracecar.core.track.model import GridLayout, Pose, Track
 from mlracecar.core.vehicle.dynamics import DynamicsModel
 from mlracecar.core.vehicle.state import VehicleState
+
+MAX_SPEED = 150.0
+"""m/s (540 km/h): faster than any car the race rules expect to keep track of."""
 
 
 @dataclass(frozen=True)
@@ -62,6 +69,10 @@ class Snapshot:
     """Simulated seconds since the world began."""
     cars: VehicleState
     """Every car's position and motion."""
+    race: RaceState
+    """Every car's race: where it is along the lap, its laps, and its times."""
+    events: tuple[RaceEvent, ...]
+    """What happened since the previous snapshot, in order."""
 
 
 class World:
@@ -95,12 +106,14 @@ class World:
         self.track = track
         self.model = model
         self.timing = timing
+        self.rules = RaceRules(track, reach=MAX_SPEED * timing.decision_dt)
         self._rng = rng
         # With more cars than fit on one lap, the grid wraps around; ghost cars don't mind.
         layout = GridLayout(car_length=model.params.length, car_width=model.params.width)
         self._grid = track.start_grid(cars, layout)
         self._tick = 0
-        self._snapshot = self._take_snapshot(self._placed(np.arange(cars), start))
+        placed = self._placed(np.arange(cars), start)
+        self._snapshot = self._take_snapshot(placed, self.rules.start(placed), ())
 
     def __len__(self) -> int:
         """The number of cars."""
@@ -121,11 +134,13 @@ class World:
         Raises:
             ValueError: If the actions have the wrong shape or aren't finite numbers.
         """
-        cars = self._snapshot.cars
+        before = self._snapshot
+        cars = before.cars
         for _ in range(self.timing.action_repeat):
             cars = self.model.step(cars, actions, self.timing.dt)
         self._tick += self.timing.action_repeat
-        return self._take_snapshot(cars)
+        race, events = self.rules.update(before.race, before.cars, cars, before.time, self._time)
+        return self._take_snapshot(cars, race, events)
 
     def reset(
         self, cars: ArrayLike | None = None, *, start: StartPosition = StartPosition.GRID
@@ -133,6 +148,8 @@ class World:
         """Put some cars back at the start, at rest. The others carry on as they were.
 
         The clock keeps running: a reset car starts again, not the world.
+
+        A reset car's race starts afresh too: no laps, and its next lap starts at the line.
 
         Args:
             cars: Which cars, as a boolean mask of shape ``(N,)``; all of them if ``None``.
@@ -146,13 +163,10 @@ class World:
         if mask.shape != (count,):
             raise ValueError(f"expected a mask of shape ({count},), got {mask.shape}")
         placed = self._placed(np.flatnonzero(mask), start)
-        current = self._snapshot.cars
-        columns = {}
-        for field in fields(VehicleState):
-            column = getattr(current, field.name).copy()
-            column[mask] = getattr(placed, field.name)
-            columns[field.name] = column
-        return self._take_snapshot(VehicleState(**columns))
+        current = self._snapshot
+        merged = _merged(current.cars, placed, mask)
+        race = _merged(current.race, self.rules.start(placed), mask)
+        return self._take_snapshot(merged, race, ())
 
     def _placed(self, cars: ArrayLike, start: StartPosition) -> VehicleState:
         """The given cars (by index) at rest at their start."""
@@ -169,8 +183,25 @@ class World:
         room = np.maximum(self.track.width_at(arc_length) - self.model.params.width, 0.0) / 2
         return self.track.pose_at(arc_length, self._rng.uniform(-1.0, 1.0, count) * room)
 
-    def _take_snapshot(self, cars: VehicleState) -> Snapshot:
-        for field in fields(cars):
-            getattr(cars, field.name).flags.writeable = False
-        self._snapshot = Snapshot(self._tick, self._tick / self.timing.physics_hz, cars)
+    @property
+    def _time(self) -> float:
+        return self._tick / self.timing.physics_hz
+
+    def _take_snapshot(
+        self, cars: VehicleState, race: RaceState, events: tuple[RaceEvent, ...]
+    ) -> Snapshot:
+        for arrays in (cars, race):
+            for field in fields(arrays):
+                getattr(arrays, field.name).flags.writeable = False
+        self._snapshot = Snapshot(self._tick, self._time, cars, race, events)
         return self._snapshot
+
+
+def _merged[State: (VehicleState, RaceState)](current: State, new: State, mask: BoolArray) -> State:
+    """``current`` with the masked cars' entries replaced by ``new``'s, in fresh arrays."""
+    columns: dict[str, Any] = {}
+    for field in fields(current):
+        column = getattr(current, field.name).copy()
+        column[mask] = getattr(new, field.name)
+        columns[field.name] = column
+    return type(current)(**columns)
