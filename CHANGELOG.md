@@ -126,6 +126,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- A car's heading error and the road width used for the off-track check now change smoothly
+  along the road. They stepped at every 0.5 m centerline sample, so a car almost equally near
+  two samples could get either value, and Windows and Linux could disagree.
 - `wrap_angle` returns angles that are already in range unchanged. Before, it could change
   them by a rounding error, which would have made a car driving straight drift off course.
 - Control points closer than a micrometre now count as on top of each other: the track checks
