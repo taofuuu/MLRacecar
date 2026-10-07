@@ -34,6 +34,8 @@ class RoadPosition(NamedTuple):
     """Distance from the centerline in metres, positive to the left."""
     heading: FloatArray
     """The road's direction there, in radians."""
+    width: FloatArray
+    """The road's width there, in metres."""
 
 
 class RoadLocator:
@@ -52,7 +54,9 @@ class RoadLocator:
         self._squared_lengths = np.einsum("si,si->s", self._vectors, self._vectors)
         self._arc_start = line.arc_length
         self._arc_span = np.diff(line.arc_length, append=line.length)
-        self._heading = np.arctan2(self._vectors[:, 1], self._vectors[:, 0])
+        following = np.roll(np.arange(len(line.points)), -1)
+        self._tangents = line.tangent, line.tangent[following]  # at each segment's two ends
+        self._widths = track.width, track.width[following]
         spacing = line.length / len(line.points)
         steps = min(math.ceil((reach + MARGIN) / spacing), len(line.points) // 2)
         # The samples with the lap's ends repeated beyond them: sample i is at i + steps, and a
@@ -87,6 +91,11 @@ class RoadLocator:
         Finding the nearest sample first and then measuring only to the two segments that meet
         there is much cheaper than measuring to every candidate segment. With samples 0.5 m
         apart along a smooth curve, it lands on the same segment.
+
+        The road's heading and width are blended between the segment's two ends, so they change
+        smoothly along the road. Taken per segment, they would step at every sample, and a point
+        almost equally far from two segments (which rounding can tip either way) would get one
+        step or the other.
         """
         rows = np.arange(len(points))
         dx = points[:, :1] - self._x[candidates]
@@ -101,11 +110,23 @@ class RoadLocator:
         best = np.argmin(np.einsum("nki,nki->nk", gaps, gaps), axis=1)
         segment = pair[rows, best]
         gap = gaps[rows, best]
-        arc_length = self._arc_start[segment] + fraction[rows, best] * self._arc_span[segment]
+        along_segment = fraction[rows, best]
+        arc_length = self._arc_start[segment] + along_segment * self._arc_span[segment]
         side = np.where(cross(self._vectors[segment], gap) < 0, -1.0, 1.0)
+        tangent = _blend(self._tangents, segment, along_segment[:, None])
         return RoadPosition(
             segment=segment,
             arc_length=np.where(arc_length >= self.length, arc_length - self.length, arc_length),
             offset=side * np.hypot(gap[:, 0], gap[:, 1]),
-            heading=self._heading[segment],
+            heading=np.arctan2(tangent[:, 1], tangent[:, 0]),
+            width=_blend(self._widths, segment, along_segment),
         )
+
+
+def _blend(
+    ends: tuple[FloatArray, FloatArray], segment: IntArray, fraction: FloatArray
+) -> FloatArray:
+    """A quantity known at both ends of each segment, ``fraction`` of the way along it."""
+    start, end = ends
+    result: FloatArray = start[segment] + (end[segment] - start[segment]) * fraction
+    return result
