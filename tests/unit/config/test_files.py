@@ -16,7 +16,7 @@ from mlracecar.config.files import (
     parse_override,
     read_config_file,
 )
-from mlracecar.config.models import RacecarConfig, SimulationConfig, VehicleConfig
+from mlracecar.config.models import RacecarConfig, RaceConfig, SimulationConfig, VehicleConfig
 
 DEFAULT_CONFIG_PATH = Path(__file__).parents[3] / "configs" / "default.yaml"
 
@@ -218,6 +218,8 @@ def test_every_problem_is_listed_with_where_it_came_from(tmp_path: Path) -> None
         ("simulation.physics_hz=60.0", "simulation.physics_hz: must be a whole number, got 60.0"),
         ("vehicle.max_steer=90", "vehicle.max_steer: must be less than 90, got 90"),
         ("vehicle.drag_coefficient=-0.1", "vehicle.drag_coefficient: must be at least 0, got -0.1"),
+        ("race.off_track=fast", "race.off_track: must be one of 'none', 'slowdown', 'reset' or "
+                                "'terminate', got \"fast\""),
         ("vehicle.wheelbase=5", "vehicle.wheelbase: must be shorter than the car's length (4.5 m), "
                                 "got 5"),
     ],
@@ -292,16 +294,43 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         rolling_resistance=draw(non_negative),
     )
     simulation = SimulationConfig(physics_hz=draw(whole), action_repeat=draw(whole))
-    return RacecarConfig(vehicle=vehicle, simulation=simulation)
+    race = RaceConfig(
+        off_track=draw(st.sampled_from(["none", "slowdown", "reset", "terminate"])),
+        grass_slowdown=draw(positive),
+    )
+    return RacecarConfig(vehicle=vehicle, simulation=simulation, race=race)
+
+
+class Texts(BaseModel):
+    plain: str = "slowdown"
+    looks_like_yes: str = "on"
+    looks_like_a_number: str = "1.5"
+    empty: str = ""
+
+
+def test_text_is_quoted_only_where_yaml_would_read_it_as_something_else() -> None:
+    config = RacecarConfig.model_construct(vehicle=Texts())  # type: ignore[arg-type]
+
+    text = format_config(config)
+
+    lines = text.splitlines()
+    for line in [
+        "plain: slowdown",
+        'looks_like_yes: "on"',
+        'looks_like_a_number: "1.5"',
+        'empty: ""',
+    ]:
+        assert f"  {line}" in lines
+    assert parse_config_text(text)["vehicle"] == Texts().model_dump()
 
 
 def test_a_setting_without_a_yaml_form_is_not_written() -> None:
-    class Named(BaseModel):
-        name: str = "fast"
+    class Switches(BaseModel):
+        enabled: bool = True
 
-    config = RacecarConfig.model_construct(vehicle=Named(), simulation=SimulationConfig())  # type: ignore[arg-type]
+    config = RacecarConfig.model_construct(vehicle=Switches())  # type: ignore[arg-type]
 
-    with pytest.raises(TypeError, match="no YAML form for str settings"):
+    with pytest.raises(TypeError, match="no YAML form for bool settings"):
         format_config(config)
 
 
@@ -316,6 +345,8 @@ def test_written_settings_explain_every_line() -> None:
     lines = format_config(RacecarConfig()).splitlines()
 
     settings = [line for line in lines if line.startswith("  ")]
-    assert len(settings) == len(VehicleConfig.model_fields) + len(SimulationConfig.model_fields)
+    sections = (VehicleConfig, SimulationConfig, RaceConfig)
+    assert len(settings) == sum(len(section.model_fields) for section in sections)
     assert all("  # " in line for line in settings)
     assert all(len(line) <= 100 for line in lines)
+    assert all(line.isascii() for line in lines)  # Windows consoles garble the rest

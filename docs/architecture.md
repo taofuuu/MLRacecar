@@ -212,7 +212,9 @@ are ghosts until collisions arrive in M7.
   crossing it. This blocks reverse-over-the-line and corner-cutting exploits (agents *will*
   find these). Lap and sector times are interpolated between updates.
   See [Race rules](race-rules.md).
-- **Off-track policy** is configurable: `none | slowdown | reset | terminate`.
+- **Off track** means the car's centre is off the road. What happens then is configurable
+  (`race.off_track`): `none | slowdown | reset | terminate`; `slowdown` is the default.
+  **Wrong way** means moving backwards along the track faster than 1 m/s.
 - **Events** (`LapCompleted`, `OffTrack`, `WrongWay`, `Collision`) are returned as plain
   data, not callbacks, so they are easy to log, test, and replay.
 

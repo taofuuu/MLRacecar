@@ -17,7 +17,7 @@ from numpy.typing import ArrayLike
 
 from mlracecar.core.geometry import BoolArray
 from mlracecar.core.race.events import RaceEvent
-from mlracecar.core.race.rules import RaceRules, RaceState
+from mlracecar.core.race.rules import RaceRules, RaceSettings, RaceState
 from mlracecar.core.track.model import GridLayout, Pose, Track
 from mlracecar.core.vehicle.dynamics import DynamicsModel
 from mlracecar.core.vehicle.state import VehicleState
@@ -87,6 +87,7 @@ class World:
         cars: How many cars, at least 1.
         rng: The only source of randomness (for random starts).
         start: Where the cars start.
+        settings: The race rules' settings (what happens when a car leaves the road).
 
     Raises:
         ValueError: If ``cars`` is less than 1.
@@ -100,13 +101,14 @@ class World:
         cars: int,
         rng: np.random.Generator,
         start: StartPosition = StartPosition.GRID,
+        settings: RaceSettings | None = None,
     ) -> None:
         if cars < 1:
             raise ValueError(f"a world needs at least 1 car, got {cars}")
         self.track = track
         self.model = model
         self.timing = timing
-        self.rules = RaceRules(track, reach=MAX_SPEED * timing.decision_dt)
+        self.rules = RaceRules(track, reach=MAX_SPEED * timing.decision_dt, settings=settings)
         self._rng = rng
         # With more cars than fit on one lap, the grid wraps around; ghost cars don't mind.
         layout = GridLayout(car_length=model.params.length, car_width=model.params.width)
@@ -127,6 +129,9 @@ class World:
     def step(self, actions: ArrayLike) -> Snapshot:
         """Drive every car for one driver decision: ``timing.action_repeat`` physics steps.
 
+        Cars whose run is over (``race.out``) stay where they are. Afterwards the race rules
+        update every car's race and apply the off-track policy.
+
         Args:
             actions: ``[steer, pedal]`` for each car, shape ``(N, 2)``; each car keeps its action
                 for the whole decision.
@@ -139,7 +144,9 @@ class World:
         for _ in range(self.timing.action_repeat):
             cars = self.model.step(cars, actions, self.timing.dt)
         self._tick += self.timing.action_repeat
+        cars = before.cars.where(before.race.out, cars)
         race, events = self.rules.update(before.race, before.cars, cars, before.time, self._time)
+        cars, race = self.rules.enforce(cars, race, self.timing.decision_dt)
         return self._take_snapshot(cars, race, events)
 
     def reset(

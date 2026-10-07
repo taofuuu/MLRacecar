@@ -36,6 +36,10 @@ All notable changes to this project are documented here. The format is based on
   road car (about 280 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
+- Race rules, part 2: a car whose centre leaves the road is off track (`OffTrack` event), and
+  the `race.off_track` setting says what happens: nothing, the grass slows it down (default,
+  `race.grass_slowdown` m/s per second), it is put back on the road, or its run ends until it
+  is reset. A car moving backwards along the track is going the wrong way (`WrongWay` event).
 - Race rules (`mlracecar.core.race`), part 1: each car's position along the lap, distance
   driven, offset from the middle of the road and heading error; checkpoints that must be
   crossed in order (backwards undoes, missing one invalidates the lap); laps, lap and sector

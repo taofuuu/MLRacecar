@@ -70,6 +70,16 @@ class VehicleState:
         result: FloatArray = np.hypot(self.vx, self.vy)
         return result
 
+    def where(self, mask: ArrayLike, other: Self) -> Self:
+        """These cars where ``mask`` is set, and ``other``'s cars elsewhere."""
+        chosen = np.asarray(mask, dtype=bool)
+        return type(self)(
+            **{
+                field.name: np.where(chosen, getattr(self, field.name), getattr(other, field.name))
+                for field in fields(self)
+            }
+        )
+
     def select(self, cars: slice | ArrayLike) -> Self:
         """Some of the cars: ``cars`` picks them by index, by slice, or with a boolean mask."""
         index = cars if isinstance(cars, slice) else np.atleast_1d(np.asarray(cars))

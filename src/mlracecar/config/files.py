@@ -255,6 +255,8 @@ def _problem(issue: ErrorDetails) -> str:
             return f"must be at least {_format_scalar(limits['ge'])}{got}"
         case "less_than":
             return f"must be less than {_format_scalar(limits['lt'])}{got}"
+        case "literal_error":
+            return f"must be one of {limits['expected']}{got}"
         case _:
             return issue["msg"] + got
 
@@ -319,9 +321,11 @@ def _comment(field: FieldInfo) -> str:
 
 def _format_scalar(value: object) -> str:
     """A setting's value as YAML. Floats keep every digit, so they read back exactly."""
-    match value:
-        case int():
-            return str(value)
-        case float():
-            return repr(value).removesuffix(".0")  # 1300.0 reads back as 1300.0 either way
+    if isinstance(value, float):
+        return repr(value).removesuffix(".0")  # 1300.0 reads back as 1300.0 either way
+    if isinstance(value, int) and not isinstance(value, bool):  # no yes/no settings yet
+        return str(value)
+    if isinstance(value, str):
+        # Plain if YAML reads it back as the same text; quoted otherwise ("on" is true).
+        return value if _parse_yaml(value, "") == value else json.dumps(value)
     raise TypeError(f"no YAML form for {type(value).__name__} settings yet")

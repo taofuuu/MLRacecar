@@ -1,4 +1,4 @@
-"""Race rules: progress along the lap, checkpoints, laps, and lap and sector times.
+"""Race rules: progress along the lap, checkpoints, laps, times, and leaving the road.
 
 Checkpoints are lines across the road (`Track.checkpoints`); checkpoint 0 is the start/finish
 line. A lap starts when a car crosses the start/finish line forwards and ends when it next does.
@@ -13,22 +13,55 @@ A car that starts behind the line (on the grid) or anywhere else along the lap s
 lap when it reaches the line. Each lap is split into `SECTORS` sectors, which begin at evenly
 spread checkpoints. Times are interpolated between updates, so they are accurate to far better
 than one update.
+
+A car is *off track* while its centre is off the road, and what happens then is the
+`OffTrackPolicy`: nothing, the grass slows it down, it is put back on the road, or its run is
+over. A car drives the *wrong way* while it moves backwards along the track faster than
+`WRONG_WAY_SPEED`. Each time either starts, an event says so.
 """
 
 import itertools
 import math
 from dataclasses import dataclass, replace
+from enum import StrEnum
 
 import numpy as np
 
 from mlracecar.core.geometry import BoolArray, FloatArray, IntArray, cross, wrap_angle
-from mlracecar.core.race.events import LapCompleted, RaceEvent
+from mlracecar.core.race.events import LapCompleted, OffTrack, RaceEvent, WrongWay
 from mlracecar.core.race.progress import RoadLocator
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.state import VehicleState
 
 SECTORS = 3
 """Sectors per lap, as in real racing."""
+
+WRONG_WAY_SPEED = 1.0
+"""m/s backwards along the track from which a car counts as driving the wrong way."""
+
+
+class OffTrackPolicy(StrEnum):
+    """What happens to a car whose centre leaves the road."""
+
+    NONE = "none"
+    """Nothing: the car carries on (the event still says it happened)."""
+    SLOWDOWN = "slowdown"
+    """The grass slows it down for as long as it is off the road."""
+    RESET = "reset"
+    """It is put back in the middle of the road where it left it, at rest."""
+    TERMINATE = "terminate"
+    """Its run is over: it stops where it is until it is reset."""
+
+
+@dataclass(frozen=True)
+class RaceSettings:
+    """The rules' settings. `mlracecar.config.models.RaceConfig` builds them from settings files;
+    the defaults here are the same."""
+
+    off_track: OffTrackPolicy = OffTrackPolicy.SLOWDOWN
+    """What happens to a car whose centre leaves the road."""
+    grass_slowdown: float = 6.0
+    """How hard the grass slows a car down, in m/s² (with `OffTrackPolicy.SLOWDOWN`)."""
 
 
 @dataclass(frozen=True, eq=False)
@@ -60,6 +93,13 @@ class RaceState:
     """The latest valid lap time in seconds; NaN until there is one."""
     best_lap: FloatArray
     """The best valid lap time in seconds; NaN until there is one."""
+    off_track: BoolArray
+    """Whether the car's centre is off the road."""
+    wrong_way: BoolArray
+    """Whether the car is driving backwards along the track."""
+    out: BoolArray
+    """Whether the car's run is over (it left the road under `OffTrackPolicy.TERMINATE`); it
+    stays where it is, at rest, until it is reset."""
 
 
 @dataclass(frozen=True)
@@ -76,11 +116,14 @@ class RaceRules:
     Args:
         track: The track.
         reach: The farthest a car can move between two updates, in metres.
+        settings: What happens when a car leaves the road.
     """
 
-    def __init__(self, track: Track, reach: float) -> None:
+    def __init__(self, track: Track, reach: float, settings: RaceSettings | None = None) -> None:
         self.track = track
+        self.settings = settings or RaceSettings()
         self._locator = RoadLocator(track, reach)
+        self._half_width = track.width / 2
         checkpoints = track.checkpoints
         self._left = checkpoints.left
         self._line = checkpoints.right - checkpoints.left
@@ -106,6 +149,9 @@ class RaceRules:
             laps=np.zeros(count, dtype=np.intp),
             last_lap=np.full(count, np.nan),
             best_lap=np.full(count, np.nan),
+            off_track=np.abs(where.offset) > self._half_width[where.segment],
+            wrong_way=np.zeros(count, dtype=bool),
+            out=np.zeros(count, dtype=bool),
         )
 
     def update(
@@ -116,10 +162,15 @@ class RaceRules:
         start: float,
         end: float,
     ) -> tuple[RaceState, tuple[RaceEvent, ...]]:
-        """The race after the cars moved from ``before`` (at time ``start``) to ``after``."""
+        """The race after the cars moved from ``before`` (at time ``start``) to ``after``.
+
+        Follow it with `enforce`, which applies the off-track policy.
+        """
         where = self._locator.locate(after.position, near=race.segment)
         half_lap = self._locator.length / 2
         moved = np.mod(where.arc_length - race.arc_length + half_lap, 2 * half_lap) - half_lap
+        off_track = np.abs(where.offset) > self._half_width[where.segment]
+        wrong_way = moved < -WRONG_WAY_SPEED * (end - start)
         moved_on = replace(
             race,
             segment=where.segment,
@@ -127,11 +178,47 @@ class RaceRules:
             distance=race.distance + moved,
             offset=where.offset,
             heading_error=wrap_angle(after.yaw - where.heading),
+            off_track=off_track,
+            wrong_way=wrong_way,
+            out=race.out | (off_track & (self.settings.off_track is OffTrackPolicy.TERMINATE)),
         )
+        events: list[RaceEvent] = [
+            *(OffTrack(int(car), float(where.arc_length[car]), end)
+              for car in np.flatnonzero(off_track & ~race.off_track)),
+            *(WrongWay(int(car), float(where.arc_length[car]), end)
+              for car in np.flatnonzero(wrong_way & ~race.wrong_way)),
+        ]  # fmt: skip
         crossings = self._crossings(race.arc_length, where.arc_length, before, after, start, end)
-        if not crossings:
-            return moved_on, ()
-        return self._crossed(moved_on, crossings)
+        if crossings:
+            moved_on, laps = self._crossed(moved_on, crossings)
+            events = [*laps, *events]  # laps happen during the update, the others at its end
+        return moved_on, tuple(events)
+
+    def enforce(
+        self, cars: VehicleState, race: RaceState, dt: float
+    ) -> tuple[VehicleState, RaceState]:
+        """Apply the off-track policy to cars that are off the road, after an update of ``dt``
+        seconds."""
+        policy = self.settings.off_track
+        if policy is OffTrackPolicy.SLOWDOWN:
+            speed = cars.speed
+            slower = np.maximum(speed - self.settings.grass_slowdown * dt, 0.0)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                scale = np.where(race.off_track & (speed > 0), slower / speed, 1.0)
+            return _scaled(cars, scale), race
+        if policy is OffTrackPolicy.RESET and race.off_track.any():
+            pose = self.track.pose_at(race.arc_length)
+            placed = VehicleState.at_rest(pose.position, pose.heading)
+            back = race.off_track
+            return placed.where(back, cars), replace(
+                race,
+                offset=np.where(back, 0.0, race.offset),
+                heading_error=np.where(back, 0.0, race.heading_error),
+                off_track=np.zeros_like(back),
+            )
+        if policy is OffTrackPolicy.TERMINATE:
+            return _scaled(cars, np.where(race.out, 0.0, 1.0)), race
+        return cars, race
 
     def _crossings(
         self,
@@ -225,3 +312,8 @@ class RaceRules:
             best_lap=best_lap,
         )
         return crossed, tuple(events)
+
+
+def _scaled(cars: VehicleState, scale: FloatArray) -> VehicleState:
+    """The cars with their motion scaled: 0 stops a car, 1 leaves it as it is."""
+    return replace(cars, vx=cars.vx * scale, vy=cars.vy * scale, yaw_rate=cars.yaw_rate * scale)

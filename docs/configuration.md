@@ -32,6 +32,10 @@ The default car is a sporty road car: about 280 km/h flat out. Angles are in deg
 in kilowatts, because those are easy to picture; the simulation converts them to radians and
 watts.
 
+A third section, `race`, holds the race rules: what happens when a car leaves the road
+(`off_track`: `none`, `slowdown`, `reset`, or `terminate`) and how hard the grass slows it
+(`grass_slowdown`). See [Race rules](race-rules.md).
+
 ## Changing settings
 
 Write a file with only the settings you want to change, under their section:
