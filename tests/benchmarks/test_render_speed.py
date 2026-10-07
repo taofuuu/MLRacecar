@@ -1,6 +1,6 @@
 """How long drawing a race frame takes: the race window must manage 60 frames a second.
 
-Run with `uv run pytest -m benchmark`.
+Run with `uv run pytest -m benchmark --no-cov`.
 """
 
 from pathlib import Path

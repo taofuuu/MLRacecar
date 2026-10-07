@@ -108,6 +108,7 @@
 | **Deterministic / bitwise reproducible** | Same inputs → exactly the same outputs, down to the last digit. | Same seed = same race. |
 | **Seed / RNG** | The starting number for a random-number generator. Same seed = same "random" sequence. | Every run records its seeds. |
 | **Throughput** | How much work per second, e.g. simulation steps per second. | Benchmarks in the README. |
+| **Car-step** | One car driving for one step (one driver decision). 1,024 cars taking one step together make 1,024 car-steps. | The speed table in the README. Each car-step is one experience the AI can learn from. |
 
 ## Testing and tooling
 
