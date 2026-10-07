@@ -2,7 +2,9 @@
 
 import os
 from pathlib import Path
+from typing import Any
 
+import numpy as np
 import pytest
 from hypothesis import settings
 
@@ -24,3 +26,10 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
         if BENCHMARKS_DIR in item.path.parents:
             item.add_marker(pytest.mark.benchmark)
+
+
+def pytest_benchmark_update_machine_info(
+    config: pytest.Config, machine_info: dict[str, Any]
+) -> None:
+    """Save the NumPy version with the speed measurements: the simulation's speed depends on it."""
+    machine_info["numpy"] = np.__version__

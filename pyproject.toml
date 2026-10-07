@@ -179,7 +179,8 @@ addopts = [
   "--strict-markers",
   "--strict-config",
   "--import-mode=importlib",
-  # Slow, GPU, and benchmark tests are opt-in: `uv run pytest -m slow` (or gpu / benchmark).
+  # Slow, GPU, and benchmark tests are opt-in: `uv run pytest -m slow` (or gpu), and
+  # `uv run pytest -m benchmark --no-cov` (coverage would slow down what is being timed).
   "-m", "not slow and not gpu and not benchmark",
   "--cov=mlracecar",
   "--cov-report=term-missing:skip-covered",

@@ -1,6 +1,6 @@
 """How long validating a track takes. The editor re-validates on every edit, so it must stay fast.
 
-Run with `uv run pytest -m benchmark`.
+Run with `uv run pytest -m benchmark --no-cov`.
 """
 
 import numpy as np
