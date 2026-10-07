@@ -31,12 +31,15 @@ track you design.
 
 ```bash
 uv sync
+uv run racecar drive tracks/gp-circuit.json
 uv run racecar edit tracks/gp-circuit.json
 uv run racecar check tracks/gp-circuit.json
 uv run racecar config
 ```
 
-`racecar edit` opens the track editor: click to add points, the road appears as you draw, and
+`racecar drive` puts you behind the wheel: arrow keys or WASD to drive, **R** to restart,
+**C** to change the camera. The panel shows your speed, lap, and lap times; a lap only counts
+if you stay on the road and pass every checkpoint in order. `racecar edit` opens the track editor: click to add points, the road appears as you draw, and
 any problems are marked in red or orange. Ctrl+Z undoes, Ctrl+S saves. Press **H** in the editor for all the
 controls. `racecar check` reads a track file and runs the
 track checks on it. The sample tracks are in [`tracks/`](tracks/); the format is described in

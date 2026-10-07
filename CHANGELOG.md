@@ -36,6 +36,13 @@ All notable changes to this project are documented here. The format is based on
   road car (about 280 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
+- `racecar drive <track>`: drive a car round a track with the keyboard (arrow keys or WASD),
+  with lap times, R to restart, C for the camera, 1-3 for debug overlays, P to pause, and the
+  best lap of the session in the title bar. It takes the same `--config` and `--set` options
+  as `racecar config`, and refuses tracks with errors. The race runs in real time while the
+  window draws 60 frames a second, blending the car between decisions.
+- The `Agent` protocol (`mlracecar.agents.base`) and `KeyboardAgent`, which turns held keys
+  into smooth steering and a pedal.
 - The race renderer (`mlracecar.render.race.RaceRenderer`): draws snapshots only, with the
   track and its kerbs, the cars, a HUD (speed, lap, current, last and best lap times,
   off-track and wrong-way warnings), three cameras (follow, overview, free), and toggleable
