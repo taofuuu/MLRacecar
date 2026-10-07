@@ -5,13 +5,14 @@ video. It never runs or changes the simulation (an import-linter contract checks
 draw into a window or, offscreen, return each frame as an RGB array.
 """
 
+from dataclasses import replace
 from enum import StrEnum
 
 import numpy as np
 import pygame
 from numpy.typing import NDArray
 
-from mlracecar.core.geometry import FloatArray, rotate
+from mlracecar.core.geometry import FloatArray, rotate, wrap_angle
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.state import VehicleState
@@ -167,7 +168,11 @@ class RaceRenderer:
     # ------------------------------------------------------------------ #
 
     def draw(
-        self, surface: pygame.Surface, snapshot: Snapshot, rays: FloatArray | None = None
+        self,
+        surface: pygame.Surface,
+        snapshot: Snapshot,
+        rays: FloatArray | None = None,
+        hint: str = "",
     ) -> None:
         """Draw a snapshot onto a surface of `size`.
 
@@ -175,6 +180,7 @@ class RaceRenderer:
             surface: Where to draw, such as the window.
             snapshot: The race at one moment.
             rays: Optional sensor ray end points in metres, shape ``(N, R, 2)``.
+            hint: Extra text for the bottom line, such as the keys to press.
         """
         camera = self.camera(snapshot)
         followed = self.followed % len(snapshot.cars)
@@ -192,7 +198,7 @@ class RaceRenderer:
         if Overlay.VELOCITY in self.overlays:
             _draw_velocity(surface, camera, snapshot.cars)
         caption = f"Car {followed + 1} of {len(snapshot.cars)}  ·  camera: {self.mode.value}"
-        self._hud.draw(surface, snapshot, followed, caption)
+        self._hud.draw(surface, snapshot, followed, f"{caption}  ·  {hint}" if hint else caption)
 
     def render(self, snapshot: Snapshot, rays: FloatArray | None = None) -> NDArray[np.uint8]:
         """Draw a snapshot offscreen and return it as an RGB image, shape ``(height, width, 3)``.
@@ -241,6 +247,25 @@ class RaceRenderer:
             pygame.draw.polygon(
                 surface, outline, bodies[index], width=2 if index == followed else 1
             )
+
+
+def interpolated(before: Snapshot, after: Snapshot, fraction: float) -> Snapshot:
+    """The race ``fraction`` of the way from ``before`` to ``after``, for drawing.
+
+    The simulation moves in steps (20 a second by default), but a window draws 60 frames a
+    second; drawing the cars between two snapshots makes their motion smooth. Only the cars'
+    positions, headings, and the clock are blended; everything else is ``after``'s.
+    """
+    old, new = before.cars, after.cars
+    if len(old) != len(new):
+        return after
+    cars = replace(
+        new,
+        x=old.x + (new.x - old.x) * fraction,
+        y=old.y + (new.y - old.y) * fraction,
+        yaw=wrap_angle(old.yaw + wrap_angle(new.yaw - old.yaw) * fraction),
+    )
+    return replace(after, cars=cars, time=before.time + (after.time - before.time) * fraction)
 
 
 def _overview(edges: FloatArray, size: tuple[int, int]) -> Camera:

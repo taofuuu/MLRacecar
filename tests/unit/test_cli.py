@@ -10,9 +10,11 @@ from typer.testing import CliRunner
 
 import mlracecar
 from mlracecar.cli import app
+from mlracecar.config.models import RacecarConfig
+from mlracecar.core.track.model import Track
 from mlracecar.editor.document import TrackDocument
 from mlracecar.editor.draft import TrackDraft
-from mlracecar.io.track_file import TrackFile, write_track_file
+from mlracecar.io.track_file import TrackFile, read_track_file, write_track_file
 
 runner = CliRunner()
 
@@ -206,3 +208,90 @@ def test_config_reports_an_unreadable_file(tmp_path: Path) -> None:
     result = runner.invoke(app, ["config", str(tmp_path / "missing.yaml")])
     assert result.exit_code == 1
     assert "missing.yaml: can't read the file" in result.output
+
+
+# --------------------------------------------------------------------------- #
+# racecar drive
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def driven(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Track, RacecarConfig, str]]:
+    """Stands in for the driving window and records what it was opened with."""
+    calls: list[tuple[Track, RacecarConfig, str]] = []
+
+    def fake_run_drive(track: Track, config: RacecarConfig, title: str) -> None:
+        calls.append((track, config, title))
+
+    monkeypatch.setattr("mlracecar.play.drive.run_drive", fake_run_drive)
+    return calls
+
+
+def test_drive_opens_the_track_with_the_settings(
+    driven: list[tuple[Track, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    settings = tmp_path / "car.yaml"
+    settings.write_text("vehicle:\n  mass: 1500\n", encoding="utf-8")
+    result = runner.invoke(
+        app,
+        [
+            "drive",
+            str(SAMPLES / "oval.json"),
+            "--config",
+            str(settings),
+            "--set",
+            "race.off_track=reset",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    ((track, config, title),) = driven
+    assert title == read_track_file(SAMPLES / "oval.json").name
+    assert track.length > 0
+    assert config.vehicle.mass == 1500.0
+    assert config.race.off_track == "reset"
+
+
+def test_drive_reports_an_unreadable_track(
+    driven: list[tuple[Track, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    result = runner.invoke(app, ["drive", str(tmp_path / "missing.json")])
+    assert result.exit_code == 1
+    assert "Can't open the track." in result.output
+    assert driven == []
+
+
+def test_drive_refuses_a_track_with_errors(
+    driven: list[tuple[Track, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    path = write_track(tmp_path, [12.0] * 11 + [4.0])  # too narrow at one point
+    result = runner.invoke(app, ["drive", str(path)])
+    assert result.exit_code == 1
+    assert "has problems that make it undrivable" in plain(result.output)
+    assert driven == []
+
+
+def test_drive_reports_invalid_settings(driven: list[tuple[Track, RacecarConfig, str]]) -> None:
+    result = runner.invoke(app, ["drive", str(SAMPLES / "oval.json"), "--set", "vehicle.mass=-1"])
+    assert result.exit_code == 1
+    assert "vehicle.mass: must be greater than 0" in result.output
+    assert driven == []
+
+
+def test_drive_without_pygame_explains_how_to_get_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    for module in [
+        "mlracecar.play.drive",
+        "mlracecar.render.race",
+        "mlracecar.render.hud",
+        "mlracecar.render.drawing",
+    ]:
+        monkeypatch.delitem(sys.modules, module, raising=False)
+    monkeypatch.setitem(sys.modules, "pygame", None)  # makes `import pygame` fail
+    result = runner.invoke(app, ["drive", str(SAMPLES / "oval.json")])
+    assert result.exit_code == 1
+    assert "pip install 'mlracecar[render]'" in result.output
+
+
+def test_drive_does_not_hide_other_import_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "mlracecar.play.drive", None)
+    result = runner.invoke(app, ["drive", str(SAMPLES / "oval.json")])
+    assert isinstance(result.exception, ModuleNotFoundError)

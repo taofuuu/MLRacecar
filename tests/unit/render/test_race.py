@@ -1,6 +1,9 @@
 """Tests for mlracecar.render.race: drawing a race offscreen, cameras, kerbs, and overlays."""
 
+from dataclasses import replace
+
 import numpy as np
+import pygame
 import pytest
 
 from mlracecar.config.models import SimulationConfig, VehicleConfig
@@ -22,6 +25,7 @@ from mlracecar.render.race import (
     Overlay,
     RaceRenderer,
     _kerb_blocks,
+    interpolated,
 )
 
 ANGLES = np.linspace(0, 2 * np.pi, 16, endpoint=False)
@@ -226,3 +230,52 @@ def test_a_track_without_tight_bends_has_no_kerbs() -> None:
         gentle, KinematicBicycle(CAR), SimulationConfig().to_timing(), 1, np.random.default_rng(0)
     )
     assert not has_color(drawing.render(world.snapshot), KERB_RED)
+
+
+def test_cars_are_drawn_between_two_snapshots() -> None:
+    before, after = race(decisions=10), race(decisions=11)
+
+    halfway = interpolated(before, after, 0.5)
+
+    np.testing.assert_allclose(
+        halfway.cars.position, (before.cars.position + after.cars.position) / 2
+    )
+    assert halfway.time == pytest.approx((before.time + after.time) / 2)
+    assert halfway.race is after.race
+    np.testing.assert_array_equal(
+        interpolated(before, after, 0.0).cars.position, before.cars.position
+    )
+    np.testing.assert_array_equal(
+        interpolated(before, after, 1.0).cars.position, after.cars.position
+    )
+
+
+def test_headings_blend_the_short_way_round() -> None:
+    snapshot = race(cars=1)
+    pointing = [
+        replace(snapshot, cars=replace(snapshot.cars, yaw=np.array([yaw]))) for yaw in (3.0, -3.0)
+    ]
+
+    halfway = interpolated(pointing[0], pointing[1], 0.5)
+
+    assert abs(halfway.cars.yaw[0]) == pytest.approx(np.pi)  # through pi, not through 0
+
+
+def test_snapshots_with_different_cars_are_not_blended() -> None:
+    one, four = race(cars=1), race(cars=4)
+
+    assert interpolated(one, four, 0.5) is four
+
+
+def test_a_hint_joins_the_bottom_line() -> None:
+    drawing, snapshot = renderer(), race()
+    images = []
+    for hint in ("", "R: restart  ·  C: camera"):
+        surface = pygame.Surface(SIZE)
+        drawing.draw(surface, snapshot, hint=hint)
+        images.append(pygame.surfarray.array3d(surface).swapaxes(0, 1))
+    plain, hinted = images
+
+    bottom = slice(SIZE[1] - 40, SIZE[1])
+    assert (plain[bottom] != hinted[bottom]).any()
+    assert (plain[: SIZE[1] - 40] == hinted[: SIZE[1] - 40]).all()
