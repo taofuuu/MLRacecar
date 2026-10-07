@@ -200,6 +200,17 @@ class TrackDraft:
         """Change the track's name (an empty name keeps the old one)."""
         return replace(self, name=name.strip() or self.name)
 
+    def rounded(self, decimals: int) -> Self:
+        """Round every position and width to ``decimals`` decimal places (2 is a centimetre)."""
+
+        def tidy(value: float) -> float:
+            return round(value, decimals) + 0.0  # + 0.0 turns -0.0 into 0.0
+
+        return self._with(
+            tuple((tidy(x), tidy(y)) for x, y in self.points),
+            tuple(tidy(width) for width in self.widths),
+        )
+
     # ------------------------------------------------------------------ #
     # Helpers
     # ------------------------------------------------------------------ #

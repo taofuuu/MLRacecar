@@ -157,6 +157,13 @@ def test_rename() -> None:
     assert draft.rename("   ").name == draft.name  # an empty name keeps the old one
 
 
+def test_rounding_tidies_positions_and_widths() -> None:
+    draft = TrackDraft(points=((1.23456, -0.004), (-314.0837535325377, 7.0)), widths=(12.378, 9.0))
+    rounded = draft.rounded(2)
+    assert rounded == TrackDraft(points=((1.23, 0.0), (-314.08, 7.0)), widths=(12.38, 9.0))
+    assert math.copysign(1.0, rounded.points[0][1]) == 1.0  # 0.0, not -0.0
+
+
 MISSING_POINT_EDITS = {
     "move": lambda draft: draft.move_point(4, (0.0, 0.0)),
     "delete": lambda draft: draft.delete_point(4),
