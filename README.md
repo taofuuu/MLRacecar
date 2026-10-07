@@ -47,6 +47,32 @@ track checks on it. The sample tracks are in [`tracks/`](tracks/); the format is
 simulation will run on, such as the car's weight and power; see
 [docs/configuration.md](docs/configuration.md) for how to change them.
 
+## Speed
+
+The simulation moves every car at once with NumPy arrays, so a thousand cars cost only a few
+times more than one. One step is one driver decision: 1/20 s of racing, with six physics
+updates and the race rules for every car. A car-step is one car driving one step: one
+experience for the AI to learn from.
+
+| Cars | Time per step | Steps per second | Car-steps per second | Faster than real time |
+|-----:|--------------:|-----------------:|---------------------:|----------------------:|
+| 1 | 0.57 ms | 1,759 | 1,759 | 88x |
+| 64 | 0.83 ms | 1,201 | 76,886 | 60x |
+| 1,024 | 3.32 ms | 301 | 308,202 | 15x |
+
+Median of 200 steps on 12th Gen Intel(R) Core(TM) i5-12400F (Windows 11), Python 3.12.3, NumPy 2.5.3, commit 0c09c51.
+
+Measure it yourself (expect about 10% difference from run to run):
+
+```bash
+uv run pytest -m benchmark --no-cov --benchmark-json=benchmark.json
+uv run python scripts/benchmark_table.py benchmark.json
+```
+
+Every push to `main` measures again on GitHub's machines: the
+[Benchmarks workflow](https://github.com/taofuuu/MLRacecar/actions/workflows/benchmarks.yml)
+shows the table in each run's summary and keeps the full results as a download.
+
 ## Documentation
 
 | Document                                 | What's inside                                     |

@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Simulation speed benchmarks: one world step for 1, 64, and 1,024 cars racing on the GP
+  circuit. The README shows the baseline (1,024 cars run about 15 times faster than real time
+  on the dev machine), `scripts/benchmark_table.py` makes that table from the results, and CI
+  measures again on every push to `main` and keeps the results as a download.
 - Golden-trajectory regression tests: four recorded runs (a straight line, a slalom, a scripted
   lap, and four cars off the road and the wrong way) that every run must match to about a
   millionth, with a summary of what changed, when, and by how much when they don't. Record
