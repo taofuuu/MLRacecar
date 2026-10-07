@@ -48,6 +48,10 @@
 | **Immutable** | Can't be changed after it's made. Changing it means making a new copy with the change. | Editor drafts: undo is going back to an earlier copy ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Command pattern** | Each edit is stored as an object that knows how to do *and* undo itself. A classic way to build undo/redo. | Considered for the editor, replaced by immutable drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Observer pattern** | One thing publishes updates and many listeners receive them. | Snapshots go to the screen, replay recorder, and video writer at once. |
+| **HUD** (heads-up display) | The information drawn over the race: speed, lap, lap times, warnings. | The top-left panel in the race window. |
+| **Debug overlay** | Extra drawings for developers that can be switched on and off, like the middle line of the road or each car's velocity. | Keys 1-4 in the race window. |
+| **Offscreen rendering / RGB array** | Drawing a frame into memory instead of a window, as a grid of red-green-blue pixel values. | Tests, CI, video export, and what an AI could see. |
+| **FPS** (frames per second) | How many pictures a second the window draws. 60 looks smooth. | The race window's target. |
 | **Snapshot** | A frozen picture of the whole race at one moment: every car's position, speed, lap. | Drawn, recorded, and sent to the web demo. |
 | **Ghost cars** | Cars that drive through each other instead of colliding, so many can learn on the same track at once without getting in each other's way. | Every car until collisions arrive (M7). |
 | **Read-only array** | An array that refuses to be changed: writing to it raises an error. | Snapshot arrays, so nothing that keeps a snapshot can change the race. |

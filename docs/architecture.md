@@ -103,7 +103,7 @@ core's import allow-list by `tests/unit/test_architecture.py`):
 | `env`               | Gymnasium / PettingZoo adapters, observations, rewards             | `RacingEnv`, `BatchedRacingEnv`, `ObservationSpec`   |
 | `agents`            | Anything that maps observations to actions                         | `Agent`, `KeyboardAgent`, `SB3Agent`, `OnnxAgent`    |
 | `training`          | Training runs, evaluation, experiment tracking                     | `TrainingRun`, `Evaluator`, `Tracker`                |
-| `render`            | Camera, grid and track drawing; later snapshots, HUD, video export | `Camera`, `draw_track`, `Renderer`, `VideoWriter`    |
+| `render`            | Drawing snapshots: track, kerbs, cars, HUD, debug overlays; video  | `Camera`, `RaceRenderer`, `Hud`, `VideoWriter`       |
 | `editor`            | Track editor application (MVC with immutable drafts)               | `TrackDraft`, `EditorController`, `EditorWindow`     |
 | `cli`               | `racecar` command-line entry points (Typer)                        | n/a                                                  |
 
@@ -275,9 +275,20 @@ runs/2026-12-01_2130_ppo-first-lap/
 
 ### 4.11 Rendering, replays and video
 
-The renderer only reads `Snapshot`s and never touches simulation internals. One snapshot
-stream feeds every output through a `SnapshotSink` protocol (observer pattern): the live
-window, the replay recorder, the video writer, and later the web demo.
+The renderer only reads `Snapshot`s and never touches simulation internals: an import-linter
+contract keeps `mlracecar.render` away from the world, the car models, and the race rules.
+`Snapshot` and `RaceState` live in data-only modules (`core.snapshot`, `core.race.state`) for
+that reason. One snapshot stream feeds every output through a `SnapshotSink` protocol (observer
+pattern): the live window, the replay recorder, the video writer, and later the web demo.
+
+`RaceRenderer` draws the track (with red and white kerbs on bends tighter than 100 m), the
+cars, and a HUD for the followed car (speed, lap, current, last and best lap times, and
+warnings). It has three cameras (follow a car, overview of the whole track, free pan and zoom)
+and debug overlays that can be toggled: centerline, checkpoints (the followed car's next one
+highlighted), velocity arrows, and sensor rays. `render(snapshot)` draws offscreen and returns
+an RGB array, which works headless (SDL's dummy driver) for tests, CI, and video. With 16 cars
+on the 3.5 km GP circuit a frame takes about 6 ms following a car and 9 ms for the overview,
+all overlays on (`tests/benchmarks/test_render_speed.py`).
 
 ### 4.12 Track editor
 
