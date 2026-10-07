@@ -95,12 +95,16 @@ def wrap_angle(angles: ArrayLike) -> FloatArray:
         angles: Angles in radians, any shape.
 
     Returns:
-        Array of the same shape, pointing the same way as the input.
+        Array of the same shape, pointing the same way as the input. Angles already in range
+        come back exactly as they were.
     """
     a = np.asarray(angles, dtype=np.float64)
     wrapped = np.mod(a + np.pi, 2 * np.pi) - np.pi
     # Rounding can land exactly on +pi (e.g. for inputs just below -pi); fold it back.
-    result: FloatArray = np.where(wrapped >= np.pi, wrapped - 2 * np.pi, wrapped)
+    wrapped = np.where(wrapped >= np.pi, wrapped - 2 * np.pi, wrapped)
+    # Adding and subtracting pi rounds too (0.7 becomes 0.7000000000000002), which would
+    # make a car driving straight ahead drift off its heading, step by step.
+    result: FloatArray = np.where((a >= -np.pi) & (a < np.pi), a, wrapped)
     return result
 
 

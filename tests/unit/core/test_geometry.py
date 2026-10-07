@@ -68,6 +68,11 @@ def test_wrap_angle_stays_in_range_and_points_the_same_way(a: float) -> None:
     assert math.isclose(math.sin(wrapped), math.sin(a), abs_tol=1e-9)
 
 
+@given(st.floats(min_value=-math.pi, max_value=math.pi, exclude_max=True))
+def test_wrap_angle_leaves_angles_in_range_exactly_as_they_are(a: float) -> None:
+    assert float(wrap_angle(a)) == a
+
+
 def test_wrap_angle_folds_rounding_at_plus_pi() -> None:
     # Just below -pi, the modulo rounds to exactly 2*pi, which would map to +pi.
     assert float(wrap_angle(-math.pi - 1e-17)) == -math.pi

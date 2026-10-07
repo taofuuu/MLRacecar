@@ -47,6 +47,8 @@ class VehicleConfig(BaseModel):
     """How far the front wheels turn at full lock, in degrees."""
     steer_rate: Positive = 90.0
     """How fast the front wheels can turn, in degrees per second."""
+    grip: Positive = 1.0
+    """Tyre grip: the hardest the car can corner, in g (gravity = 1)."""
     max_drive_force: Positive = 8000.0
     """The engine's push at low speed, in newtons."""
     max_power: Positive = 200.0
@@ -81,6 +83,7 @@ class VehicleConfig(BaseModel):
             mass=self.mass,
             max_steer=math.radians(self.max_steer),
             steer_rate=math.radians(self.steer_rate),
+            grip=self.grip,
             max_drive_force=self.max_drive_force,
             max_power=self.max_power * 1000,
             max_brake_force=self.max_brake_force,
