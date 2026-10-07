@@ -26,7 +26,8 @@ All notable changes to this project are documented here. The format is based on
 - Track files (`mlracecar.io.track_file`): versioned JSON (format version 1) with field-level
   error messages, automatic upgrades from older versions, refusal of newer ones, atomic saving,
   one control point per line, and a published JSON Schema (`docs/schemas/`).
-- Sample tracks in `tracks/`: an oval and a 3.5 km GP circuit, both free of track-check issues.
+- Sample tracks in `tracks/`: an oval, a 1.1 km technical circuit with 14 corners for
+  practising car control, and a 3.5 km GP circuit, all free of track-check issues.
 - `racecar check <file>`: reads a track file and runs the track checks on it.
 - Settings (`mlracecar.config`, ADR-0008): pydantic models for the car and the simulation
   timing, read from YAML files and `--set section.key=value` in layers (defaults < files <

@@ -238,11 +238,11 @@ def test_a_draft_with_errors_can_still_be_saved() -> None:
     assert draft.to_track_file().control_points[2].width == 3.0
 
 
-@pytest.mark.parametrize("name", ["oval", "gp-circuit"])
-def test_sample_tracks_open_and_save_unchanged(name: str) -> None:
+@pytest.mark.parametrize("name", sorted(path.stem for path in SAMPLES.glob("*.json")))
+def test_sample_tracks_have_no_issues_and_save_unchanged(name: str) -> None:
     track_file = read_track_file(SAMPLES / f"{name}.json")
     draft = TrackDraft.from_track_file(track_file)
-    assert draft.is_raceable
+    assert list(draft.issues) == []  # not even a warning: tracks/README.md promises it
     assert draft.to_track_file() == track_file
 
 
