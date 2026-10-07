@@ -10,13 +10,8 @@ from numpy.typing import ArrayLike
 from drivers import CenterlineDriver
 from mlracecar.config.models import SimulationConfig, VehicleConfig
 from mlracecar.core.race.events import LapCompleted, OffTrack, RaceEvent, WrongWay
-from mlracecar.core.race.rules import (
-    SECTORS,
-    OffTrackPolicy,
-    RaceRules,
-    RaceSettings,
-    RaceState,
-)
+from mlracecar.core.race.rules import OffTrackPolicy, RaceRules, RaceSettings
+from mlracecar.core.race.state import SECTORS, RaceState
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.vehicle.state import VehicleState

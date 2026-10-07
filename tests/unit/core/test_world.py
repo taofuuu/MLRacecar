@@ -8,11 +8,13 @@ import pytest
 
 from mlracecar.config.models import VehicleConfig
 from mlracecar.core.geometry import BoolArray, FloatArray, wrap_angle
-from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings, RaceState
+from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
+from mlracecar.core.race.state import RaceState
+from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import GridLayout, Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.vehicle.state import VehicleState
-from mlracecar.core.world import Snapshot, StartPosition, Timing, World
+from mlracecar.core.world import StartPosition, Timing, World
 from roads import road_coordinates
 
 ANGLES = np.linspace(0, 2 * np.pi, 12, endpoint=False)

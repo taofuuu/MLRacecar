@@ -3,10 +3,10 @@
 import numpy as np
 
 from mlracecar.core.geometry import FloatArray, wrap_angle
+from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.dynamics import GRAVITY
 from mlracecar.core.vehicle.params import VehicleParams
-from mlracecar.core.world import Snapshot
 
 
 class CenterlineDriver:
