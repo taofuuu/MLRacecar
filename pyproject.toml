@@ -154,6 +154,18 @@ source_modules = [
 ]
 forbidden_modules = ["pygame"]
 
+[[tool.importlinter.contracts]]
+name = "The renderer draws snapshots: it never runs or changes the simulation"
+type = "forbidden"
+source_modules = ["mlracecar.render"]
+forbidden_modules = [
+  "mlracecar.core.world",
+  "mlracecar.core.vehicle.dynamics",
+  "mlracecar.core.vehicle.kinematic",
+  "mlracecar.core.race.rules",
+  "mlracecar.core.race.progress",
+]
+
 # --------------------------------------------------------------------------- #
 # Tests (architecture.md section 6)
 # --------------------------------------------------------------------------- #
