@@ -121,6 +121,13 @@ def test_points_coincide(duplicate: int, expected_index: int) -> None:
     assert issues[0].location == ControlPointAt(expected_index)
 
 
+def test_points_a_hair_apart_coincide_too() -> None:
+    points = OVAL.copy()
+    points[3] = points[4] + [0.0, 5e-248]  # the curve between them can't be computed
+    issues = validate(points, same_width(points, 12.0))
+    assert codes(issues) == [IssueCode.POINTS_COINCIDE]
+
+
 def test_rejects_arrays_of_the_wrong_shape() -> None:
     with pytest.raises(ValueError, match=r"shape \(P, 2\)"):
         validate(OVAL, same_width(OVAL, 12.0)[:-1])

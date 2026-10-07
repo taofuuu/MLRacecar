@@ -26,6 +26,11 @@ from mlracecar.core.geometry import FloatArray, IntArray, cross, norm
 DEFAULT_SPACING = 0.5
 """Default distance between resampled centerline points, in metres."""
 
+COINCIDENT_GAP = 1e-6
+"""Neighbouring control points closer than this many metres count as on top of each other. The
+curve between them would be too short to compute: its curvature divides by the gap cubed,
+which for gaps far below this rounds to zero."""
+
 ALPHA = 0.5
 """Knot exponent: the knot interval of a piece is ``distance ** ALPHA`` (0.5 = centripetal)."""
 
@@ -78,7 +83,8 @@ class ClosedSpline:
 
         Args:
             control_points: At least 3 points, shape ``(P, 2)``, in order of travel. Neighbouring
-                points (including the last and the first) must differ.
+                points (including the last and the first) must be at least `COINCIDENT_GAP`
+                apart.
 
         Returns:
             The fitted spline.
@@ -90,8 +96,8 @@ class ClosedSpline:
         if points.ndim != 2 or points.shape[1] != 2 or len(points) < 3:
             raise ValueError(f"need at least 3 control points of shape (P, 2), got {points.shape}")
         gaps = norm(np.roll(points, -1, axis=0) - points)
-        if np.any(gaps == 0):
-            duplicates = np.flatnonzero(gaps == 0).tolist()
+        if np.any(gaps < COINCIDENT_GAP):
+            duplicates = np.flatnonzero(gaps < COINCIDENT_GAP).tolist()
             raise ValueError(f"control points coincide with the next one at indices {duplicates}")
 
         coefficients = _piece_coefficients(points)
