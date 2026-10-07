@@ -74,6 +74,15 @@ def test_check_reports_an_unreadable_file(tmp_path: Path) -> None:
     assert "name: String should have at least 1 character" in result.output
 
 
+def test_check_reports_a_file_that_is_not_text(tmp_path: Path) -> None:
+    path = tmp_path / "picture.json"
+    path.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+    result = runner.invoke(app, ["check", str(path)])
+    assert result.exit_code == 1
+    assert "Can't open the track." in result.output
+    assert "not readable text" in result.output
+
+
 def test_check_fails_on_track_errors(tmp_path: Path) -> None:
     result = runner.invoke(app, ["check", str(write_track(tmp_path, [12.0] * 11 + [4.0]))])
     assert result.exit_code == 1

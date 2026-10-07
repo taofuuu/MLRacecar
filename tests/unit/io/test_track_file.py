@@ -156,6 +156,26 @@ def test_a_file_from_a_newer_version_asks_to_update() -> None:
         parse_track_file(file_text(schema_version=CURRENT_VERSION + 1))
 
 
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig", "utf-16"])
+def test_files_may_be_utf8_or_utf16(tmp_path: Path, encoding: str) -> None:
+    # Windows PowerShell 5.1 writes UTF-16 with `>` and `Out-File`.
+    original = parse_track_file(file_text(name="Ström ±50"))
+    path = tmp_path / "track.json"
+    path.write_text(format_track_file(original), encoding=encoding)  # non-ASCII kept as is
+
+    assert read_track_file(path) == original
+
+
+def test_a_file_that_is_not_text_is_reported(tmp_path: Path) -> None:
+    path = tmp_path / "track.json"
+    path.write_bytes(b'{"name": "\xff"}')
+
+    with pytest.raises(
+        TrackFileError, match=r"track\.json: not readable text \(invalid start byte"
+    ):
+        read_track_file(path)
+
+
 def test_reading_a_missing_file(tmp_path: Path) -> None:
     with pytest.raises(TrackFileError, match=r"missing\.json: can't read the file"):
         read_track_file(tmp_path / "missing.json")
