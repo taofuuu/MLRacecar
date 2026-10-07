@@ -1,0 +1,57 @@
+# Measures how fast the simulation runs after every push to main, and keeps the results: the
+# speed table is in each run's summary, and the full results (every timing) are a download.
+# GitHub's machines are shared, so expect some noise from run to run; the README's numbers
+# come from the dev machine. Pull requests that change the measurements run them too.
+name: Benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - .github/workflows/benchmarks.yml
+      - scripts/benchmark_table.py
+      - tests/benchmarks/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0 (no major tag published; pinned to the release commit)
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (must match uv.lock exactly)
+        run: uv sync --locked
+
+      # No coverage: measuring it would slow down the code being timed.
+      - name: Run benchmarks
+        run: uv run pytest -m benchmark --no-cov --benchmark-json=benchmark.json
+
+      - name: Add the speed table to the job summary
+        run: |
+          echo "### Simulation speed" >> "$GITHUB_STEP_SUMMARY"
+          uv run python scripts/benchmark_table.py benchmark.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the results
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks-${{ github.sha }}
+          path: benchmark.json
+          if-no-files-found: error
