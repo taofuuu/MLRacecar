@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Golden-trajectory regression tests: four recorded runs (a straight line, a slalom, a scripted
+  lap, and four cars off the road and the wrong way) that every run must match to about a
+  millionth, with a summary of what changed, when, and by how much when they don't. Record
+  them again after an intended change with `scripts/update_golden.py`.
 - `mlracecar.core.geometry`: vectorized 2D geometry (cross product, rotation, angle wrapping,
   segment intersection, raycasts, projection onto a polyline, self-intersection detection),
   property-tested with Hypothesis.
