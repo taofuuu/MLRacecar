@@ -28,6 +28,14 @@ All notable changes to this project are documented here. The format is based on
   one control point per line, and a published JSON Schema (`docs/schemas/`).
 - Sample tracks in `tracks/`: an oval and a 3.5 km GP circuit, both free of track-check issues.
 - `racecar check <file>`: reads a track file and runs the track checks on it.
+- Settings (`mlracecar.config`, ADR-0008): pydantic models for the car and the simulation
+  timing, read from YAML files and `--set section.key=value` in layers (defaults < files <
+  `--set`), converted to the core's `VehicleParams` and `Timing`. Errors list every invalid
+  setting with the file it came from and suggest the nearest name for a typo.
+  `configs/default.yaml` lists every setting with its default; the default car is a sporty
+  road car (about 280 km/h).
+- `racecar config [files] --set key=value`: shows the settings a combination of files and
+  overrides produces, or what is wrong with them.
 - `mlracecar.editor.draft.TrackDraft`: the track editor's headless model. Immutable drafts
   (ADR-0011) with append, insert-into-stretch, move, delete, width, reverse-direction, and
   set-start edits, cached track and validation per draft, and conversion to and from track files.

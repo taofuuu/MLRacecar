@@ -519,7 +519,7 @@ title = "Typed configuration system"
 labels = ["type:feature", "area:core", "priority:P0", "size:M"]
 summary = "Pydantic + YAML configuration with CLI overrides, as decided in ADR-0008."
 tasks = [
-  "`mlracecar.config` models for vehicle, simulation, and environment",
+  "`mlracecar.config` models for vehicle and simulation (later tickets add their own sections)",
   "YAML loading with base file + override files",
   "CLI overrides: `--set vehicle.max_steer=0.5`",
   "Conversion to frozen core dataclasses; resolved config dump",
