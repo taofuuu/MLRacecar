@@ -41,7 +41,8 @@ uv run racecar config
 ```
 
 `racecar drive` puts you behind the wheel: arrow keys or WASD to drive, **R** to restart,
-**C** to change the camera. The panel shows your speed, lap, and lap times; a lap only counts
+**C** to change the camera, **4** to see the distance sensors the AI will drive by
+([docs/sensors.md](docs/sensors.md)). The panel shows your speed, lap, and lap times; a lap only counts
 if you stay on the road and pass every checkpoint in order. `racecar edit` opens the track editor: click to add points, the road appears as you draw, and
 any problems are marked in red or orange. Ctrl+Z undoes, Ctrl+S saves. Press **H** in the editor for all the
 controls. `racecar check` reads a track file and runs the
@@ -55,17 +56,27 @@ simulation will run on, such as the car's weight and power; see
 The simulation moves every car at once with NumPy arrays, so a thousand cars cost only a few
 times more than one. One step is one driver decision: 1/20 s of racing, with six physics
 updates and the race rules for every car. A car-step is one car driving one step: one
-experience for the AI to learn from.
+experience for the AI to learn from. The AI also reads each car's distance sensors once per
+step.
 
 | Cars | Time per step | Steps per second | Car-steps per second | Faster than real time |
 |-----:|--------------:|-----------------:|---------------------:|----------------------:|
-| 1 | 0.57 ms | 1,759 | 1,759 | 88x |
-| 64 | 0.83 ms | 1,201 | 76,886 | 60x |
-| 1,024 | 3.32 ms | 301 | 308,202 | 15x |
+| 1 | 0.40 ms | 2,501 | 2,501 | 125x |
+| 64 | 0.50 ms | 1,985 | 127,009 | 99x |
+| 1,024 | 2.35 ms | 426 | 435,847 | 21x |
 
-Median of 200 steps on 12th Gen Intel(R) Core(TM) i5-12400F (Windows 11), Python 3.12.3, NumPy 2.5.3, commit 0c09c51.
+**Distance sensors**, 15 rays per car, read once per step:
 
-Measure it yourself (expect about 10% difference from run to run):
+| Cars | Time to read every ray | Car readings per second |
+|-----:|-----------------------:|------------------------:|
+| 1 | 0.08 ms | 12,937 |
+| 64 | 1.35 ms | 47,474 |
+| 1,024 | 25.67 ms | 39,892 |
+
+Medians, measured on 12th Gen Intel(R) Core(TM) i5-12400F (Windows 11), Python 3.12.3, NumPy 2.5.3, commit 0776a40.
+
+Measure it yourself. Runs back to back agree within about 10%, but on different days the same
+computer has measured up to 30% apart, depending on what else it is doing:
 
 ```bash
 uv run pytest -m benchmark --no-cov --benchmark-json=benchmark.json
@@ -74,7 +85,7 @@ uv run python scripts/benchmark_table.py benchmark.json
 
 Every push to `main` measures again on GitHub's machines: the
 [Benchmarks workflow](https://github.com/taofuuu/MLRacecar/actions/workflows/benchmarks.yml)
-shows the table in each run's summary and keeps the full results as a download.
+shows the tables in each run's summary and keeps the full results as a download.
 
 ## Documentation
 

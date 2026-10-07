@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validat
 from pydantic_core import PydanticCustomError
 
 from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
+from mlracecar.core.sensors import RaySettings
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.core.world import Timing
 
@@ -126,6 +127,27 @@ class RaceConfig(BaseModel):
         )
 
 
+class SensorConfig(BaseModel):
+    """The car's distance sensors: rays that measure how far away the road's edges are."""
+
+    model_config = _SETTINGS
+
+    rays: Annotated[int, Field(ge=1)] = 15
+    """How many rays fan out from the car."""
+    field_of_view: Annotated[float, Field(gt=0, le=360)] = 180.0
+    """The angle they fan across, in degrees, centred on where the car points."""
+    range: Positive = 100.0
+    """How far they reach, in metres."""
+
+    def to_settings(self) -> RaySettings:
+        """The settings, for the sensors."""
+        return RaySettings(
+            count=self.rays,
+            field_of_view=math.radians(self.field_of_view),
+            max_range=self.range,
+        )
+
+
 class RacecarConfig(BaseModel):
     """Every setting, in sections. `mlracecar.config.files.load_config` builds one from files."""
 
@@ -137,3 +159,5 @@ class RacecarConfig(BaseModel):
     """How simulated time moves forward."""
     race: RaceConfig = Field(default_factory=RaceConfig)
     """The race rules: what happens when a car leaves the road."""
+    sensors: SensorConfig = Field(default_factory=SensorConfig)
+    """The car's distance sensors: how many rays, how wide they fan, and how far they reach."""

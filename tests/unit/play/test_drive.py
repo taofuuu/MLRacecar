@@ -12,7 +12,7 @@ from mlracecar.config.models import RacecarConfig
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.play.drive import DriveWindow, held_keys, run_drive
-from mlracecar.render.race import CameraMode, Overlay
+from mlracecar.render.race import RAY, CameraMode, Overlay
 
 ANGLES = np.linspace(0, 2 * np.pi, 12, endpoint=False)
 CIRCLE = Track.build(60 * np.column_stack([np.cos(ANGLES), np.sin(ANGLES)]), [12.0] * 12)
@@ -28,6 +28,14 @@ def window() -> Iterator[DriveWindow]:
 
 def key(code: int) -> pygame.event.Event:
     return pygame.event.Event(pygame.KEYDOWN, key=code, mod=0)
+
+
+def shows(color: tuple[int, int, int]) -> bool:
+    """Whether the window shows this colour anywhere, or nearly (smoothed lines blend)."""
+    surface = pygame.display.get_surface()
+    assert surface is not None
+    image = pygame.surfarray.array3d(surface)
+    return bool((np.abs(image.astype(int) - color).sum(axis=2) <= 24).any())
 
 
 def drive(window: DriveWindow, keys: HeldKeys, seconds: float) -> Snapshot:
@@ -95,6 +103,17 @@ def test_c_switches_the_camera_and_number_keys_the_overlays(window: DriveWindow)
 
     assert window.renderer.mode is CameraMode.OVERVIEW
     assert window.renderer.overlays == {Overlay.CHECKPOINTS}
+
+
+def test_4_shows_the_distance_rays_the_ai_will_drive_by(window: DriveWindow) -> None:
+    window.draw()
+    assert not shows(RAY)
+
+    window.handle(key(pygame.K_4))
+    window.draw()
+
+    assert window.renderer.overlays == {Overlay.RAYS}
+    assert shows(RAY)
 
 
 @pytest.mark.parametrize(

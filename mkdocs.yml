@@ -40,6 +40,7 @@ nav:
   - Settings: configuration.md
   - Car physics: vehicle-model.md
   - Race rules: race-rules.md
+  - Sensors: sensors.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md
   - API reference: reference.md

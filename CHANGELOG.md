@@ -8,8 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Distance sensors (`mlracecar.core.sensors`): rays fanned out from each car that measure how
+  far the road's edges are, in metres and as a fraction of the range, exactly as if every piece
+  of edge were tested but much faster. Set them up in the new `sensors` settings section (15
+  rays across 180 degrees, reaching 100 m, by default), and press **4** in `racecar drive` to
+  see them. Reading 15 rays for 64 cars takes about 1.4 ms on the dev machine.
 - Simulation speed benchmarks: one world step for 1, 64, and 1,024 cars racing on the GP
-  circuit. The README shows the baseline (1,024 cars run about 15 times faster than real time
+  circuit. The README shows the baseline (1,024 cars run 15 to 20 times faster than real time
   on the dev machine), `scripts/benchmark_table.py` makes that table from the results, and CI
   measures again on every push to `main` and keeps the results as a download.
 - Golden-trajectory regression tests: four recorded runs (a straight line, a slalom, a scripted

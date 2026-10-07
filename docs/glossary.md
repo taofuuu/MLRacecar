@@ -100,7 +100,10 @@
 | **Fixed timestep** | The simulation always advances by the same tiny time slice (e.g. 1/120 s), so results don't depend on computer speed. | The World loop. |
 | **Semi-implicit Euler** | A simple, stable way to step physics forward in time. | Vehicle integration. |
 | **Action repeat** | The AI decides 20 times per second; each decision is held for several physics steps. | 120 Hz physics, 20 Hz decisions. |
-| **Raycast** | Shooting an invisible line from the car and measuring how far until it hits the track edge, like a laser rangefinder. | The car's "eyes" (M3-1). |
+| **Raycast** | Shooting an invisible line from the car and measuring how far until it hits the track edge, like a laser rangefinder. | The car's "eyes": [Sensors](sensors.md). |
+| **Lidar** | A sensor that measures distances with laser beams fanned out around it. Our rays work the same way, without the lasers. | [Sensors](sensors.md). |
+| **Field of view** | How wide an angle a sensor covers. 180° is from straight left to straight right. | `sensors.field_of_view`. |
+| **Normalized** | Rescaled to a standard range, usually 0 to 1, so a neural network gets inputs of similar size. | Ray distances divided by the range. |
 | **Broad phase** | A quick first pass that skips obviously-irrelevant things before doing precise math. | Rays only check nearby track edges. |
 | **Vectorized** | Doing math on whole arrays at once instead of looping one item at a time. Much faster in Python. | All cars update in one go. |
 | **Struct-of-arrays** | Storing data as "one list per property" (all x positions, all speeds) instead of "one object per car". Enables vectorizing. | `World` state. |

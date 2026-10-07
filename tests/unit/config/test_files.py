@@ -16,7 +16,13 @@ from mlracecar.config.files import (
     parse_override,
     read_config_file,
 )
-from mlracecar.config.models import RacecarConfig, RaceConfig, SimulationConfig, VehicleConfig
+from mlracecar.config.models import (
+    RacecarConfig,
+    RaceConfig,
+    SensorConfig,
+    SimulationConfig,
+    VehicleConfig,
+)
 
 DEFAULT_CONFIG_PATH = Path(__file__).parents[3] / "configs" / "default.yaml"
 
@@ -298,7 +304,12 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         off_track=draw(st.sampled_from(["none", "slowdown", "reset", "terminate"])),
         grass_slowdown=draw(positive),
     )
-    return RacecarConfig(vehicle=vehicle, simulation=simulation, race=race)
+    sensors = SensorConfig(
+        rays=draw(whole),
+        field_of_view=draw(st.floats(0, 360, exclude_min=True)),
+        range=draw(positive),
+    )
+    return RacecarConfig(vehicle=vehicle, simulation=simulation, race=race, sensors=sensors)
 
 
 class Texts(BaseModel):
@@ -345,7 +356,7 @@ def test_written_settings_explain_every_line() -> None:
     lines = format_config(RacecarConfig()).splitlines()
 
     settings = [line for line in lines if line.startswith("  ")]
-    sections = (VehicleConfig, SimulationConfig, RaceConfig)
+    sections = (VehicleConfig, SimulationConfig, RaceConfig, SensorConfig)
     assert len(settings) == sum(len(section.model_fields) for section in sections)
     assert all("  # " in line for line in settings)
     assert all(len(line) <= 100 for line in lines)

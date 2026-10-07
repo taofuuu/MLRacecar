@@ -14,6 +14,7 @@ import pygame
 from mlracecar.agents.keyboard import HeldKeys, KeyboardAgent
 from mlracecar.config.models import RacecarConfig
 from mlracecar.core.race.events import LapCompleted
+from mlracecar.core.sensors import RaySensor
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.world import World
@@ -41,9 +42,10 @@ OVERLAY_KEYS = {
     pygame.K_1: Overlay.CENTERLINE,
     pygame.K_2: Overlay.CHECKPOINTS,
     pygame.K_3: Overlay.VELOCITY,
+    pygame.K_4: Overlay.RAYS,
 }
 
-HINT = "Arrows or WASD: drive  ·  R: restart  ·  C: camera  ·  1-3: overlays  ·  P: pause"
+HINT = "Arrows or WASD: drive  ·  R: restart  ·  C: camera  ·  1-4: overlays  ·  P: pause"
 
 _NO_OBSERVATIONS = np.zeros((1, 0), dtype=np.float32)
 """The keyboard agent needs no observations: the person sees the screen."""
@@ -64,7 +66,7 @@ class DriveWindow:
 
     Args:
         track: The track.
-        config: The settings: the car, the timing, and the race rules.
+        config: The settings: the car, the timing, the race rules, and the sensors.
         title: Shown in the window's title bar, such as the track's name.
         seed: Seeds the world's randomness.
     """
@@ -83,6 +85,8 @@ class DriveWindow:
             settings=config.race.to_settings(),
         )
         self.agent = KeyboardAgent(self.timing.decision_dt)
+        self.sensor = RaySensor(track, config.sensors.to_settings())
+        """The distance rays the AI will drive by; key 4 shows them."""
         self.renderer = RaceRenderer(track, (car.length, car.width), self._screen.get_size())
         self.title = title
         self.running = True
@@ -150,7 +154,8 @@ class DriveWindow:
         """Draw the race, the car blended between its last two decisions, and show it."""
         fraction = self._owed / self.timing.decision_dt
         snapshot = interpolated(self._previous, self.world.snapshot, fraction)
-        self.renderer.draw(self._screen, snapshot, hint=HINT)
+        rays = self.sensor.sense(snapshot).end if Overlay.RAYS in self.renderer.overlays else None
+        self.renderer.draw(self._screen, snapshot, rays, hint=HINT)
         pygame.display.flip()
         best = lap_time_text(self.session_best)
         paused = " - paused" if self.paused else ""

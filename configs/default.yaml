@@ -27,3 +27,9 @@ simulation:
 race:
   off_track: slowdown  # When a car's centre leaves the road: none, slowdown, reset, or terminate.
   grass_slowdown: 6    # How hard grass slows a car, in m/s per second (off_track: slowdown).
+
+# The car's distance sensors: how many rays, how wide they fan, and how far they reach.
+sensors:
+  rays: 15            # How many rays fan out from the car.
+  field_of_view: 180  # The angle they fan across, in degrees, centred on where the car points.
+  range: 100          # How far they reach, in metres.

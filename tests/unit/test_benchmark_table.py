@@ -18,6 +18,14 @@ def world_step(cars: int, median: float) -> dict[str, Any]:
     }
 
 
+def sense(cars: int, median: float) -> dict[str, Any]:
+    return {
+        "name": f"test_sense[{cars}]",
+        "extra_info": {"cars": cars, "rays": 15},
+        "stats": {"median": median},
+    }
+
+
 def results(*benchmarks: dict[str, Any]) -> dict[str, Any]:
     return {
         "benchmarks": list(benchmarks),
@@ -46,8 +54,22 @@ def test_it_says_where_the_numbers_were_measured() -> None:
     table = speed_table(results(world_step(1, 0.0005)))
 
     assert table.splitlines()[-1] == (
-        "Median of 200 steps on Some CPU (Linux 6.8), Python 3.12.3, NumPy 2.5.3, commit 0c09c51."
+        "Medians, measured on Some CPU (Linux 6.8), Python 3.12.3, NumPy 2.5.3, commit 0c09c51."
     )
+
+
+def test_the_sensors_get_their_own_table_when_they_were_measured() -> None:
+    table = speed_table(results(world_step(1, 0.0005), sense(64, 0.0016), sense(1, 0.0001)))
+
+    assert table.splitlines()[3:10] == [
+        "",
+        "**Distance sensors**, 15 rays per car, read once per step:",
+        "",
+        "| Cars | Time to read every ray | Car readings per second |",
+        "|-----:|-----------------------:|------------------------:|",
+        "| 1 | 0.10 ms | 10,000 |",
+        "| 64 | 1.60 ms | 40,000 |",
+    ]
 
 
 def test_other_benchmarks_are_left_out() -> None:
