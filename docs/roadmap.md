@@ -63,8 +63,13 @@ The tables below list each milestone's tickets: key, ticket, type, priority, siz
 | [M1-5](https://github.com/taofuuu/MLRacecar/issues/13) | Versioned JSON track file format                | feature | P0  | S    |
 | [M1-6](https://github.com/taofuuu/MLRacecar/issues/14) | Track editor v1                                 | feature | P0  | L    |
 | [M1-7](https://github.com/taofuuu/MLRacecar/issues/15) | Editor undo/redo                                | feature | P1  | M    |
-| [M1-8](https://github.com/taofuuu/MLRacecar/issues/16) | Track format and editor user guide              | docs    | P1  | S    |
-| [M1-9](https://github.com/taofuuu/MLRacecar/issues/79) | Round a corner to a chosen radius               | feature | P1  | M    |
+| [M1-8](https://github.com/taofuuu/MLRacecar/issues/16) | Track format and editor user guide: moved to M5, with Editor v2 | docs | P1 | S |
+| [M1-9](https://github.com/taofuuu/MLRacecar/issues/79) | ~~Round a corner to a chosen radius~~: dropped, replaced by Editor v2 | feature | P1 | M |
+| [#86](https://github.com/taofuuu/MLRacecar/issues/86) | Control points a hair apart make the track code divide by zero | bug | P2 | S |
+
+The editor from M1-6 and M1-7 stays a **prototype** until after M4: good enough to make
+test tracks. Its successor, built from pieces (straights and corners), is planned in M5
+([#87](https://github.com/taofuuu/MLRacecar/issues/87)).
 
 ## M2: Drivable simulation
 
@@ -109,7 +114,7 @@ The tables below list each milestone's tickets: key, ticket, type, priority, siz
 
 | Milestone | Tickets |
 |-----------|---------|
-| [**M5**](https://github.com/taofuuu/MLRacecar/milestone/6) Generalize and play | Procedural track generator · Multi-track training + held-out eval · Curriculum learning (P1) · Domain randomization (P2) · Play against the AI · Ghost laps (P1) · Release v0.2.0 |
+| [**M5**](https://github.com/taofuuu/MLRacecar/milestone/6) Generalize and play | Procedural track generator · Multi-track training + held-out eval · Curriculum learning (P1) · Domain randomization (P2) · Play against the AI · Ghost laps (P1) · [Editor v2: build tracks from pieces](https://github.com/taofuuu/MLRacecar/issues/87) + user guide · Release v0.2.0 |
 | [**M6**](https://github.com/taofuuu/MLRacecar/milestone/7) Browser demo        | Spike: Pyodide vs. TypeScript runtime · ONNX export + parity test · Web demo app · GitHub Pages deploy · Release v0.3.0 |
 | [**M7**](https://github.com/taofuuu/MLRacecar/milestone/8) Multi-car racing    | Car-to-car collisions · PettingZoo multi-agent env · Opponent-aware observations · Self-play training · Race mode (P1) · Release v0.4.0 |
 | [**M8**](https://github.com/taofuuu/MLRacecar/milestone/9) ML deep dive        | PPO from scratch · Benchmark vs. SB3 (multi-seed, CIs) · Optuna sweeps (P1) · Ablation study · SAC comparison (P1) · Technical write-up · Release v1.0.0 |

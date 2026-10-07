@@ -471,6 +471,7 @@ acceptance = [
 ]
 depends_on = ["M1-6"]
 
+# Moved to M5 with Editor v2 (#87): the M1 editor stays a prototype until after M4.
 [[issues]]
 key = "M1-8"
 milestone = "M1"
@@ -485,7 +486,8 @@ tasks = [
 acceptance = ["A new user can create and save a track using only the guide"]
 depends_on = ["M1-6"]
 
-# Added during M1, from the review of the editor (M1-6).
+# Added during M1, from the review of the editor (M1-6). Dropped (PR #83 closed): rounding
+# added many points that were hard to adjust; replaced by Editor v2, built from pieces (#87).
 [[issues]]
 key = "M1-9"
 milestone = "M1"

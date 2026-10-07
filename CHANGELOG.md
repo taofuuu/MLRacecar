@@ -75,3 +75,8 @@ All notable changes to this project are documented here. The format is based on
   and a pull request template with the Definition of Done.
 - Documentation website (MkDocs Material) with Mermaid diagrams and an API reference generated
   from docstrings; built in strict mode on every PR and published to GitHub Pages from `main`.
+
+### Fixed
+
+- Control points closer than a micrometre now count as on top of each other: the track checks
+  report them, and the track code refuses them, instead of dividing by zero.

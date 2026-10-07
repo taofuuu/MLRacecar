@@ -65,6 +65,7 @@ def reference_position(points: FloatArray, piece: int, fraction: float) -> Float
         ([[0, 0, 0], [1, 0, 0], [0, 1, 0]], "at least 3 control points"),
         ([[0, 0], [1, 0], [1, 0], [0, 1]], r"coincide .* indices \[1\]"),
         ([[0, 0], [1, 0], [0, 1], [0, 0]], r"coincide .* indices \[3\]"),  # last = first
+        ([[0, 0], [1, 0], [1, 1e-248], [0, 1]], r"coincide .* indices \[1\]"),  # too close
     ],
 )
 def test_rejects_invalid_control_points(points: list[list[float]], message: str) -> None:
