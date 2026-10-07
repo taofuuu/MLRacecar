@@ -8,12 +8,19 @@ import numpy as np
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from mlracecar.config.models import RacecarConfig, RaceConfig, SimulationConfig, VehicleConfig
+from mlracecar.config.models import (
+    RacecarConfig,
+    RaceConfig,
+    SensorConfig,
+    SimulationConfig,
+    VehicleConfig,
+)
 from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
+from mlracecar.core.sensors import RaySettings
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.core.world import Timing
 
-SECTIONS: list[type[BaseModel]] = [VehicleConfig, SimulationConfig, RaceConfig]
+SECTIONS: list[type[BaseModel]] = [VehicleConfig, SimulationConfig, RaceConfig, SensorConfig]
 
 
 def test_every_setting_has_a_default() -> None:
@@ -113,6 +120,19 @@ def test_time_needs_at_least_one_step(setting: str) -> None:
         SimulationConfig.model_validate({setting: 0})
 
 
+@pytest.mark.parametrize(
+    ("setting", "value"),
+    [("rays", 0), ("field_of_view", 0.0), ("field_of_view", 361.0), ("range", 0.0)],
+)
+def test_impossible_sensors_are_rejected(setting: str, value: float) -> None:
+    with pytest.raises(ValidationError):
+        SensorConfig.model_validate({setting: value})
+
+
+def test_the_sensors_can_see_all_the_way_round() -> None:
+    assert SensorConfig(field_of_view=360.0).field_of_view == 360.0
+
+
 # --------------------------------------------------------------------------- #
 # Conversion to the core
 # --------------------------------------------------------------------------- #
@@ -152,6 +172,17 @@ def test_race_settings_convert_for_the_race_rules() -> None:
 
 def test_the_race_rules_default_to_the_default_settings() -> None:
     assert RaceConfig().to_settings() == RaceSettings()
+
+
+def test_sensor_settings_convert_to_radians_for_the_sensors() -> None:
+    settings = SensorConfig(rays=9, field_of_view=90.0, range=50.0).to_settings()
+
+    assert (settings.count, settings.max_range) == (9, 50.0)
+    assert settings.field_of_view == pytest.approx(math.pi / 2)  # degrees -> radians
+
+
+def test_the_sensors_default_to_the_default_settings() -> None:
+    assert SensorConfig().to_settings() == RaySettings()
 
 
 def test_every_off_track_policy_can_be_chosen_in_the_settings() -> None:
