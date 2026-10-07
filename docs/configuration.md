@@ -20,7 +20,7 @@ vehicle:
   length: 4.5                # Length of the body, in metres.
   mass: 1300                 # The car's mass, in kilograms.
   max_steer: 30              # How far the front wheels turn at full lock, in degrees.
-  max_power: 200             # Engine power in kilowatts; it limits the push at high speed.
+  max_power: 250             # Engine power in kilowatts; it limits the push at high speed.
 
 # How simulated time moves forward.
 simulation:
@@ -36,6 +36,10 @@ watts.
 A third section, `race`, holds the race rules: what happens when a car leaves the road
 (`off_track`: `none`, `slowdown`, `reset`, or `terminate`) and how hard the grass slows it
 (`grass_slowdown`). See [Race rules](race-rules.md).
+
+A fourth, `sensors`, sets up the car's distance sensors: how many rays (`rays`), the angle they
+fan across in degrees (`field_of_view`), and how far they reach in metres (`range`). See
+[Sensors](sensors.md).
 
 ## Changing settings
 

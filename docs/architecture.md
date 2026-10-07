@@ -225,9 +225,13 @@ are ghosts until collisions arrive in M7.
 
 ### 4.6 Sensors and observations
 
-- **Raycasts:** `R` rays spread across a field of view return the distance to the nearest
-  track boundary. A broad phase only tests boundary segments near the car's progress index,
-  so cost is `O(N·R·w)` instead of `O(N·R·S)` for `S` total segments.
+- **Raycasts** (`core.sensors.RaySensor`, [Sensors](sensors.md)): `R` rays spread across a
+  field of view return the distance to the nearest track boundary. A broad phase only tests
+  boundary segments near the car's progress index, so cost is `O(N·R·w)` instead of
+  `O(N·R·S)` for `S` total segments. Within that window, segments are grouped into blocks with
+  precomputed bounding circles that each ray tests first, and only segments whose endpoints
+  straddle the ray's line get the exact intersection. The result is exact: it matches testing
+  every segment.
 - **Observation features** are composable and normalized: rays, speed, lateral offset,
   heading error, yaw rate, previous action, and look-ahead curvature.
 - An **`ObservationSpec`** (feature names, shapes, normalization, content hash) is saved with
