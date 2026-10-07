@@ -142,7 +142,7 @@ def test_the_scripted_driver_laps_the_gp_circuit() -> None:
         assert world.snapshot.time < 200, "no valid lap after 200 s"
         world.step(driver.act(world.snapshot))
 
-    assert world.snapshot.race.best_lap[0] == pytest.approx(122, abs=5)  # about 100 km/h
+    assert world.snapshot.race.best_lap[0] == pytest.approx(114, abs=5)  # about 110 km/h
 
 
 # --------------------------------------------------------------------------- #

@@ -13,10 +13,10 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-STEER_TIME = 0.25
+STEER_TIME = 0.15
 """Seconds from straight to full lock while a steering key is held."""
 
-CENTRE_TIME = 0.15
+CENTRE_TIME = 0.1
 """Seconds from full lock back to straight after the key is let go."""
 
 

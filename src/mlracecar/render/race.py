@@ -48,6 +48,13 @@ CAR_COLORS: tuple[Color, ...] = (
 FOLLOW_SCALE = 6.0
 """Starting zoom of the follow camera, in pixels per metre."""
 
+VIEW_AHEAD = 2.5
+"""Seconds of road ahead of the followed car that the follow camera keeps on screen: it
+looks further ahead, and zooms out if it must, as the car speeds up."""
+
+FOLLOW_MARGIN = 40
+"""Pixels the follow camera keeps between the road ahead and the edge of the window."""
+
 HUD_SPACE = 180
 """Pixels on the left that the overview keeps clear of the track, for the HUD."""
 
@@ -132,9 +139,19 @@ class RaceRenderer:
             return self._overview
         if self.mode is CameraMode.FREE:
             return self._free
-        position = snapshot.cars.position[self.followed % len(snapshot.cars)]
-        center = (float(position[0]), float(position[1]))
-        return Camera(center=center, scale=self._follow_scale, size=self.size)
+        return self._follow_camera(snapshot.cars, self.followed % len(snapshot.cars))
+
+    def _follow_camera(self, cars: VehicleState, car: int) -> Camera:
+        """Centred `VIEW_AHEAD` / 2 seconds ahead of the car, along the way it's going, and zoomed
+        out from the chosen zoom if that's needed to show `VIEW_AHEAD` seconds of road."""
+        position = cars.position[car]
+        ahead = float(cars.speed[car]) * VIEW_AHEAD / 2
+        course = float(cars.yaw[car] + np.arctan2(cars.vy[car], cars.vx[car]))
+        center = position + ahead * np.array([np.cos(course), np.sin(course)])
+        scale = self._follow_scale
+        if ahead > 0:
+            scale = min(scale, (min(self.size) / 2 - FOLLOW_MARGIN) / ahead)
+        return Camera(center=(float(center[0]), float(center[1])), scale=scale, size=self.size)
 
     def next_camera(self) -> CameraMode:
         """Switch to the next camera mode: follow, overview, free, and round again."""

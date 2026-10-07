@@ -28,7 +28,8 @@ simulation:
   action_repeat: 6  # Physics steps per driver decision (120 / 6 = 20 decisions a second).
 ```
 
-The default car is a sporty road car: about 280 km/h flat out. Angles are in degrees and power
+The default car is a hot sporty car: 0–100 km/h in about 3 seconds, about 300 km/h flat out
+(see [Car physics](vehicle-model.md)). Angles are in degrees and power
 in kilowatts, because those are easy to picture; the simulation converts them to radians and
 watts.
 

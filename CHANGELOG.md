@@ -32,15 +32,16 @@ All notable changes to this project are documented here. The format is based on
   timing, read from YAML files and `--set section.key=value` in layers (defaults < files <
   `--set`), converted to the core's `VehicleParams` and `Timing`. Errors list every invalid
   setting with the file it came from and suggest the nearest name for a typo.
-  `configs/default.yaml` lists every setting with its default; the default car is a sporty
-  road car (about 280 km/h).
+  `configs/default.yaml` lists every setting with its default; the default car is a hot
+  sporty car (0-100 km/h in about 3 s, about 300 km/h).
 - `racecar config [files] --set key=value`: shows the settings a combination of files and
   overrides produces, or what is wrong with them.
 - `racecar drive <track>`: drive a car round a track with the keyboard (arrow keys or WASD),
   with lap times, R to restart, C for the camera, 1-3 for debug overlays, P to pause, and the
   best lap of the session in the title bar. It takes the same `--config` and `--set` options
   as `racecar config`, and refuses tracks with errors. The race runs in real time while the
-  window draws 60 frames a second, blending the car between decisions.
+  window draws 60 frames a second, blending the car between decisions. The follow camera
+  looks ahead of the car and zooms out with speed to keep 2.5 seconds of road in view.
 - The `Agent` protocol (`mlracecar.agents.base`) and `KeyboardAgent`, which turns held keys
   into smooth steering and a pedal.
 - The race renderer (`mlracecar.render.race.RaceRenderer`): draws snapshots only, with the
@@ -68,7 +69,7 @@ All notable changes to this project are documented here. The format is based on
   at a limited rate; the engine's push fades with speed once its power runs out; brakes, air
   drag and rolling resistance slow the car, which has no reverse gear. A new `grip` setting
   limits cornering, so a car too fast for a bend runs wide. The default car does 0-100 km/h
-  in 4.7 s and stops from 100 km/h in 37.5 m. See the new Car physics page.
+  in 3.2 s and stops from 100 km/h in 30.6 m. See the new Car physics page.
 - `mlracecar.editor.draft.TrackDraft`: the track editor's headless model. Immutable drafts
   (ADR-0011) with append, insert-into-stretch, move, delete, width, reverse-direction, and
   set-start edits, cached track and validation per draft, and conversion to and from track files.

@@ -14,6 +14,8 @@ from mlracecar.core.world import World
 from mlracecar.render.race import (
     CAR_COLORS,
     CENTERLINE,
+    FOLLOW_MARGIN,
+    FOLLOW_SCALE,
     HUD_SPACE,
     KERB_RED,
     KERB_WHITE,
@@ -21,6 +23,7 @@ from mlracecar.render.race import (
     NEXT_CHECKPOINT,
     RAY,
     VELOCITY,
+    VIEW_AHEAD,
     CameraMode,
     Overlay,
     RaceRenderer,
@@ -61,13 +64,46 @@ def test_a_frame_is_an_rgb_image_of_the_renderer_size() -> None:
     assert image.dtype == np.uint8
 
 
-def test_the_follow_camera_keeps_the_followed_car_in_the_middle() -> None:
-    drawing, snapshot = renderer(), race()
+def test_the_follow_camera_centres_a_standing_car() -> None:
+    drawing, snapshot = renderer(), race(decisions=0)
 
     for car in (0, 2):
         drawing.followed = car
         image = drawing.render(snapshot)
         assert tuple(image[200, 320]) == CAR_COLORS[car]
+
+
+def moving_at(speed: float) -> Snapshot:
+    """One car on the grid, rolling straight ahead at ``speed`` m/s."""
+    snapshot = race(cars=1, decisions=0)
+    return replace(snapshot, cars=replace(snapshot.cars, vx=np.array([speed])))
+
+
+def test_the_follow_camera_looks_ahead_of_a_moving_car() -> None:
+    drawing, snapshot = renderer(), moving_at(20.0)
+
+    camera = drawing.camera(snapshot)
+
+    ahead = np.asarray(camera.center) - snapshot.cars.position[0]
+    heading = np.array([np.cos(snapshot.cars.yaw[0]), np.sin(snapshot.cars.yaw[0])])
+    np.testing.assert_allclose(ahead, heading * 20.0 * VIEW_AHEAD / 2)
+    assert camera.scale == FOLLOW_SCALE  # 25 m ahead fits at the chosen zoom
+
+
+def test_the_follow_camera_zooms_out_to_keep_the_road_ahead_on_screen() -> None:
+    drawing = renderer()
+
+    for speed in (40.0, 80.0):
+        snapshot = moving_at(speed)
+        camera = drawing.camera(snapshot)
+        far_ahead = snapshot.cars.position[0] + (camera.center - snapshot.cars.position[0]) * 2
+        pixel = camera.to_screen(far_ahead)
+        assert camera.scale < FOLLOW_SCALE
+        assert pixel.min() >= FOLLOW_MARGIN - 1e-6
+        assert (pixel <= np.asarray(SIZE) - FOLLOW_MARGIN + 1e-6).all()
+        car = camera.to_screen(snapshot.cars.position[0])
+        assert (car >= FOLLOW_MARGIN - 1e-6).all()  # and the car itself still shows
+        assert (car <= np.asarray(SIZE) - FOLLOW_MARGIN + 1e-6).all()
 
 
 def test_the_overview_shows_the_whole_track_clear_of_the_hud() -> None:
@@ -103,7 +139,7 @@ def test_the_camera_cycles_follow_overview_free() -> None:
 
 
 def test_zooming_the_follow_camera_keeps_following() -> None:
-    drawing, snapshot = renderer(), race()
+    drawing, snapshot = renderer(), race(decisions=0)
 
     drawing.zoom_at((0, 0), 2.0)
 

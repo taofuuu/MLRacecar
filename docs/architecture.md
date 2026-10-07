@@ -261,7 +261,7 @@ class Agent(Protocol):
 ```
 
 Implementations: `KeyboardAgent` (M2), `SB3Agent` (M4), `OnnxAgent` (M6), `PPOAgent` (M8,
-our own). `KeyboardAgent` turns held keys into smooth steering (0.25 s to full lock, 0.15 s back
+our own). `KeyboardAgent` turns held keys into smooth steering (0.15 s to full lock, 0.1 s back
 to straight) and an immediate pedal; the window tells it which keys are held, so it never
 imports pygame. `racecar drive` (`play.drive.DriveWindow`) runs the race in real time, one
 decision every 0.05 s, while drawing 60 frames a second with the car blended between decisions. Every saved model ships a **model card** (observation spec hash, action spec,
