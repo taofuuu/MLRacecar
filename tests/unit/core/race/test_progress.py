@@ -69,3 +69,34 @@ def test_many_cars_are_found_in_chunks_like_one_at_a_time() -> None:
 
     for index, got in enumerate(together):
         np.testing.assert_array_equal(got, np.concatenate([single[index] for single in alone]))
+
+
+def test_the_road_heading_changes_smoothly_along_the_road() -> None:
+    # Points just either side of every centerline sample: before the fix, the heading jumped
+    # there by a segment's turn (0.5 m / 60 m = 0.008 rad), and rounding could pick either side.
+    samples = CIRCLE.centerline.arc_length[1:50]
+    either_side = np.concatenate([samples - 1e-7, samples + 1e-7])
+    points = CIRCLE.pose_at(either_side, 4.0).position
+
+    heading = LOCATOR.locate(points).heading
+
+    np.testing.assert_allclose(heading[:49], heading[49:], atol=1e-6)
+
+
+def test_the_road_heading_follows_the_curve() -> None:
+    arc_length = np.linspace(0, CIRCLE.length, 300, endpoint=False)
+
+    found = LOCATOR.locate(CIRCLE.pose_at(arc_length).position)
+
+    error = wrap_angle(found.heading - CIRCLE.pose_at(arc_length).heading)
+    np.testing.assert_allclose(error, 0.0, atol=1e-4)
+
+
+def test_the_road_width_is_blended_between_samples() -> None:
+    widths = 10.0 + 4.0 * np.sin(ANGLES)  # 6 to 14 m wide
+    varied = Track.build(60 * np.column_stack([np.cos(ANGLES), np.sin(ANGLES)]), widths)
+    arc_length = np.linspace(0, varied.length, 500, endpoint=False)
+
+    found = RoadLocator(varied, reach=5.0).locate(varied.pose_at(arc_length, 2.0).position)
+
+    np.testing.assert_allclose(found.width, varied.width_at(found.arc_length), atol=0.01)

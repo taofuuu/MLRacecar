@@ -120,6 +120,7 @@ Day-to-day commands:
 | `uv run racecar drive tracks/oval.json`  | Drive the track with the keyboard (needs a display)            |
 | `uv run python scripts/export_track_schema.py` | Re-publish the track file JSON Schema after changing the format |
 | `uv run python scripts/export_default_config.py` | Rewrite `configs/default.yaml` after adding or changing a setting |
+| `uv run python scripts/update_golden.py` | Record the golden trajectories again after an intended physics change (say why in the PR) |
 | `uv run lint-imports`                     | Architecture check: each layer only imports the layers below it |
 | `uv run --group docs mkdocs serve`        | Preview the docs site at http://127.0.0.1:8000 while editing   |
 | `uv run pre-commit run --all-files`       | Everything the commit hook runs, on the whole repo             |

@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Golden-trajectory regression tests: four recorded runs (a straight line, a slalom, a scripted
+  lap, and four cars off the road and the wrong way) that every run must match to about a
+  millionth, with a summary of what changed, when, and by how much when they don't. Record
+  them again after an intended change with `scripts/update_golden.py`.
 - `mlracecar.core.geometry`: vectorized 2D geometry (cross product, rotation, angle wrapping,
   segment intersection, raycasts, projection onto a polyline, self-intersection detection),
   property-tested with Hypothesis.
@@ -122,6 +126,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Fixed
 
+- A car's heading error and the road width used for the off-track check now change smoothly
+  along the road. They stepped at every 0.5 m centerline sample, so a car almost equally near
+  two samples could get either value, and Windows and Linux could disagree.
 - `wrap_angle` returns angles that are already in range unchanged. Before, it could change
   them by a rounding error, which would have made a car driving straight drift off course.
 - Control points closer than a micrometre now count as on top of each other: the track checks

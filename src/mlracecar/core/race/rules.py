@@ -83,7 +83,6 @@ class RaceRules:
         self.track = track
         self.settings = settings or RaceSettings()
         self._locator = RoadLocator(track, reach)
-        self._half_width = track.width / 2
         checkpoints = track.checkpoints
         self._left = checkpoints.left
         self._line = checkpoints.right - checkpoints.left
@@ -109,7 +108,7 @@ class RaceRules:
             laps=np.zeros(count, dtype=np.intp),
             last_lap=np.full(count, np.nan),
             best_lap=np.full(count, np.nan),
-            off_track=np.abs(where.offset) > self._half_width[where.segment],
+            off_track=np.abs(where.offset) > where.width / 2,
             wrong_way=np.zeros(count, dtype=bool),
             out=np.zeros(count, dtype=bool),
         )
@@ -129,7 +128,7 @@ class RaceRules:
         where = self._locator.locate(after.position, near=race.segment)
         half_lap = self._locator.length / 2
         moved = np.mod(where.arc_length - race.arc_length + half_lap, 2 * half_lap) - half_lap
-        off_track = np.abs(where.offset) > self._half_width[where.segment]
+        off_track = np.abs(where.offset) > where.width / 2
         wrong_way = moved < -WRONG_WAY_SPEED * (end - start)
         moved_on = replace(
             race,
