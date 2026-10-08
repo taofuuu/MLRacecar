@@ -264,6 +264,15 @@ All three environments are thin adapters over the same `World`:
 | `BatchedRacingEnv`   | `gymnasium.vector.VectorEnv` | N independent "ghost" cars in one world: N parallel envs for roughly the cost of one | M3 |
 | `MultiCarRacingEnv`  | `pettingzoo.ParallelEnv` | N cars that collide and race     | M7        |
 
+`RacingEnv` (`env.racing`, [The RL environment](environment.md)) is registered as
+`MLRacecar-v0`. Each step it calls `World.step`, then `RewardFunction`, `EpisodeRules`, and
+`ObservationBuilder`; `reset(seed, options={track, start})` builds a fresh `World` from the
+environment's seeded generator, so runs repeat exactly from a seed. Rendering is injected: the
+environment depends only on a `Viewer` protocol, and the registration's entry point
+(`play.environment.make_racing_env`) supplies `render.viewer.RaceViewer`, importing pygame
+only when a render mode is requested. That keeps `env` free of `render` and pygame, as the
+import-linter contracts require.
+
 ### 4.9 Agents
 
 ```python

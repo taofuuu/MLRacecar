@@ -112,7 +112,7 @@ Day-to-day commands:
 | Command                                   | What it does                                                   |
 |-------------------------------------------|----------------------------------------------------------------|
 | `uv run pytest`                           | Fast tests + coverage report (fails below 80%)                 |
-| `uv run pytest -m slow` / `-m gpu`        | Opt-in slow or GPU tests                                       |
+| `uv run pytest -m slow --no-cov` / `-m gpu` | Opt-in slow or GPU tests (without coverage, whose 80% minimum fails when only a few tests run) |
 | `uv run pytest -m benchmark --no-cov`     | Speed measurements (without coverage, which would slow down what is timed and fail the 80% minimum) |
 | `uv run python scripts/benchmark_table.py benchmark.json` | The README's speed table, from results saved with `--benchmark-json=benchmark.json` |
 | `uv run ruff check --fix .`               | Lint, auto-fixing what it safely can                           |

@@ -48,8 +48,9 @@ measured. See [Observations](observations.md).
 
 The last two shape training. `reward` weighs each part of the AI's score (0 switches a part
 off), and `episode` says when a training run ends: leaving the road (`end_off_track`), the time
-limit in seconds (`time_limit`), or being stuck for `stuck_time` seconds. See
-[Rewards and episodes](rewards.md).
+limit in seconds (`time_limit`), or being stuck for `stuck_time` seconds; and where runs start
+(`start`: `grid` or `random`). See [Rewards and episodes](rewards.md) and
+[The RL environment](environment.md).
 
 ## Changing settings
 

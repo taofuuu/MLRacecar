@@ -28,7 +28,8 @@ knows whether it gives or takes points.
 `RewardFunction(config, decision_dt)(before, after, actions, previous_actions)` returns
 `Rewards(total, terms)`: the reward per car, and every term's points per car, so that it's
 always clear which term drove what. `RewardTally` adds the terms up over each car's run; the
-environment (M3-4) reports those sums in `info` when a run ends.
+[environment](environment.md) reports those sums in `info["episode_terms"]` when a run
+ends, and each step's points in `info["terms"]`.
 
 ### Why progress, not speed
 
@@ -97,6 +98,7 @@ episode:
   end_off_track: true  # End the run as soon as the car's centre leaves the road.
   time_limit: 60       # The longest a run lasts, in seconds of racing.
   stuck_time: 5        # End the run after this many seconds in a row slower than 1 m/s.
+  start: grid          # Where runs start: grid, or random (anywhere on the lap).
 ```
 
 For example, `--set reward.smoothness=0.05` switches on a small cost for jerky controls.
