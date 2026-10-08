@@ -13,7 +13,8 @@ from PIL import Image, ImageSequence
 from stable_baselines3.common.logger import Logger
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-from mlracecar.training.tracking import Frame, SB3Output, TensorBoardTracker, Tracker, gif
+from mlracecar.render.video import Frame
+from mlracecar.training.tracking import SB3Output, TensorBoardTracker, Tracker
 
 RED, GREEN, BLUE, WHITE = (220, 30, 30), (30, 200, 60), (40, 60, 230), (255, 255, 255)
 
@@ -78,36 +79,6 @@ def test_a_video_is_an_animated_gif_at_half_the_size_and_frame_rate(tmp_path: Pa
     assert len(pictures) == 5  # every second picture
     assert all(picture.size == (32, 20) for picture in pictures)
     assert Image.open(io.BytesIO(image.encoded_image_string)).info["duration"] == 100  # 10 fps
-
-
-def test_a_gif_keeps_the_pictures(tmp_path: Path) -> None:
-    frames = list(moving_square(6))
-
-    data, size = gif(iter(frames), fps=20)
-
-    assert size == (64, 40)
-    pictures = frames_of(data)
-    assert len(pictures) == 6
-    for picture, frame in zip(pictures, frames, strict=True):
-        np.testing.assert_array_equal(np.asarray(picture), frame)
-
-
-def test_a_colour_that_only_appears_later_is_drawn_in_the_nearest_one() -> None:
-    first = np.full((8, 8, 3), GREEN, dtype=np.uint8)
-    first[:4] = BLUE
-    later = first.copy()
-    later[:2, :2] = RED  # not in the first picture
-
-    data, _ = gif(iter([first, later]), fps=20)
-
-    picture = np.asarray(frames_of(data)[1])
-    assert tuple(picture[0, 0]) in {BLUE, GREEN}
-    np.testing.assert_array_equal(picture[4:], first[4:])
-
-
-def test_a_video_needs_a_picture() -> None:
-    with pytest.raises(ValueError, match="at least one picture"):
-        gif(iter([]), fps=20)
 
 
 def test_stable_baselines3_numbers_reach_the_tracker() -> None:

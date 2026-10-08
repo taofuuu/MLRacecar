@@ -2,9 +2,10 @@
 
 > **In plain words:** A replay is a recording of a race that you can watch again: pause it,
 > skip around, and slow it down or speed it up. `racecar eval --record replays/` saves every
-> run the AI drives in an evaluation, and `racecar replay` plays one. A replay keeps a picture of
-> the race for every driver decision, so it shows exactly what happened, even after the code or
-> the track changes. A one-minute run is about 110 kB.
+> run the AI drives in an evaluation, and `racecar replay` plays one, or saves it as a GIF or an
+> MP4 video to share. A replay keeps a picture of the race for every driver decision, so it shows
+> exactly what happened, even after the code or the track changes. A one-minute run is about
+> 110 kB.
 
 ## Recording
 
@@ -43,6 +44,45 @@ with a timeline along the bottom showing where the replay is up to:
 
 The car moves smoothly at any speed: between two recorded moments it's drawn part of the way
 from one to the next, as in the driving window. It needs pygame (the `render` extra).
+
+## Videos
+
+`--export` saves a replay as a video instead of opening the window: a GIF or an MP4, by the
+file's extension.
+
+```bash
+uv run racecar replay replays/technical-A-01.npz --export lap.gif --lap 1 --camera overview
+uv run racecar replay replays/technical-A-01.npz --export clip.mp4 --from 10 --to 25 --rays
+```
+
+| Option | Default | Meaning |
+|--------|--------:|---------|
+| `--export FILE` | | A `.gif` or `.mp4` file to save it as. |
+| `--camera` | `follow` | `follow` (the chase camera) or `overview` (the whole track). |
+| `--rays` | off | Show the distance rays the car drives by. |
+| `--from`, `--to` | the whole replay | Where to start and stop, in seconds. |
+| `--lap N` | | Just the Nth valid lap, from the line to the line. |
+| `--fps` | 25 | Pictures a second. A GIF's timing is in hundredths of a second, so 10, 20, 25, or 50 play exactly. |
+| `--size` | `960x600` | Width x height in pixels (even, for an MP4). |
+
+`--camera`, `--rays`, `--from`, and `--lap` work when watching too: the window opens that way.
+
+GIFs need nothing more; MP4s need the `video` extra (`uv sync --extra video`, about 30 MB:
+the ffmpeg encoder). An MP4 is about a quarter of the size of the same GIF, in full colour:
+better for sharing on social media. A GIF plays anywhere, including in a README. One lap takes
+5 to 10 seconds to make. The follow camera's GIFs are bigger, as every picture moves (a lap at
+640 x 400: about 6 MB, against 1.8 MB for the overview).
+
+### The README's GIF
+
+The GIF at the top of the README is the AI's first clean lap, made from a replay kept in the
+repository (`docs/media/hero-lap.npz`) by one command:
+
+```bash
+uv run racecar replay docs/media/hero-lap.npz --export docs/media/hero.gif --lap 1 --camera overview --size 640x400 --rays
+```
+
+A test checks that the replay still reads and the command still works.
 
 ## The file
 

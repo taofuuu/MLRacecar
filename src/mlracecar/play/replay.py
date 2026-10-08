@@ -1,29 +1,41 @@
-"""The replay window behind `racecar replay`: watch a recorded race, at any speed, and scrub.
+"""The replay window behind `racecar replay`: watch a recorded race, at any speed, and scrub;
+or save it as a video (`export_replay`, ``racecar replay --export``).
 
 `Playback` is where the replay is up to: the time, the speed, and whether it's playing. It's
 plain logic, tested without a window. `ReplayWindow` draws the race as the driving window does,
 60 frames a second with the cars blended between snapshots, and the timeline along the bottom.
+A video is drawn the same way, offscreen, a picture every 1/fps seconds of the race.
 """
 
-from collections.abc import Sequence
+import math
+from collections.abc import Iterator, Sequence
+from pathlib import Path
 
 import numpy as np
 import pygame
 
 from mlracecar.config.models import RacecarConfig
+from mlracecar.core.race.events import LapCompleted
 from mlracecar.core.sensors import RaySensor
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.io.replay import Replay
 from mlracecar.play.drive import FRAME_RATE, OVERLAY_KEYS, fitting_window_size
 from mlracecar.render.hud import lap_time_text
-from mlracecar.render.race import Overlay, RaceRenderer, interpolated
+from mlracecar.render.race import CameraMode, Overlay, RaceRenderer, interpolated
 from mlracecar.render.timeline import Timeline, fraction_at, grabs
+from mlracecar.render.video import Frame, VideoError, write_video
 
 SPEEDS = (0.25, 0.5, 1.0, 2.0, 4.0)
 """The playback speeds, slowest first."""
 
 SKIP = 1.0
 """Seconds that Left and Right jump back or on."""
+
+VIDEO_SIZE = (960, 600)
+"""A video's width and height in pixels, unless asked otherwise."""
+
+VIDEO_FPS = 25
+"""A video's pictures a second, unless asked otherwise: a GIF plays 25 exactly (40 ms each)."""
 
 HINT = "Space: play/pause  ·  Left/Right: 1 s  ·  Up/Down: speed  ·  C: camera  ·  1-4: overlays"
 
@@ -106,7 +118,14 @@ class ReplayWindow:
         title: Shown in the window's title bar.
     """
 
-    def __init__(self, replay: Replay, config: RacecarConfig, title: str) -> None:
+    def __init__(
+        self,
+        replay: Replay,
+        config: RacecarConfig,
+        title: str,
+        camera: CameraMode = CameraMode.FOLLOW,
+        rays: bool = False,
+    ) -> None:
         pygame.display.init()
         self._screen = pygame.display.set_mode(fitting_window_size(), pygame.RESIZABLE)
         track = replay.track.to_track()
@@ -115,6 +134,9 @@ class ReplayWindow:
         self.sensor = RaySensor(track, config.sensors.to_settings())
         """The distance rays the car drove by; key 4 shows them."""
         self.renderer = RaceRenderer(track, (car.length, car.width), self._screen.get_size())
+        self.renderer.mode = camera
+        if rays:
+            self.renderer.overlays.add(Overlay.RAYS)
         self.timeline = Timeline()
         self.title = title
         self.running = True
@@ -196,6 +218,106 @@ class ReplayWindow:
         pygame.display.quit()
 
 
-def run_replay(replay: Replay, config: RacecarConfig, title: str) -> None:
-    """Open the replay window and run it until it's closed."""
-    ReplayWindow(replay, config, title).run()
+def run_replay(
+    replay: Replay,
+    config: RacecarConfig,
+    title: str,
+    camera: CameraMode = CameraMode.FOLLOW,
+    rays: bool = False,
+    start: float = 0.0,
+) -> None:
+    """Open the replay window, ``start`` seconds in, and run it until it's closed."""
+    window = ReplayWindow(replay, config, title, camera, rays)
+    window.playback.seek(start)
+    window.run()
+
+
+def lap_times(replay: Replay, lap: int) -> tuple[float, float]:
+    """When the replay's ``lap``-th valid lap (counting from 1) starts and ends, in seconds
+    from the start of the replay.
+
+    Raises:
+        VideoError: If the replay has fewer valid laps.
+    """
+    laps = [
+        event
+        for snapshot in replay.snapshots
+        for event in snapshot.events
+        if isinstance(event, LapCompleted) and event.valid
+    ]
+    if not 1 <= lap <= len(laps):
+        valid = f"{len(laps)} valid lap{'' if len(laps) == 1 else 's'}"
+        raise VideoError(f"there's no lap {lap}: the replay has {valid}")
+    begin = replay.snapshots[0].time
+    end = laps[lap - 1].at - begin
+    return end - laps[lap - 1].time, end
+
+
+def replay_frames(
+    replay: Replay,
+    config: RacecarConfig,
+    *,
+    camera: CameraMode = CameraMode.FOLLOW,
+    rays: bool = False,
+    start: float = 0.0,
+    end: float | None = None,
+    fps: float = VIDEO_FPS,
+    size: tuple[int, int] = VIDEO_SIZE,
+) -> Iterator[Frame]:
+    """The replay as pictures, drawn offscreen as the window draws it (without the bottom line),
+    one every ``1 / fps`` seconds of the race from ``start`` to ``end`` (the end by default).
+
+    Raises:
+        VideoError: If the times aren't within the replay, in order, or the rate or size isn't
+            positive.
+    """
+    playback = Playback(replay.snapshots)
+    end = playback.duration if end is None else end
+    if not 0 <= start < end <= playback.duration + 1e-9:
+        raise VideoError(
+            f"--from and --to must be in order, within the replay's {playback.duration:g} s; "
+            f"got {start:g} to {end:g}"
+        )
+    if fps <= 0 or min(size) < 1:
+        raise VideoError(f"the frame rate and size must be positive, got {fps:g} and {size}")
+    track = replay.track.to_track()
+    car = config.vehicle.to_params()
+    renderer = RaceRenderer(track, (car.length, car.width), size)
+    renderer.mode = camera
+    renderer.caption = False
+    sensor = RaySensor(track, config.sensors.to_settings()) if rays else None
+    if rays:
+        renderer.overlays.add(Overlay.RAYS)
+    count = math.floor((end - start) * fps + 1e-9) + 1
+
+    def frames() -> Iterator[Frame]:
+        for index in range(count):
+            playback.seek(start + index / fps)
+            snapshot = playback.snapshot()
+            yield renderer.render(snapshot, None if sensor is None else sensor.sense(snapshot).end)
+
+    return frames()
+
+
+def export_replay(
+    replay: Replay,
+    config: RacecarConfig,
+    path: str | Path,
+    *,
+    camera: CameraMode = CameraMode.FOLLOW,
+    rays: bool = False,
+    start: float = 0.0,
+    end: float | None = None,
+    fps: float = VIDEO_FPS,
+    size: tuple[int, int] = VIDEO_SIZE,
+) -> None:
+    """Save the replay, from ``start`` to ``end`` seconds, as a video: a GIF or an MP4, by the
+    extension of ``path`` (`write_video`).
+
+    Raises:
+        VideoError: As for `replay_frames` and `write_video`.
+    """
+    frames = replay_frames(
+        replay, config, camera=camera, rays=rays, start=start, end=end, fps=fps, size=size
+    )
+    write_video(path, frames, fps)

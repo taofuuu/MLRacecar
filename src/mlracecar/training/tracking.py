@@ -6,21 +6,16 @@ same three methods. Stable-Baselines3's own numbers (its losses, frames per seco
 tracker through `SB3Output`, so everything a run tracks goes the same way.
 """
 
-import io
-import itertools
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
 import numpy as np
-from numpy.typing import NDArray
-from PIL import Image
 from stable_baselines3.common.logger import KVWriter
 from tensorboard.compat.proto.summary_pb2 import Summary
 from torch.utils.tensorboard import SummaryWriter
 
-type Frame = NDArray[np.uint8]
-"""An RGB picture, ``(height, width, 3)``."""
+from mlracecar.render.video import Frame, gif
 
 
 class Tracker(Protocol):
@@ -100,44 +95,3 @@ class SB3Output(KVWriter):
 
     def close(self) -> None:
         """Nothing to close: whoever made the tracker closes it."""
-
-
-def gif(
-    frames: Iterable[Frame], fps: float, shrink: int = 1, skip: int = 1
-) -> tuple[bytes, tuple[int, int]]:
-    """An animated GIF of ``frames`` that loops, and its width and height.
-
-    Args:
-        frames: The pictures, in order. They're read one at a time, so a long video doesn't
-            have to fit in memory at full size.
-        fps: Pictures a second.
-        shrink: Make it this many times smaller (averaging each square of pixels).
-        skip: Keep only every ``skip``-th picture (and show each that much longer).
-
-    Every picture uses the first one's colours (up to 256), which is fast and keeps the file
-    small; a colour that only appears later is drawn in the nearest of them.
-
-    Raises:
-        ValueError: If there are no pictures.
-    """
-    pictures = (_shrunk(frame, shrink) for frame in itertools.islice(frames, 0, None, skip))
-    first = next(pictures, None)
-    if first is None:
-        raise ValueError("a video needs at least one picture")
-    palette = first.quantize(colors=256, dither=Image.Dither.NONE)
-    rest = (picture.quantize(palette=palette, dither=Image.Dither.NONE) for picture in pictures)
-    buffer = io.BytesIO()
-    palette.save(
-        buffer,
-        format="GIF",
-        save_all=True,
-        append_images=rest,
-        duration=round(1000 * skip / fps),
-        loop=0,
-    )
-    return buffer.getvalue(), first.size
-
-
-def _shrunk(frame: Frame, shrink: int) -> Image.Image:
-    picture = Image.fromarray(np.ascontiguousarray(frame))
-    return picture.reduce(shrink) if shrink > 1 else picture

@@ -9,14 +9,18 @@
 
 **Draw a race track. Watch an AI learn to master it. Then try to beat it.**
 
+![The AI driving a clean lap of the technical circuit](docs/media/hero.gif)
+
+*The AI's first clean lap of the technical circuit, 30.3 s, after about a minute and a half of
+training on a laptop CPU. The pink lines are the distance sensors it drives by.*
+
 MLRacecar is a top-down 2D racing simulator built from scratch in Python. It comes with a
 visual track editor and a reinforcement-learning pipeline that teaches cars to drive any
 track you design.
 
-> **Status: in development.** Milestones M0 (foundations) and M1 (tracks) are done, and so is
-> M2 (drivable simulation) apart from the optional tire-slip car model: you can draw a track in
-> the editor and drive it with the keyboard. Next up is M3, the reinforcement-learning
-> environment. See the [roadmap](docs/roadmap.md) and the
+> **Status: in development.** Milestones M0 to M3 are done: the tracks and the editor, a
+> drivable simulation, and the reinforcement-learning environment. In M4 an AI now learns to
+> lap a track, as above. See the [roadmap](docs/roadmap.md) and the
 > [project board](https://github.com/users/taofuuu/projects/3).
 
 ## Planned features

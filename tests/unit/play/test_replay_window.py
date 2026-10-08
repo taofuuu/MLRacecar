@@ -1,20 +1,34 @@
 """Tests for mlracecar.play.replay: watching a replay, run off-screen (see tests/conftest.py)."""
 
 from collections.abc import Iterator
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pygame
 import pytest
+from numpy.typing import NDArray
+from PIL import Image, ImageSequence
 
 from mlracecar.config.models import RacecarConfig
+from mlracecar.core.race.events import LapCompleted
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.env.racing import RacingEnv
 from mlracecar.io.replay import Replay
 from mlracecar.io.track_file import TrackFile
-from mlracecar.play.replay import SPEEDS, Playback, ReplayWindow, run_replay
-from mlracecar.render.race import CameraMode, Overlay
+from mlracecar.play.replay import (
+    SPEEDS,
+    Playback,
+    ReplayWindow,
+    export_replay,
+    lap_times,
+    replay_frames,
+    run_replay,
+)
+from mlracecar.render.race import RAY, CameraMode, Overlay, RaceRenderer
 from mlracecar.render.timeline import bar_rect
+from mlracecar.render.video import VideoError
 from snapshots import assert_same_snapshots
 
 ANGLES = np.linspace(0, 2 * np.pi, 48, endpoint=False)
@@ -264,3 +278,121 @@ def test_run_replay_plays_until_closed() -> None:
     pygame.event.post(pygame.event.Event(pygame.QUIT))
 
     run_replay(replay_of(SNAPSHOTS), CONFIG, "Circle")  # returns once the window is closed
+
+
+# --------------------------------------------------------------------------- #
+# Videos
+# --------------------------------------------------------------------------- #
+
+
+def with_laps(snapshots: list[Snapshot], *laps: tuple[int, float, bool]) -> list[Snapshot]:
+    """The snapshots, with a lap ending at each ``(step, lap time, valid)``."""
+    changed = list(snapshots)
+    for step, seconds, valid in laps:
+        lap = LapCompleted(0, seconds, (seconds,), valid, changed[step].time)
+        changed[step] = replace(changed[step], events=(lap,))
+    return changed
+
+
+def test_a_video_has_a_picture_every_1_over_fps_seconds() -> None:
+    frames = list(
+        replay_frames(replay_of(SNAPSHOTS), CONFIG, start=1.0, end=2.0, fps=10, size=(64, 40))
+    )
+
+    assert len(frames) == 11  # 1.0, 1.1, ..., 2.0
+    assert all(frame.shape == (40, 64, 3) for frame in frames)
+
+
+def test_a_video_runs_to_the_end_by_default() -> None:
+    frames = replay_frames(replay_of(SNAPSHOTS), CONFIG, fps=5, size=(64, 40))
+
+    assert len(list(frames)) == 21  # 4 s at 5 a second, and the end
+
+
+def test_a_video_is_drawn_with_the_camera_and_rays_asked_for() -> None:
+    def picture(**options: Any) -> NDArray[np.uint8]:
+        frames = replay_frames(replay_of(SNAPSHOTS), CONFIG, start=2.0, end=2.0 + 1e-3, **options)
+        return next(iter(frames))
+
+    follow, overview = picture(), picture(camera=CameraMode.OVERVIEW)
+    assert not np.array_equal(follow, overview)
+
+    def shows_rays(image: NDArray[np.uint8]) -> bool:
+        return bool((np.abs(image.astype(int) - RAY).sum(axis=2) <= 24).any())
+
+    assert shows_rays(picture(rays=True))
+    assert not shows_rays(follow)
+
+
+def test_a_video_leaves_out_the_bottom_line() -> None:
+    frames = replay_frames(
+        replay_of(SNAPSHOTS), CONFIG, camera=CameraMode.OVERVIEW, end=0.1, size=(640, 400)
+    )
+    picture = next(iter(frames))
+    car = CONFIG.vehicle.to_params()
+    renderer = RaceRenderer(CIRCLE.to_track(), (car.length, car.width), (640, 400))
+    renderer.mode = CameraMode.OVERVIEW
+
+    with_caption = renderer.render(SNAPSHOTS[0])
+
+    rows = np.flatnonzero((picture != with_caption).any(axis=(1, 2)))
+    assert rows.size > 0
+    assert rows.min() > 400 - 40  # only the bottom line differs
+
+
+@pytest.mark.parametrize(
+    ("options", "message"),
+    [
+        ({"start": 3.0, "end": 2.0}, r"must be in order, within the replay's 4 s; got 3 to 2"),
+        ({"start": -1.0}, r"got -1 to 4"),
+        ({"end": 5.0}, r"got 0 to 5"),
+        ({"fps": 0}, "the frame rate and size must be positive"),
+        ({"size": (0, 40)}, "the frame rate and size must be positive"),
+    ],
+)
+def test_a_video_outside_the_replay_is_refused(options: dict[str, Any], message: str) -> None:
+    with pytest.raises(VideoError, match=message):
+        replay_frames(replay_of(SNAPSHOTS), CONFIG, **options)
+
+
+def test_a_lap_runs_from_the_line_to_the_line() -> None:
+    laps = with_laps(SNAPSHOTS, (30, 1.0, True), (50, 0.7, False), (70, 1.0, True))
+
+    assert lap_times(replay_of(laps), 1) == pytest.approx((0.5, 1.5))
+    assert lap_times(replay_of(laps), 2) == pytest.approx((2.5, 3.5))  # the invalid one skipped
+    with pytest.raises(VideoError, match="there's no lap 3: the replay has 2 valid laps"):
+        lap_times(replay_of(laps), 3)
+    with pytest.raises(VideoError, match=r"there's no lap 2: the replay has 1 valid lap$"):
+        lap_times(replay_of(with_laps(SNAPSHOTS, (30, 1.0, True))), 2)
+
+
+def test_a_replay_is_saved_as_a_gif(tmp_path: Path) -> None:
+    export_replay(
+        replay_of(SNAPSHOTS), CONFIG, tmp_path / "lap.gif", end=1.0, fps=10, size=(64, 40)
+    )
+
+    with Image.open(tmp_path / "lap.gif") as gif:
+        pictures = len(list(ImageSequence.Iterator(gif)))
+        assert (gif.size, pictures, gif.info["duration"]) == ((64, 40), 11, 100)
+
+
+def test_the_window_can_open_with_a_camera_and_the_rays_at_a_time() -> None:
+    pygame.display.init()
+    pygame.event.post(pygame.event.Event(pygame.QUIT))
+    opened: list[ReplayWindow] = []
+    real = ReplayWindow.run
+
+    def run(self: ReplayWindow) -> None:
+        opened.append(self)
+        real(self)
+
+    ReplayWindow.run = run  # type: ignore[method-assign]
+    try:
+        run_replay(replay_of(SNAPSHOTS), CONFIG, "Circle", CameraMode.OVERVIEW, True, 2.5)
+    finally:
+        ReplayWindow.run = real  # type: ignore[method-assign]
+
+    [window] = opened
+    assert window.renderer.mode is CameraMode.OVERVIEW
+    assert Overlay.RAYS in window.renderer.overlays
+    assert window.playback.position >= 2.5
