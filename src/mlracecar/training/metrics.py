@@ -5,8 +5,8 @@ explore); test runs are the ones it drives without learning (`evaluation.drive_t
 Both are summed up the same way (`evaluation.summarize`) and named the same way, with
 ``practice`` or ``test`` as the group:
 
-- ``<group>/score``, ``/distance``, ``/average_speed``, ``/lap_rate``, ``/best_lap``: as in
-  `summarize` (the best lap only once there is one);
+- ``<group>/score``, ``/completion_rate``, ``/distance``, ``/average_speed``, ``/lap_rate``,
+  ``/mean_lap``, ``/best_lap``: as in `summarize` (the lap times only once there is a lap);
 - ``<group>_ends/<reason>``: the share of runs that ended that way (``off_track``, ...);
 - ``<group>_reward/<term>``: each reward term's mean points per run.
 
@@ -22,7 +22,7 @@ from numpy.typing import NDArray
 
 from mlracecar.config.models import REWARD_TERMS
 from mlracecar.env.episodes import EndReason
-from mlracecar.training.evaluation import RunResult, summarize
+from mlracecar.training.evaluation import RunResult, RunTally, summarize
 
 PRACTICE_WINDOW = 100
 """Practice runs summed up: the latest this many, as Stable-Baselines3 does for its own."""
@@ -39,30 +39,32 @@ class PracticeRuns:
     def __init__(self, decision_dt: float, window: int = PRACTICE_WINDOW) -> None:
         self.decision_dt = decision_dt
         self.runs: deque[RunResult] = deque(maxlen=window)
-        self._steps: NDArray[np.int64] | None = None
+        self._tally: RunTally | None = None
 
     def add(self, infos: Sequence[Mapping[str, Any]], dones: NDArray[np.bool_]) -> None:
         """One step of every car (Stable-Baselines3's ``infos`` and ``dones``): keep the runs
         that ended in it. Every car must have started a fresh run before the first step."""
-        if self._steps is None:
-            self._steps = np.zeros(len(infos), dtype=np.int64)
-        self._steps += 1
+        if self._tally is None:
+            self._tally = RunTally(len(infos), self.decision_dt)
+        tally = self._tally
+        tally.step(
+            [info["laps"] for info in infos],
+            [info["last_lap"] for info in infos],
+            [info["off_track"] for info in infos],
+        )
         for car in np.flatnonzero(dones).tolist():
             info = infos[car]
             terms = {term: float(info["episode_terms"][term]) for term in REWARD_TERMS}
-            best = float(info["best_lap"])
             self.runs.append(
-                RunResult(
+                tally.result(
+                    car,
                     reward=sum(terms.values()),
                     distance=float(info["distance"]),
-                    laps=int(info["laps"]),
-                    best_lap=best if np.isfinite(best) else None,
                     end_reason=str(info["end_reason"]),
-                    seconds=float(self._steps[car] * self.decision_dt),
                     terms=terms,
                 )
             )
-            self._steps[car] = 0
+            tally.restart(car)
 
     def scalars(self) -> dict[str, float]:
         """The latest runs as named numbers; none before the first run ends."""
@@ -73,10 +75,11 @@ def scalars(group: str, summary: Mapping[str, Any]) -> dict[str, float]:
     """A summary from `summarize` as named numbers for a tracker."""
     values = {
         f"{group}/{key}": float(summary[key])
-        for key in ("score", "distance", "average_speed", "lap_rate")
+        for key in ("score", "completion_rate", "distance", "average_speed", "lap_rate")
     }
-    if summary["best_lap"] is not None:
-        values[f"{group}/best_lap"] = float(summary["best_lap"])
+    for lap in ("mean_lap", "best_lap"):
+        if summary[lap] is not None:
+            values[f"{group}/{lap}"] = float(summary[lap])
     for reason in EndReason:
         ended = summary["end_reasons"].get(reason.value, 0)
         values[f"{group}_ends/{reason.value}"] = ended / summary["runs"]

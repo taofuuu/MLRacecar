@@ -104,7 +104,14 @@ def test_a_run_starts_on_the_grid_at_rest() -> None:
 
     assert env.world is not None
     np.testing.assert_allclose(env.world.snapshot.cars.position, env.track.start_grid(1).position)
-    assert info == {"distance": 0.0, "speed": 0.0, "laps": 0, "best_lap": None, "off_track": False}
+    assert info == {
+        "distance": 0.0,
+        "speed": 0.0,
+        "laps": 0,
+        "last_lap": None,
+        "best_lap": None,
+        "off_track": False,
+    }
     assert env.observation_space.contains(observation)
 
 
@@ -208,6 +215,7 @@ def test_a_lap_driven_well_counts_and_its_time_is_reported() -> None:
         assert "end_reason" not in info
 
     assert info["best_lap"] == pytest.approx(2 * math.pi * 60 / 25, rel=0.05)
+    assert info["last_lap"] == pytest.approx(2 * math.pi * 60 / 25, rel=0.05)
 
 
 def test_the_time_limit_stops_the_run() -> None:

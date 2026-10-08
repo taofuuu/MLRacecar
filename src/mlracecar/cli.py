@@ -6,7 +6,7 @@ import platform
 import sys
 from importlib import metadata
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, NoReturn
 
 import typer
 
@@ -237,14 +237,7 @@ def train(
     try:
         from mlracecar.training.run import TrainingError, TrainingRun  # only for training
     except ImportError as error:
-        if error.name not in TRAINING_LIBRARIES:
-            raise
-        typer.echo(
-            "Training needs PyTorch and Stable-Baselines3: uv sync --extra train "
-            "(or --extra train-cpu without an NVIDIA GPU).",
-            err=True,
-        )
-        raise typer.Exit(1) from None
+        _need_training_libraries(error, "Training")
     try:
         if resume is not None:
             if files or overrides or name:
@@ -265,6 +258,107 @@ def train(
     if viewer is None and run.config.training.video_every:
         typer.echo("No videos: drawing them needs pygame (uv sync --extra render).")
     run.train(report=typer.echo, viewer=viewer)
+
+
+@app.command(name="eval")
+def evaluate(
+    models: Annotated[
+        list[Path],
+        typer.Option(
+            "--model",
+            metavar="FOLDER",
+            help="A saved agent, e.g. runs/<run>/checkpoints/best. Repeat to compare several.",
+        ),
+    ],
+    tracks: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--tracks",
+            metavar="FILES",
+            help='Track files, or a pattern in quotes, e.g. "tracks/*.json". Repeat for more. '
+            "Default: the track each agent trained on.",
+        ),
+    ] = None,
+    episodes: Annotated[int, typer.Option(min=1, help="Runs per agent and track.")] = 20,
+    seed: Annotated[
+        int, typer.Option(min=0, help="Sets the start places: the same seed, the same places.")
+    ] = 0,
+    start: Annotated[
+        str, typer.Option(help="Where runs start: random (places on the lap) or grid.")
+    ] = "random",
+    overrides: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--set",
+            metavar="KEY=VALUE",
+            help="Change one of the agents' settings, e.g. --set episode.time_limit=120.",
+        ),
+    ] = None,
+    json_file: Annotated[
+        Path | None, typer.Option("--json", help="Also save the report as JSON here.")
+    ] = None,
+    markdown_file: Annotated[
+        Path | None, typer.Option("--markdown", help="Also save the Markdown report here.")
+    ] = None,
+) -> None:
+    """Score saved agents on tracks, from the same start places every time, and print a report.
+
+    Each agent drives with the settings it was trained with (changed by any --set), without
+    learning. Give several --model to compare them side by side on the same runs. The report
+    (Markdown) gives each agent's completion rate (runs until the time limit without leaving
+    the road), laps and lap times, times off the road, and speed, per track. The same agents and
+    seed always give the same report. Needs the training libraries (uv sync --extra train).
+    Exits with status 1 if the evaluation can't be done.
+    """
+    try:
+        from mlracecar.agents.sb3 import IncompatibleModelError
+        from mlracecar.io.model_card import ModelCardError
+        from mlracecar.training import harness  # only for training
+    except ImportError as error:
+        _need_training_libraries(error, "Evaluating")
+    changes = overrides or []
+    try:
+        entrants = harness.load_entrants(models, changes)
+        names = tracks or [entrant.config.training.track for entrant in entrants]
+        report = harness.evaluate(
+            entrants,
+            harness.find_tracks(names),
+            episodes,
+            seed,
+            start,
+            changes,
+            progress=lambda line: typer.echo(line, err=True),
+        )
+    except (
+        ConfigError,
+        TrackFileError,
+        ModelCardError,
+        IncompatibleModelError,
+        harness.EvaluationError,
+    ) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from None
+    text = harness.markdown(report)
+    typer.echo(text, nl=False)
+    if json_file is not None:
+        harness.write_report(report, json_file)
+        typer.echo(f"Saved the report in {json_file}", err=True)
+    if markdown_file is not None:
+        markdown_file.parent.mkdir(parents=True, exist_ok=True)
+        markdown_file.write_text(text, encoding="utf-8", newline="\n")
+        typer.echo(f"Saved the Markdown in {markdown_file}", err=True)
+
+
+def _need_training_libraries(error: ImportError, doing: str) -> NoReturn:
+    """Say what to install if a training library is missing; otherwise, raise ``error``."""
+    if error.name not in TRAINING_LIBRARIES:
+        raise error
+    typer.echo(
+        f"{doing} needs PyTorch and Stable-Baselines3: uv sync --extra train "
+        "(or --extra train-cpu without an NVIDIA GPU).",
+        err=True,
+    )
+    raise typer.Exit(1) from None
 
 
 def _race_pictures() -> "ViewerFactory | None":

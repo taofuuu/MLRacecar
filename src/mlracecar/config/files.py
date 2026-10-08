@@ -46,18 +46,25 @@ class ConfigError(ValueError):
     """Settings can't be used. The message lists every problem and where it came from."""
 
 
-def load_config(files: Iterable[str | Path] = (), overrides: Iterable[str] = ()) -> RacecarConfig:
+def load_config(
+    files: Iterable[str | Path] = (),
+    overrides: Iterable[str] = (),
+    base: tuple[str, Mapping[str, Any]] | None = None,
+) -> RacecarConfig:
     """Build the settings: the defaults, changed by each file in order, then by each override.
 
     Args:
         files: Settings files (YAML); each only needs the settings it changes.
         overrides: ``section.key=value`` strings, as given to ``--set``.
+        base: Settings to start from before the files, and where they're from, such as
+            ``("the model card", card.config)``. Any they leave out are the defaults.
 
     Raises:
         ConfigError: If a file can't be read, an override isn't ``key=value``, or a setting is
             invalid. Every invalid setting is listed, with the file (or ``--set``) it came from.
     """
-    layers = [(str(path), read_config_file(path)) for path in files]
+    layers: list[tuple[str, Mapping[Any, Any]]] = [] if base is None else [base]
+    layers += [(str(path), read_config_file(path)) for path in files]
     layers += [("--set", parse_override(override)) for override in overrides]
     merged: dict[Hashable, Any] = {}
     sources: dict[Location, str] = {}

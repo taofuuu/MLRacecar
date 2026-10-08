@@ -1,6 +1,7 @@
 """Smoke tests for the `racecar` command line."""
 
 import importlib.util
+import json
 import re
 import sys
 from importlib import metadata
@@ -493,3 +494,94 @@ def test_train_resume_needs_a_run_folder(tmp_path: Path) -> None:
 
     assert result.exit_code == 1
     assert f"{tmp_path}: not a training run" in result.output
+
+
+# --------------------------------------------------------------------------- #
+# racecar eval
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture(scope="module")
+def saved_agent(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A tiny run's best agent, trained on the oval."""
+    folder = tmp_path_factory.mktemp("eval")
+    result = runner.invoke(app, ["train", str(tiny_run(folder)), "--runs", str(folder / "runs")])
+    assert result.exit_code == 0, result.output
+    [run] = (folder / "runs").iterdir()
+    return run / "checkpoints" / "best"
+
+
+@needs_training
+def test_eval_prints_a_report_and_can_save_it(saved_agent: Path, tmp_path: Path) -> None:
+    arguments = ["eval", "--model", str(saved_agent), "--model", str(saved_agent)]
+    files = ["--json", str(tmp_path / "report.json"), "--markdown", str(tmp_path / "report.md")]
+
+    result = runner.invoke(app, [*arguments, "--episodes", "2", *files])
+
+    assert result.exit_code == 0, result.output
+    assert result.stdout.startswith("# Evaluation\n\n2 runs per agent and track, from random")
+    assert "## Oval (" in result.stdout  # the track it trained on
+    assert re.search(r"\| Completion rate \| +\S+ \(\d/2\) \| +\S+ \(\d/2\) \|", result.stdout)
+    assert "A on " in result.stderr
+    assert (tmp_path / "report.md").read_text(encoding="utf-8") == result.stdout
+    report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
+    assert [agent["label"] for agent in report["agents"]] == ["A", "B"]
+
+
+@needs_training
+def test_eval_only_prints_unless_asked_to_save(saved_agent: Path) -> None:
+    arguments = ["--episodes", "1", "--start", "grid"]
+
+    result = runner.invoke(app, ["eval", "--model", str(saved_agent), *arguments])
+
+    assert result.exit_code == 0, result.output
+    assert "1 run per agent and track, from the grid" in result.stdout
+    assert "Saved" not in result.stderr
+
+
+@needs_training
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (["--tracks", "nowhere/*.json"], "nowhere/*.json: no track file there"),
+        (["--set", "episode.time_limit=-1"], "episode.time_limit: must be greater than 0"),
+        (["--set", "observation.rays=false"], "rays"),
+        (["--start", "pit"], "start must be 'random' or 'grid', got 'pit'"),
+    ],
+)
+def test_eval_explains_why_it_cant_be_done(
+    saved_agent: Path, arguments: list[str], message: str
+) -> None:
+    result = runner.invoke(app, ["eval", "--model", str(saved_agent), *arguments])
+
+    assert result.exit_code == 1
+    assert message in result.output
+
+
+@needs_training
+def test_eval_needs_a_saved_agent(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["eval", "--model", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "can't read the model card" in result.output
+
+
+def test_eval_says_what_to_install_without_the_training_libraries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delitem(sys.modules, "mlracecar.training.harness", raising=False)
+    monkeypatch.delitem(sys.modules, "mlracecar.agents.sb3", raising=False)
+    monkeypatch.setitem(sys.modules, "stable_baselines3", None)  # importing it fails
+
+    result = runner.invoke(app, ["eval", "--model", "anything"])
+
+    assert result.exit_code == 1
+    assert "Evaluating needs PyTorch and Stable-Baselines3: uv sync --extra train" in result.output
+
+
+def test_eval_doesnt_hide_other_import_problems(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "mlracecar.agents.sb3", None)
+
+    result = runner.invoke(app, ["eval", "--model", "anything"])
+
+    assert isinstance(result.exception, ImportError)

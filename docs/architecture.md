@@ -345,6 +345,16 @@ and ours share one sink and one step axis (car-steps); a `VecMonitor` supplies
 never imports pygame), streamed frame by frame into a GIF (Pillow: half size and frame rate, one
 shared palette), and stored as a TensorBoard image summary.
 
+Evaluation (`training.harness`, `racecar eval`, [Evaluation](evaluation.md)) loads saved agents
+with the settings from their model cards (`load_config(base=...)`, then `--set` overrides,
+re-checked against the observation spec), and drives `episodes` deterministic runs per agent and
+track through `drive_test_runs`, from seeds drawn from a stream separate from the training
+tests'. `RunTally` records every valid lap time (from `info["last_lap"]`) and each off-track
+transition, for test, practice, and evaluation runs alike; the completion rate is the share of
+clean runs (truncated by the time limit with no off-track transition). Reports are plain JSON
+with no timestamps, so they're byte-for-byte reproducible, and render as Markdown with one
+column per agent.
+
 ### 4.11 Rendering, replays and video
 
 The renderer only reads `Snapshot`s and never touches simulation internals: an import-linter

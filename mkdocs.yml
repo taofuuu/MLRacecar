@@ -46,6 +46,7 @@ nav:
   - The RL environment: environment.md
   - Trained agents: agents.md
   - Training: training.md
+  - Evaluation: evaluation.md
   - RL fundamentals: rl-guide.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md

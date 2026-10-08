@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- `racecar eval`: scores saved agents on tracks (by default the one each trained on), 20 runs
+  each from random places set by a seed, with the settings they were trained with (changed by
+  `--set`), and prints a Markdown report: the completion rate (the share of runs that last until
+  the time limit without leaving the road), laps, mean and best lap, times off the road, speed,
+  and score. Several `--model` are compared side by side on the same runs. `--json` and
+  `--markdown` save the report; the same agents and seed give the same report, byte for byte.
+- The environments' `info` has `last_lap`, the latest valid lap time.
+- Test results in `evaluations.jsonl` and the TensorBoard charts gain the completion rate and
+  the mean lap; each run records every lap time and the times it left the road.
 - TensorBoard charts for every training run (`uv run tensorboard --logdir runs`):
   Stable-Baselines3's learning numbers, and racing numbers for the practice runs and each test:
   score, distance, speed, the share of runs with a lap, the best lap, how runs ended, and each

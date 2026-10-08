@@ -81,8 +81,9 @@ uv run racecar config heavy-car.yaml --set vehicle.max_steer=25
 ```
 
 It prints the final settings in the same form as `configs/default.yaml`, so its output is
-itself a settings file. Later, `racecar drive` and `racecar train` will take the same files and
-`--set` options, and every training run will save the final settings it used.
+itself a settings file. `racecar drive` (with `--config`) and `racecar train` take the same files
+and `--set` options, and every training run saves the final settings it used. `racecar eval`
+starts from the settings a saved agent was trained with, and its `--set` changes those.
 
 ## Checks
 

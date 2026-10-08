@@ -238,12 +238,14 @@ class BatchedRacingEnv(gymnasium.vector.VectorEnv[_Observations, NDArray[np.floa
 
 
 def _state_info(snapshot: Snapshot, cars: BoolArray) -> dict[str, Any]:
-    """The cars' distance, speed, laps, best lap (NaN before the first), and off-track flag."""
+    """The cars' distance, speed, laps, latest and best lap (NaN before the first), and
+    off-track flag."""
     race = snapshot.race
     values = {
         "distance": race.distance.copy(),
         "speed": snapshot.cars.speed,
         "laps": race.laps.copy(),
+        "last_lap": race.last_lap.copy(),
         "best_lap": race.best_lap.copy(),
         "off_track": race.off_track.copy(),
     }

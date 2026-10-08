@@ -82,6 +82,28 @@ def test_layers_apply_in_order_each_changing_only_what_it_mentions(tmp_path: Pat
     assert config.simulation.action_repeat == SimulationConfig().action_repeat
 
 
+def test_settings_can_start_from_others_instead_of_the_defaults() -> None:
+    saved = RacecarConfig.model_validate({"vehicle": {"mass": 1500}, "episode": {"time_limit": 30}})
+    base = ("the model card", saved.model_dump(mode="json"))
+
+    assert load_config(base=base) == saved
+    config = load_config(overrides=["episode.time_limit=90"], base=base)
+    assert (config.vehicle.mass, config.episode.time_limit) == (1500.0, 90.0)
+    partial = load_config(base=("old settings", {"vehicle": {"mass": 1400}}))
+    assert partial.vehicle.width == VehicleConfig().width  # left out: the default
+
+
+def test_a_problem_in_the_settings_started_from_says_where_they_came_from() -> None:
+    with pytest.raises(ConfigError) as caught:
+        load_config(base=("the model card", {"vehicle": {"mass": -1, "colour": "red"}}))
+
+    assert str(caught.value).splitlines() == [
+        "Invalid settings:",
+        "  vehicle.mass: must be greater than 0, got -1 (from the model card)",
+        "  vehicle.colour: unknown setting (from the model card)",
+    ]
+
+
 def test_the_last_set_of_a_setting_wins() -> None:
     config = load_config(overrides=["vehicle.mass=1500", "vehicle.mass=1700"])
 
