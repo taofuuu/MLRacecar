@@ -237,6 +237,56 @@ class EpisodeConfig(BaseModel):
     """Where runs start: grid, or random (anywhere on the lap)."""
 
 
+class TrainingConfig(BaseModel):
+    """A training run: where, how long, with how many cars, and how often to save and test."""
+
+    model_config = _SETTINGS
+
+    track: Annotated[str, Field(min_length=1)] = "tracks/technical.json"
+    """The track file to train on."""
+    steps: Annotated[int, Field(ge=1)] = 1_000_000
+    """How long to train, in car-steps (16 cars x 1 step = 16)."""
+    cars: Annotated[int, Field(ge=1)] = 16
+    """Cars practising at once, in one world."""
+    seed: Annotated[int, Field(ge=0)] = 0
+    """Same settings + same seed = the same run."""
+    device: Literal["cpu", "cuda", "auto"] = "cpu"
+    """Where the network learns: cpu (fastest here), cuda, or auto."""
+    checkpoint_every: Annotated[int, Field(ge=1)] = 100_000
+    """Save the AI every this many car-steps, and at the end."""
+    eval_every: Annotated[int, Field(ge=1)] = 50_000
+    """Test it every this many car-steps, and at the end."""
+    eval_runs: Annotated[int, Field(ge=1)] = 10
+    """Test runs, from the same random places each time."""
+
+
+class PPOConfig(BaseModel):
+    """How PPO learns (Stable-Baselines3's usual values; see docs/rl-guide.md, section 8)."""
+
+    model_config = _SETTINGS
+
+    learning_rate: Positive = 3e-4
+    """How big each learning step is."""
+    steps_per_car: Annotated[int, Field(ge=2)] = 128
+    """Steps each car drives between updates (x cars = experience per update)."""
+    batch_size: Annotated[int, Field(ge=2)] = 256
+    """Steps per learning step; must divide the experience per update."""
+    epochs: Annotated[int, Field(ge=1)] = 10
+    """Passes over each update's experience."""
+    gamma: Annotated[float, Field(gt=0, le=1)] = 0.99
+    """Discount: how much later rewards count (0.99: about 5 s ahead)."""
+    gae_lambda: Annotated[float, Field(ge=0, le=1)] = 0.95
+    """GAE lambda: trades a little accuracy for less noise in the advantages."""
+    clip_range: Positive = 0.2
+    """How far one update may move the policy (the clip, epsilon)."""
+    entropy_coef: NonNegative = 0.0
+    """Bonus for staying random, to keep exploring."""
+    layers: Annotated[int, Field(ge=1)] = 2
+    """Hidden layers in the policy and value networks."""
+    layer_size: Annotated[int, Field(ge=1)] = 64
+    """Neurons in each hidden layer."""
+
+
 class RacecarConfig(BaseModel):
     """Every setting, in sections. `mlracecar.config.files.load_config` builds one from files."""
 
@@ -256,3 +306,7 @@ class RacecarConfig(BaseModel):
     """How the AI is scored: the weight of each part of the reward (0 turns it off)."""
     episode: EpisodeConfig = Field(default_factory=EpisodeConfig)
     """When a training run ends: leaving the road, the time limit, or getting stuck."""
+    training: TrainingConfig = Field(default_factory=TrainingConfig)
+    """A training run: the track, how long, how many cars, and how often to save and test."""
+    ppo: PPOConfig = Field(default_factory=PPOConfig)
+    """How PPO, the learning algorithm, learns."""
