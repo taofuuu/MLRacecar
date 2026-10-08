@@ -299,8 +299,16 @@ Implementations: `KeyboardAgent` (M2), `SB3Agent` (M4), `OnnxAgent` (M6), `PPOAg
 our own). `KeyboardAgent` turns held keys into smooth steering (0.15 s to full lock, 0.1 s back
 to straight) and an immediate pedal; the window tells it which keys are held, so it never
 imports pygame. `racecar drive` (`play.drive.DriveWindow`) runs the race in real time, one
-decision every 0.05 s, while drawing 60 frames a second with the car blended between decisions. Every saved model ships a **model card** (observation spec hash, action spec,
-environment config, library versions, git SHA) that is checked on load.
+decision every 0.05 s, while drawing 60 frames a second with the car blended between decisions.
+
+`SB3Agent` (`agents.sb3`, [Trained agents](agents.md)) wraps a Stable-Baselines3 model;
+deterministic mode acts on the policy's mean, so the same observation always gives the same
+action. Every saved model ships a **model card** (`io.model_card`: the observation spec's
+description and digest, the action spec, the environment config, library versions, the git
+commit) that is checked on load: a different digest is refused with every differing field
+named (`env.observations.observation_differences`). `training.vec_env.SB3VecEnv` adapts
+`BatchedRacingEnv` (in `SAME_STEP` mode) to SB3's `VecEnv`, with `terminal_observation` and
+`TimeLimit.truncated`; its transitions equal SB3's `DummyVecEnv` of single environments.
 
 ### 4.10 Training pipeline
 

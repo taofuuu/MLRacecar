@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Trained agents (`mlracecar.agents.sb3.SB3Agent`): a Stable-Baselines3 model driving through
+  MLRacecar's `Agent` protocol, deterministic by default, saved as a folder with the model and
+  its model card (`mlracecar.io.model_card`): the observations and actions it expects, every
+  setting, library versions, and the git commit. Loading into an environment whose observations
+  differ is refused, naming every difference.
+- `mlracecar.training.vec_env.SB3VecEnv`: Stable-Baselines3 trains on one world of many cars,
+  with exactly the transitions of its own `DummyVecEnv` of separate environments.
 - Training libraries as optional extras: `uv sync --extra train` installs PyTorch built for
   CUDA 13.0 (NVIDIA GPUs), Stable-Baselines3, and TensorBoard; `--extra train-cpu` the same
   with CPU-only PyTorch. Only training code may import them, so the simulation and the
