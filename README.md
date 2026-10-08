@@ -51,6 +51,17 @@ track checks on it. The sample tracks are in [`tracks/`](tracks/); the format is
 simulation will run on, such as the car's weight and power; see
 [docs/configuration.md](docs/configuration.md) for how to change them.
 
+To train an AI driver, install the training libraries (about 2 GB) and start a run:
+
+```bash
+uv sync --extra train
+uv run racecar train configs/smoke.yaml
+```
+
+The smoke run only checks that everything works, in a few seconds; `uv run racecar train` on
+its own trains properly. Everything about a run goes into a folder under `runs/`; see
+[docs/training.md](docs/training.md).
+
 ## Speed
 
 The simulation moves every car at once with NumPy arrays, so a thousand cars cost only a few

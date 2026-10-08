@@ -312,17 +312,26 @@ named (`env.observations.observation_differences`). `training.vec_env.SB3VecEnv`
 
 ### 4.10 Training pipeline
 
-A run directory contains everything needed to reproduce or audit a result:
+`racecar train` (`training.run.TrainingRun`, [Training](training.md)) trains SB3 PPO on
+`SB3VecEnv` and writes a run directory with everything needed to reproduce or audit a result:
 
 ```
-runs/2026-12-01_2130_ppo-first-lap/
+runs/2026-10-08_153012_technical-seed0/
 ├── config.yaml      # fully resolved config (defaults + file + CLI overrides)
-├── meta.json        # git SHA, dirty flag, package versions, seeds, hardware, timings
-├── checkpoints/     # periodic checkpoints + best model by evaluation score
-├── tensorboard/     # training curves and custom racing metrics
-├── eval/            # evaluation reports (JSON + Markdown) and videos
-└── replays/         # recorded episodes
+├── meta.json        # status, git SHA + dirty flag, versions, seeds, track hash, hardware, sessions
+├── checkpoints/     # step_N/ periodic, best/ by evaluation score, last/ for resuming (SB3Agent folders)
+├── eval/            # evaluations.jsonl: one line per evaluation; reports (M4-5) and videos (M4-7)
+├── tensorboard/     # training curves and custom racing metrics (M4-4)
+└── replays/         # recorded episodes (M4-6)
 ```
+
+Evaluation drives `eval_runs` deterministic episodes at once in a `BatchedRacingEnv`
+(`training.evaluation.drive_test_runs`), from random starts whose seeds are fixed per run, so
+scores are comparable across evaluations; the mean return is the score. Everything random is
+seeded from `training.seed` (`set_random_seed`, `seed + i` per car), so a CPU run is bitwise
+reproducible on one machine. Ctrl+C saves `checkpoints/last` and marks the run interrupted;
+`--resume` continues to `training.steps` (episodes restart, so it isn't bitwise equal to an
+uninterrupted run), refusing if the track file's hash changed.
 
 ### 4.11 Rendering, replays and video
 

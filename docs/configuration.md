@@ -52,6 +52,9 @@ limit in seconds (`time_limit`), or being stuck for `stuck_time` seconds; and wh
 (`start`: `grid` or `random`). See [Rewards and episodes](rewards.md) and
 [The RL environment](environment.md).
 
+`training` and `ppo` set up `racecar train`: the track, how long, how many cars, the seed,
+how often to save and test, and how PPO learns. See [Training](training.md).
+
 ## Changing settings
 
 Write a file with only the settings you want to change, under their section:

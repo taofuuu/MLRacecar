@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- `racecar train`: trains an AI driver with PPO on many cars at once, into a run folder
+  with every setting, the git commit, library versions, seeds, saved agents (every
+  `training.checkpoint_every` steps, the best by testing, and the last), and every test's
+  results. The same settings and seed give the same run on the CPU. Ctrl+C saves and stops;
+  `--resume` carries on. New settings sections `training` and `ppo`, and
+  `configs/smoke.yaml`, a run of a few seconds that CI does on every pull request.
 - Trained agents (`mlracecar.agents.sb3.SB3Agent`): a Stable-Baselines3 model driving through
   MLRacecar's `Agent` protocol, deterministic by default, saved as a folder with the model and
   its model card (`mlracecar.io.model_card`): the observations and actions it expects, every

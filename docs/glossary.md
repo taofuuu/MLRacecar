@@ -64,7 +64,7 @@
 | **YAML** | A plain-text format for settings: `key: value` lines, indented to group them into sections. | Settings files, e.g. `configs/default.yaml`. |
 | **Override / layers** | Settings are built in layers: defaults, then files, then `--set`. A later layer overrides (wins over) an earlier one, but only for the settings it mentions. | `racecar config my.yaml --set vehicle.mass=1500` |
 | **SI units** | The standard scientific units: metres, kilograms, seconds, newtons, watts, radians. | Inside the simulation; settings files use degrees and kilowatts instead. |
-| **Model card** | A small file saved with a trained AI that describes what it expects (inputs, settings, versions). | Prevents loading a model into the wrong setup. |
+| **Model card** | A file kept with a trained AI that says what it expects to see, how it was trained, and with which code. | `model_card.json`, checked whenever a model is loaded ([Trained agents](agents.md)). |
 
 ## Simulation and math
 
@@ -153,7 +153,8 @@
 | **Reward** | A score after each step telling the agent how well it did. | + for moving forward along the track, − for leaving it. |
 | **Episode** | One attempt from start until it ends (crash, finish, or time limit). | One run around the track. |
 | **Termination vs. truncation** | The episode ended because something happened (crashed) vs. because we stopped it (time limit). The difference matters to learning. | Env end rules. |
-| **Model card** | A file kept with a trained AI that says what it expects to see, how it was trained, and with which code. | `model_card.json`, checked whenever a model is loaded ([Trained agents](agents.md)). |
+| **Run folder** | Everything about one training run in one place: its settings, code version, seeds, saved AIs, and test results. | `runs/<date>_<name>/` ([Training](training.md)). |
+| **Saved agent (training checkpoint)** | A copy of the AI saved while it trains, to keep the best one or carry on after stopping. Not the same as a track checkpoint. | `checkpoints/best`, `checkpoints/last`. |
 | **Deterministic action** | Always the policy's best guess instead of a random draw around it, so the same situation gives the same action. | How a trained agent drives by default. |
 | **Policy** | The agent's "brain": the rule mapping observations to actions. A neural network here. | What training produces. |
 | **MDP** (Markov decision process) | The formal description of an RL problem: states, actions, what happens next, rewards. *Markov*: the next state depends only on the current one and the action. | [RL fundamentals](rl-guide.md) §2. |
