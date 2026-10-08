@@ -197,7 +197,7 @@ def show_config(
     typer.echo(format_config(config), nl=False)
 
 
-TRAINING_LIBRARIES = frozenset({"torch", "stable_baselines3", "tensorboard"})
+TRAINING_LIBRARIES = frozenset({"torch", "stable_baselines3", "tensorboard", "PIL"})
 
 
 @app.command()

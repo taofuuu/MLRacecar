@@ -29,9 +29,9 @@ dependencies = [
 render = ["pygame-ce>=2.5.8"]  # the track editor and race window (ADR-0012)
 # Training (ADR-0006). `train` gets PyTorch built for CUDA 13.0 (NVIDIA GPUs) on Windows and
 # Linux; `train-cpu` is the same without CUDA, for CI and computers without an NVIDIA GPU.
-# Install one or the other, never both (see [tool.uv] below).
-train = ["stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
-train-cpu = ["stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
+# Install one or the other, never both (see [tool.uv] below). Pillow makes the TensorBoard videos.
+train = ["pillow>=12.3.0", "stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
+train-cpu = ["pillow>=12.3.0", "stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
 
 [project.scripts]
 racecar = "mlracecar.cli:app"
@@ -137,6 +137,10 @@ warn_unreachable = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = ["tensorboard.*"]  # TensorBoard has no type hints; only training code uses it
+ignore_missing_imports = true
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
@@ -183,7 +187,7 @@ source_modules = [
 forbidden_modules = ["pygame"]
 
 [[tool.importlinter.contracts]]
-name = "Only training code imports PyTorch: the simulation and environments run without it"
+name = "Only training code imports PyTorch and the other training libraries: the simulation and environments run without them"
 type = "forbidden"
 source_modules = [
   "mlracecar.core",
@@ -194,7 +198,7 @@ source_modules = [
   "mlracecar.editor",
   "mlracecar.play",
 ]
-forbidden_modules = ["torch", "stable_baselines3", "tensorboard"]
+forbidden_modules = ["torch", "stable_baselines3", "tensorboard", "PIL"]
 
 [[tool.importlinter.contracts]]
 name = "The renderer draws snapshots: it never runs or changes the simulation"
