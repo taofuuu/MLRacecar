@@ -118,6 +118,8 @@ class RaceRenderer:
         self.mode = CameraMode.FOLLOW
         self.followed = 0
         self.overlays: set[Overlay] = set()
+        self.caption = True
+        """Whether to write the bottom line: the car, the camera, and any hint. Videos don't."""
         self._edges = np.concatenate([track.left, track.right])
         self._overview = _overview(self._edges, size)
         self._free = self._overview
@@ -247,7 +249,9 @@ class RaceRenderer:
         if Overlay.VELOCITY in self.overlays:
             _draw_velocity(surface, camera, snapshot.cars)
         caption = f"Car {followed + 1} of {len(snapshot.cars)}  ·  camera: {self.mode.value}"
-        self._hud.draw(surface, snapshot, followed, f"{caption}  ·  {hint}" if hint else caption)
+        if hint:
+            caption = f"{caption}  ·  {hint}"
+        self._hud.draw(surface, snapshot, followed, caption if self.caption else "")
 
     def render(self, snapshot: Snapshot, rays: FloatArray | None = None) -> NDArray[np.uint8]:
         """Draw a snapshot offscreen and return it as an RGB image, shape ``(height, width, 3)``.

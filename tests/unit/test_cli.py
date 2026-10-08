@@ -11,6 +11,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+from PIL import Image, ImageSequence
 from typer.testing import CliRunner
 
 import mlracecar
@@ -314,11 +315,18 @@ def watched(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Replay, RacecarConfig
     """Stands in for the replay window and records what it was opened with."""
     calls: list[tuple[Replay, RacecarConfig, str]] = []
 
-    def fake_run_replay(replay: Replay, config: RacecarConfig, title: str) -> None:
+    def fake_run_replay(
+        replay: Replay, config: RacecarConfig, title: str, *options: object
+    ) -> None:
         calls.append((replay, config, title))
+        WATCHED_WITH[:] = options
 
     monkeypatch.setattr("mlracecar.play.replay.run_replay", fake_run_replay)
     return calls
+
+
+WATCHED_WITH: list[object] = []
+"""The camera, rays, and start the stand-in replay window was last opened with."""
 
 
 def saved_replay(path: Path, info: dict[str, Any], settings: dict[str, Any] | None = None) -> Path:
@@ -381,6 +389,63 @@ def test_replay_reports_settings_it_cant_use(
     assert watched == []
 
 
+def test_replay_opens_with_the_camera_rays_and_time_asked_for(
+    watched: list[tuple[Replay, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    path = saved_replay(tmp_path / "r.npz", {})
+
+    result = runner.invoke(
+        app, ["replay", str(path), "--camera", "overview", "--rays", "--from", "0.1"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [str(option) for option in WATCHED_WITH] == ["overview", "True", "0.1"]
+
+
+def test_replay_saves_a_video(tmp_path: Path) -> None:
+    path = saved_replay(tmp_path / "r.npz", {})
+    video = tmp_path / "clips" / "r.gif"
+
+    result = runner.invoke(
+        app, ["replay", str(path), "--export", str(video), "--fps", "20", "--size", "64x40"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert f"Saved {video} (" in result.output
+    with Image.open(video) as gif:
+        pictures = len(list(ImageSequence.Iterator(gif)))  # 0.25 s at 20 a second, and the end
+        assert (gif.size, pictures) == ((64, 40), 6)
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (["--camera", "free"], "--camera must be follow or overview, got 'free'"),
+        (["--lap", "1", "--from", "0.1"], "give --lap or --from and --to, not both"),
+        (["--to", "0.2"], "--to, --fps, and --size are for saving a video: add --export FILE"),
+        (["--export", "x.gif", "--size", "big"], "--size must be width x height in pixels"),
+        (["--lap", "1"], "there's no lap 1: the replay has 0 valid laps"),
+        (["--export", "x.gif", "--from", "3"], "--from and --to must be in order"),
+        (["--export", "x.avi"], "can't make that kind of video"),
+    ],
+)
+def test_replay_explains_options_it_cant_use(
+    watched: list[tuple[Replay, RacecarConfig, str]],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    arguments: list[str],
+    message: str,
+) -> None:
+    path = saved_replay(tmp_path / "r.npz", {})
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["replay", str(path), *arguments])
+
+    assert result.exit_code == 1
+    assert message in result.output
+    assert watched == []
+
+
 def test_replay_without_pygame_explains_how_to_get_it(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -399,7 +464,7 @@ def test_replay_without_pygame_explains_how_to_get_it(
     result = runner.invoke(app, ["replay", str(path)])
 
     assert result.exit_code == 1
-    assert "Watching replays needs pygame" in result.output
+    assert "Watching or saving replays needs pygame" in result.output
 
 
 def test_replay_does_not_hide_other_import_errors(

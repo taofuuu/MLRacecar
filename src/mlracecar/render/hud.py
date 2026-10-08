@@ -76,7 +76,7 @@ class Hud:
         self._big = pygame.font.Font(None, BIG_FONT_SIZE)
 
     def draw(self, surface: pygame.Surface, snapshot: Snapshot, car: int, caption: str) -> None:
-        """Draw one car's HUD, with ``caption`` (the camera, say) along the bottom."""
+        """Draw one car's HUD, with ``caption`` (the camera, say) along the bottom, if any."""
         lines = hud_lines(snapshot, car)
         images = [self._big.render(lines[0][0], True, lines[0][1])]
         images += [self._font.render(text, True, color) for text, color in lines[1:]]
@@ -96,5 +96,7 @@ class Hud:
             surface.blit(image, ((surface.get_width() - image.get_width()) // 2, y))
             y += image.get_height()
 
+        if not caption:
+            return
         image = self._font.render(caption, True, DIM)
         surface.blit(image, (MARGIN, surface.get_height() - image.get_height() - MARGIN))

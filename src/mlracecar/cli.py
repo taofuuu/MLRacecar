@@ -3,6 +3,7 @@
 import importlib
 import os
 import platform
+import re
 import sys
 from importlib import metadata
 from pathlib import Path
@@ -364,13 +365,42 @@ def replay(
     file: Annotated[
         Path, typer.Argument(help="A replay, e.g. one that racecar eval --record saved.")
     ],
+    export: Annotated[
+        Path | None,
+        typer.Option(metavar="FILE", help="Save it as a video instead: a .gif or .mp4 file."),
+    ] = None,
+    camera: Annotated[
+        str, typer.Option(help="follow (chasing the car) or overview (the whole track).")
+    ] = "follow",
+    rays: Annotated[bool, typer.Option("--rays", help="Show the distance rays.")] = False,
+    start: Annotated[
+        float | None, typer.Option("--from", metavar="SECONDS", help="Start this far in.")
+    ] = None,
+    end: Annotated[
+        float | None,
+        typer.Option("--to", metavar="SECONDS", help="With --export: stop this far in."),
+    ] = None,
+    lap: Annotated[
+        int | None,
+        typer.Option(min=1, help="Just this valid lap, from the line to the line (1: the first)."),
+    ] = None,
+    fps: Annotated[
+        int | None, typer.Option(min=1, help="With --export: pictures a second [default: 25].")
+    ] = None,
+    size: Annotated[
+        str | None,
+        typer.Option(
+            metavar="WxH", help="With --export: in pixels, e.g. 640x400 [default: 960x600]."
+        ),
+    ] = None,
 ) -> None:
-    """Watch a recorded race.
+    """Watch a recorded race, or save it as a video (GIF or MP4) with --export.
 
     Space plays or pauses, Left and Right skip a second, Up and Down change the speed (x0.25 to
     x4), Home and End jump to the start and the end, and clicking or dragging the bar along the
     bottom goes anywhere. C changes the camera and 1-4 the overlays, as in racecar drive. Needs
-    the `render` extra (pygame). Exits with status 1 if the replay can't be read.
+    the `render` extra (pygame); MP4s also need the `video` extra. Exits with status 1 if the
+    replay can't be read or the video can't be made.
     """
     try:
         recorded = read_replay(file)
@@ -378,18 +408,80 @@ def replay(
     except (ReplayError, ConfigError) as error:
         typer.echo(str(error), err=True)
         raise typer.Exit(1) from None
+    problem = _replay_options_problem(export, camera, start, end, lap, fps, size)
+    if problem:
+        typer.echo(problem, err=True)
+        raise typer.Exit(1)
     os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     try:
-        from mlracecar.play.replay import run_replay  # here, not at the top: pygame is optional
+        # here, not at the top: pygame is optional
+        from mlracecar.play.replay import (
+            VIDEO_FPS,
+            VIDEO_SIZE,
+            export_replay,
+            lap_times,
+            run_replay,
+        )
+        from mlracecar.render.race import CameraMode
+        from mlracecar.render.video import VideoError
     except ModuleNotFoundError as error:
         if error.name != "pygame":
             raise
         typer.echo(
-            "Watching replays needs pygame. Install it with: pip install 'mlracecar[render]'",
+            "Watching or saving replays needs pygame. Install it with: "
+            "pip install 'mlracecar[render]'",
             err=True,
         )
         raise typer.Exit(1) from None
-    run_replay(recorded, config, _replay_title(recorded))
+    mode = CameraMode(camera)
+    try:
+        if lap is not None:
+            start, end = lap_times(recorded, lap)
+        if export is None:
+            run_replay(recorded, config, _replay_title(recorded), mode, rays, start or 0.0)
+            return
+        export_replay(
+            recorded,
+            config,
+            export,
+            camera=mode,
+            rays=rays,
+            start=start or 0.0,
+            end=end,
+            fps=fps or VIDEO_FPS,
+            size=(_pixels(size) if size else None) or VIDEO_SIZE,
+        )
+    except VideoError as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from None
+    typer.echo(f"Saved {export} ({export.stat().st_size / 1000:,.0f} kB)", err=True)
+
+
+def _replay_options_problem(
+    export: Path | None,
+    camera: str,
+    start: float | None,
+    end: float | None,
+    lap: int | None,
+    fps: int | None,
+    size: str | None,
+) -> str | None:
+    """What's wrong with `racecar replay`'s options, if anything."""
+    if camera not in ("follow", "overview"):
+        return f"--camera must be follow or overview, got {camera!r}"
+    if lap is not None and (start is not None or end is not None):
+        return "give --lap or --from and --to, not both"
+    if export is None and (end is not None or fps is not None or size is not None):
+        return "--to, --fps, and --size are for saving a video: add --export FILE"
+    if size is not None and _pixels(size) is None:
+        return f"--size must be width x height in pixels, such as 640x400, got {size!r}"
+    return None
+
+
+def _pixels(size: str) -> tuple[int, int] | None:
+    """``"640x400"`` as ``(640, 400)``; ``None`` if it isn't two positive whole numbers."""
+    match = re.fullmatch(r"\s*([1-9]\d*)\s*[xX]\s*([1-9]\d*)\s*", size)
+    return None if match is None else (int(match[1]), int(match[2]))
 
 
 def _replay_title(recorded: Replay) -> str:

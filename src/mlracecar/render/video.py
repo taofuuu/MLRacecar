@@ -19,9 +19,9 @@ type Frame = NDArray[np.uint8]
 FORMATS = (".gif", ".mp4")
 """The kinds of video `write_video` makes, by file extension."""
 
-MP4_QUALITY = 7
-"""ffmpeg's quality for MP4s, from 0 to 10 (H.264, constant rate factor 15): sharp lines,
-small files."""
+MP4_QUALITY = 6
+"""ffmpeg's quality for MP4s, from 0 to 10 (H.264, constant rate factor 20): thin lines such as
+the distance rays stay sharp, and a 640 x 400 lap is about 1.6 MB, a quarter of its GIF."""
 
 
 class VideoError(ValueError):
