@@ -41,6 +41,7 @@ nav:
   - Car physics: vehicle-model.md
   - Race rules: race-rules.md
   - Sensors: sensors.md
+  - RL fundamentals: rl-guide.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md
   - API reference: reference.md

@@ -153,6 +153,18 @@
 | **Episode** | One attempt from start until it ends (crash, finish, or time limit). | One run around the track. |
 | **Termination vs. truncation** | The episode ended because something happened (crashed) vs. because we stopped it (time limit). The difference matters to learning. | Env end rules. |
 | **Policy** | The agent's "brain": the rule mapping observations to actions. A neural network here. | What training produces. |
+| **MDP** (Markov decision process) | The formal description of an RL problem: states, actions, what happens next, rewards. *Markov*: the next state depends only on the current one and the action. | [RL fundamentals](rl-guide.md) §2. |
+| **Partially observable** | The agent sees only part of the state, so it can't tell some different situations apart. | Our agent gets rays and a few numbers, not the whole world. |
+| **Return** | The total reward from now until the episode ends, later rewards counted for less. | What the agent tries to make as big as possible. |
+| **Discount (γ, gamma)** | How much less a reward counts for each step it lies in the future. 0.99 means "care about the next ~100 steps". | About 5 seconds ahead at 20 decisions a second. |
+| **Dense / sparse reward** | Feedback every step (dense) vs. only now and then, like once a lap (sparse). Dense is far easier to learn from. | Progress along the track is dense; a lap bonus is sparse. |
+| **Reward hacking** | The agent finds a way to score that isn't what we meant. | Running wide over the grass is faster than braking ([RL fundamentals](rl-guide.md) §5). |
+| **Value function** | An estimate of the return from a situation: "how good is it to be here?". | PPO's critic. |
+| **Advantage** | How much better an action turned out than the value function expected. | What PPO uses to decide which actions to make more likely. |
+| **Actor-critic** | A method with two parts: the actor (the policy) acts, the critic (a value function) judges. | PPO and SAC are both. |
+| **GAE** (generalized advantage estimation) | A way to estimate advantages that trades a little accuracy for much less noise, set by λ (lambda). | PPO's `gae_lambda`. |
+| **Entropy** | How random the policy's choices are. A small bonus for it keeps the agent exploring. | `ent_coef`, `train/entropy_loss`. |
+| **Epoch** | One pass over the collected data while learning. PPO does several per batch; its clipping makes that safe. | `n_epochs` (10 by default). |
 | **Training** | Running many episodes and adjusting the policy to get more reward. | `racecar train` |
 | **Evaluation** | Testing a trained policy without learning, to measure how good it is. | `racecar eval` |
 | **Gymnasium** | The standard Python interface for single-agent RL environments. | `RacingEnv` follows it. |
