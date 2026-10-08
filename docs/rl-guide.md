@@ -6,7 +6,7 @@
 > lists the choices coming up when we build the AI's environment (M3), so you can make them
 > knowing what each one changes. The questions at the end double as interview practice.
 
-Parts marked **(M3-3)**, **(M3-4)**, and so on don't exist yet; the ticket that builds them
+Parts marked **(M3-4)** and **(M3-5)** don't exist yet; the ticket that builds them
 will update this page with what was decided.
 
 ## 1. The loop: agent and environment
@@ -115,9 +115,11 @@ The reward is the only way to tell the agent what we want, and it takes us **lit
 maximizes what we wrote, not what we meant. A reward that can be gamed will be (*reward
 hacking*). That makes the reward the most important design choice in M3.
 
-Candidate terms (architecture §4.7), to choose and weigh in **M3-3**. The reward is their
-weighted sum, and each term's value is reported separately in `info`, so we can see which one
-drives the behaviour:
+The terms we built (architecture §4.7; the details, with their settings, are on
+[Rewards and episodes](rewards.md)). The reward is their weighted sum, and each term's points
+are reported separately, so we can see which one drives the behaviour. We start with only
+**progress** (10 m = 1 point) and the **off-track penalty** (−10); the others are built but
+switched off, to reach for if watching the AI drive shows a problem:
 
 | Term | What it encourages | How it can backfire |
 |------|--------------------|---------------------|
@@ -134,11 +136,14 @@ still finishes laps about **3 seconds sooner** than a careful one (technical tra
 against 46.5 s; GP circuit: 92.4 s against 96.5 s), though its laps don't count. A
 progress-only reward would teach exactly that. The fixes are a rule decision for **M3-3**: end
 or reset the run when the car leaves the road (`terminate` / `reset`), slow it much harder on
-the grass, or add an off-track penalty bigger than the time it saves.
+the grass, or add an off-track penalty bigger than the time it saves. We measured each: only
+ending the run, or a grass slowdown 7 times stronger, made the shortcut lose. **Decided:
+leaving the road ends the run** while the AI trains (and costs 10 points); driving it
+yourself keeps the gentle rule.
 
 **Scale matters too.** PPO works best when returns are within a few hundred either way.
-Progress in metres gives about 3,500 per lap of the GP circuit, so it may need scaling (or
-SB3's `VecNormalize`).
+That's why progress is weighted 0.1: a lap of the technical track is worth about 110 points,
+and a 60-second run a little more.
 
 ## 6. Episodes: when a run ends
 
@@ -159,10 +164,11 @@ In our code, `race.out` marks a car whose run is over (the `terminate` policy), 
 `World.reset(mask, start=...)` restarts just those cars while the others keep going. The batched
 environment **(M3-5)** uses that to run 64 cars as 64 independent episodes in one world.
 
-To decide in **M3-3** and **M3-4**: what terminates (leaving the road? driving the wrong way for
-a while? being nearly stopped too long?) and how long before truncation (a time, or a number of
-laps). Random starts anywhere on the lap (`StartPosition.RANDOM`) help too: the agent practises
-every corner from the beginning instead of only the first one.
+Decided in M3-3 (`env/episodes.py`): leaving the road **terminates** the run; the **time limit**
+(60 s, about a lap and a quarter of the technical track) and being **stuck** (slower than 1 m/s
+for 5 s) **truncate** it. Random starts anywhere on the lap (`StartPosition.RANDOM`) will help
+too **(M3-4)**: the agent practises every corner from the beginning instead of only the first
+one.
 
 ## 7. Policy and value
 
@@ -243,8 +249,8 @@ What each M3 ticket will need from you, with this page's sections as background:
 | Ticket | The choice | Sections |
 |--------|------------|----------|
 | M3-2 (#27) observation | Decided: every input in, including curvature ahead, out to 150 m. | 2, 3 |
-| M3-3 (#28) rewards and termination | The terms and their weights; what ends an episode; the off-track rule while training (the grass shortcut). | 5, 6 |
-| M3-4 (#29) `RacingEnv` | Time limit; random or grid starts; which track to train on (the plan says `technical.json`: a short lap means more laps per hour). | 1, 6 |
+| M3-3 (#28) rewards and termination | Decided: progress (10 m = 1 point) and −10 for leaving the road, which also ends the run; runs stop after 60 s, or 5 s stuck. | 5, 6 |
+| M3-4 (#29) `RacingEnv` | Random or grid starts; which track to train on (the plan says `technical.json`: a short lap means more laps per hour). | 1, 6 |
 | M3-5 (#30) batched env | How many cars per world. Mostly a speed question. | 1, 8 |
 
 ## Further reading
@@ -283,8 +289,10 @@ Try answering out loud before opening each one. These are also common interview 
 ??? question "Why does a progress-only reward risk teaching the car to cut across the grass here?"
     Progress counts metres along the lap, not whether they were legal. Under the default
     `slowdown` rule, running wide over the grass costs less time than braking properly, so a
-    scripted driver doing it laps about 3 s faster. The agent would find the same trade. Fix it
-    with the rules (`terminate`/`reset`), a stronger grass slowdown, or an off-track penalty.
+    scripted driver doing it laps about 3 s faster. The agent would find the same trade. We end
+    the run when the car leaves the road (plus a 10-point penalty), so it loses everything it
+    would have scored afterwards. Putting the car back on the road wasn't enough: measured, the
+    reckless driver still lapped 2 s faster.
 
 ??? question "Termination vs. truncation: what goes wrong if a time limit is reported as termination?"
     Termination tells the learner the future is worth 0. At a time limit the car could have

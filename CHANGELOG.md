@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- How the AI is scored (`mlracecar.env.rewards`): a reward made of named terms (progress
+  along the lap, leaving the road, time, driving the wrong way, jerky controls, valid laps),
+  each with a weight in the new `reward` settings section and its points reported separately.
+  By default only progress (10 m = 1 point) and leaving the road (-10) count.
+- When a training run ends (`mlracecar.env.episodes`): leaving the road ends it (terminated),
+  whatever the race's own off-track rule; the 60-second time limit and being stuck for 5
+  seconds stop it (truncated). Set in the new `episode` settings section.
 - What the AI sees (`mlracecar.env.observations`): `ObservationBuilder` turns a snapshot into
   31 numbers per car, scaled to about -1..1: the distance rays, speed, heading (sine and
   cosine), offset from the middle of the road, yaw rate, steering angle, the previous action,

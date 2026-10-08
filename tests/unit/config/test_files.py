@@ -18,9 +18,12 @@ from mlracecar.config.files import (
 )
 from mlracecar.config.models import (
     OBSERVATION_INPUTS,
+    REWARD_TERMS,
+    EpisodeConfig,
     ObservationConfig,
     RacecarConfig,
     RaceConfig,
+    RewardConfig,
     SensorConfig,
     SimulationConfig,
     VehicleConfig,
@@ -328,8 +331,20 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         lookahead=draw(positive),
         lookahead_points=draw(whole),
     )
+    reward = RewardConfig(**{term: draw(non_negative) for term in REWARD_TERMS})
+    episode = EpisodeConfig(
+        end_off_track=draw(st.booleans()),
+        time_limit=draw(positive),
+        stuck_time=draw(positive),
+    )
     return RacecarConfig(
-        vehicle=vehicle, simulation=simulation, race=race, sensors=sensors, observation=observation
+        vehicle=vehicle,
+        simulation=simulation,
+        race=race,
+        sensors=sensors,
+        observation=observation,
+        reward=reward,
+        episode=episode,
     )
 
 
@@ -387,7 +402,15 @@ def test_written_settings_explain_every_line() -> None:
     lines = format_config(RacecarConfig()).splitlines()
 
     settings = [line for line in lines if line.startswith("  ")]
-    sections = (VehicleConfig, SimulationConfig, RaceConfig, SensorConfig, ObservationConfig)
+    sections = (
+        VehicleConfig,
+        SimulationConfig,
+        RaceConfig,
+        SensorConfig,
+        ObservationConfig,
+        RewardConfig,
+        EpisodeConfig,
+    )
     assert len(settings) == sum(len(section.model_fields) for section in sections)
     assert all("  # " in line for line in settings)
     assert all(len(line) <= 100 for line in lines)

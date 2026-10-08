@@ -46,3 +46,18 @@ observation:
   curvature: true        # How much the road bends in each stretch ahead (one value per stretch).
   lookahead: 150         # How far ahead the bends are measured, in metres.
   lookahead_points: 8    # How many equal stretches that distance is split into.
+
+# How the AI is scored: the weight of each part of the reward (0 turns it off).
+reward:
+  progress: 0.1  # Points per metre gained along the lap; going backwards loses them.
+  off_track: 10  # Points lost each time the car's centre leaves the road.
+  time: 0        # Points lost per second of racing.
+  wrong_way: 0   # Points lost per second spent driving the wrong way.
+  smoothness: 0  # Points lost per squared change of steering and pedal between decisions.
+  lap: 0         # Points for each valid lap.
+
+# When a training run ends: leaving the road, the time limit, or getting stuck.
+episode:
+  end_off_track: true  # End the run as soon as the car's centre leaves the road.
+  time_limit: 60       # The longest a run lasts, in seconds of racing.
+  stuck_time: 5        # End the run after this many seconds in a row slower than 1 m/s.
