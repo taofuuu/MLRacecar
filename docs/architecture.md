@@ -243,10 +243,16 @@ are ghosts until collisions arrive in M7.
 
 ### 4.7 Rewards
 
-The reward is a weighted sum of components defined in config: progress along the track
-(Δs), time penalty, off-track penalty, wrong-way penalty, action smoothness, and lap bonus.
-Each component's value is reported separately in `info`, which makes reward tuning
-debuggable instead of guesswork.
+The reward (`env.rewards.RewardFunction`, [Rewards and episodes](rewards.md)) is a weighted
+sum of components defined in config: progress along the track (Δs), time penalty, off-track
+penalty, wrong-way penalty, action smoothness, and lap bonus. Weights are non-negative; each
+component carries its own sign. The defaults use only progress (0.1 per metre) and the
+off-track penalty (10). Each component's value is reported separately in `info`, which makes
+reward tuning debuggable instead of guesswork.
+
+Episodes end by `env.episodes.EpisodeRules`: leaving the road (`episode.end_off_track`,
+independent of the race's own off-track policy) or being taken out by the race rules
+**terminates**; the time limit (60 s) or being stuck (below 1 m/s for 5 s) **truncates**.
 
 ### 4.8 Environments
 

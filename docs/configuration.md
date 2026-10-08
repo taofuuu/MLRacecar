@@ -46,6 +46,11 @@ or `false` (for example `--set observation.curvature=false`), and `lookahead` an
 `lookahead_points` set how far ahead, and in how many stretches, the road's bends are
 measured. See [Observations](observations.md).
 
+The last two shape training. `reward` weighs each part of the AI's score (0 switches a part
+off), and `episode` says when a training run ends: leaving the road (`end_off_track`), the time
+limit in seconds (`time_limit`), or being stuck for `stuck_time` seconds. See
+[Rewards and episodes](rewards.md).
+
 ## Changing settings
 
 Write a file with only the settings you want to change, under their section:
@@ -106,7 +111,9 @@ For developers: settings are pydantic models in `mlracecar.config.models`.
 1. Add a field with a default, its limits (for example `Field(gt=0)`), and a one-line
    docstring. The docstring becomes the setting's comment in the files MLRacecar writes.
 2. Pass it on in the section's conversion method (for example `VehicleConfig.to_params`). The
-   simulation only ever receives these plain frozen dataclasses, never pydantic models.
+   simulation only ever receives these plain frozen dataclasses, never pydantic models. The
+   sections only the RL environment uses (`observation`, `reward`, `episode`) are handed to it
+   as they are: `core` never sees pydantic, but `env` may.
 3. Rewrite the defaults file: `uv run python scripts/export_default_config.py`.
 
-New parts of MLRacecar add their own sections: race rules, the RL environment, and training.
+New parts of MLRacecar add their own sections, as training will (M4).

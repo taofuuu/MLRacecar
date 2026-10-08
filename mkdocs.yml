@@ -42,6 +42,7 @@ nav:
   - Race rules: race-rules.md
   - Sensors: sensors.md
   - Observations: observations.md
+  - Rewards and episodes: rewards.md
   - RL fundamentals: rl-guide.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md
