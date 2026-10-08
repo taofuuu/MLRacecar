@@ -35,6 +35,7 @@ nav:
       - adr/0012-pygame-ce-for-windows-and-drawing.md
       - adr/0013-track-checks-in-the-background.md
       - adr/0014-kinematic-car-model.md
+      - adr/0015-replays-as-npz-snapshot-streams.md
       - ADR template: adr/0000-template.md
   - Track file format: track-format.md
   - Settings: configuration.md
@@ -47,6 +48,7 @@ nav:
   - Trained agents: agents.md
   - Training: training.md
   - Evaluation: evaluation.md
+  - Replays: replays.md
   - RL fundamentals: rl-guide.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md

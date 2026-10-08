@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Replays: `racecar eval --record FOLDER` saves every run it scores as a replay (`.npz`, about
+  110 kB a minute: every snapshot, the track, and the settings; ADR-0015), exactly the run that
+  was scored. `racecar replay FILE` plays one back: Space plays or pauses, Left/Right skip a
+  second, Up/Down change the speed from x0.25 to x4, and the timeline along the bottom can be
+  clicked or dragged to go anywhere.
+- `BatchedRacingEnv.stepped`: the world as the latest step left it, with the step's events,
+  before any car started again.
 - `racecar eval`: scores saved agents on tracks (by default the one each trained on), 20 runs
   each from random places set by a seed, with the settings they were trained with (changed by
   `--set`), and prints a Markdown report: the completion rate (the share of runs that last until

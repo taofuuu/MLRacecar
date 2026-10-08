@@ -360,8 +360,19 @@ column per agent.
 The renderer only reads `Snapshot`s and never touches simulation internals: an import-linter
 contract keeps `mlracecar.render` away from the world, the car models, and the race rules.
 `Snapshot` and `RaceState` live in data-only modules (`core.snapshot`, `core.race.state`) for
-that reason. One snapshot stream feeds every output through a `SnapshotSink` protocol (observer
-pattern): the live window, the replay recorder, the video writer, and later the web demo.
+that reason. One snapshot stream feeds every output: the live window, the replay recorder (a
+callback, `drive_test_runs(on_step=...)`), the video writer, and later the web demo.
+
+Replays (`io.replay`, [ADR-0015](adr/0015-replays-as-npz-snapshot-streams.md),
+[Replays](replays.md)) store the snapshot stream itself in an npz: one array per snapshot field,
+snapshots along the first axis, and a JSON `meta` with the format version, track file, settings,
+race events, and free-form info. Evaluation records the scored run (`--record`), picking each
+car out of the batched world with `alone` from `BatchedRacingEnv.stepped`, which keeps a step's
+events that a restarting car would drop. Re-simulating from actions was rejected: a policy's
+float32 output differs by about 1e-7 between batch sizes, so a re-drive can drift from the run
+that was scored. `racecar replay` (`play.replay`) plays them back: `Playback` (time, speed
+x0.25 to x4, pause, seek) is window-free logic; `ReplayWindow` reuses `RaceRenderer` with
+interpolation between snapshots and draws a `render.timeline` bar to scrub.
 
 `RaceRenderer` draws the track (with red and white kerbs on bends tighter than 100 m), the
 cars, and a HUD for the followed car (speed, lap, current, last and best lap times, and
