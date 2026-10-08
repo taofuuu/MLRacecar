@@ -96,6 +96,7 @@ shows the tables in each run's summary and keeps the full results as a download.
 | [Decision records](docs/adr/)            | Why we chose what we chose                        |
 | [Roadmap](docs/roadmap.md)               | Milestones and backlog                            |
 | [Contributing](CONTRIBUTING.md)          | Workflow, conventions, Definition of Done         |
+| [RL fundamentals](docs/rl-guide.md)      | How the AI learns, tied to this code; interview practice |
 | [Glossary](docs/glossary.md)             | Every technical term, explained in plain words    |
 
 All of it is also published as a website, with search and diagrams:

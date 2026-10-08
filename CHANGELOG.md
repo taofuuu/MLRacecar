@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- An RL fundamentals guide (`docs/rl-guide.md`): the agent-environment loop, MDPs,
+  observations, actions, rewards, episodes (termination vs. truncation), policy and value, PPO
+  and why it clips, and what to watch while training, each tied to the code, with the choices
+  the RL environment tickets will need and questions to check yourself.
 - Distance sensors (`mlracecar.core.sensors`): rays fanned out from each car that measure how
   far the road's edges are, in metres and as a fraction of the range, exactly as if every piece
   of edge were tested but much faster. Set them up in the new `sensors` settings section (15
