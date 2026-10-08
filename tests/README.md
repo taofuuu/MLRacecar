@@ -40,6 +40,10 @@ uv run python scripts/benchmark_table.py benchmark.json
 The second command turns the world step results into the speed table in the README. CI runs
 the measurements on every push to `main` (the Benchmarks workflow) and keeps the results.
 
+Tests that need the training libraries (`unit/agents/test_sb3.py`, `unit/training/`) are
+skipped where they aren't installed; CI runs them on Linux, which installs `--extra
+train-cpu`, and runs everything else on Windows without them.
+
 Markers: `slow` (more than a few seconds) and `gpu` (needs CUDA) are skipped unless selected,
 e.g. `uv run pytest -m slow --no-cov`. See [architecture.md §6](../docs/architecture.md#6-testing-strategy)
 for the full testing strategy.

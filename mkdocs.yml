@@ -44,6 +44,7 @@ nav:
   - Observations: observations.md
   - Rewards and episodes: rewards.md
   - The RL environment: environment.md
+  - Trained agents: agents.md
   - RL fundamentals: rl-guide.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md

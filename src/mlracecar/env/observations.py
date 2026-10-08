@@ -13,8 +13,9 @@ without anyone noticing (M4).
 
 import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -94,12 +95,18 @@ class ObservationSpec:
     def digest(self) -> str:
         """A fingerprint of everything that shapes the observation, as 64 hex digits. Two specs
         have the same digest exactly when they describe the same numbers in the same order."""
-        description = {
+        text = json.dumps(self.description(), sort_keys=True)
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def description(self) -> dict[str, Any]:
+        """Everything that shapes the observation, as plain JSON-ready data: what the digest is
+        made from, and what a model card keeps to say how two observations differ."""
+        return {
             "version": SPEC_VERSION,
             "features": [
                 {
                     "name": feature.name,
-                    "labels": feature.labels,
+                    "labels": list(feature.labels),
                     "low": feature.low,
                     "high": feature.high,
                     "constants": dict(feature.constants),
@@ -107,13 +114,50 @@ class ObservationSpec:
                 for feature in self.features
             ],
         }
-        text = json.dumps(description, sort_keys=True)
-        return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def _bound(self, bound: Callable[[Feature], float]) -> NDArray[np.float32]:
         return np.concatenate(
             [np.full(feature.size, bound(feature), dtype=np.float32) for feature in self.features]
         )
+
+
+def observation_differences(saved: Mapping[str, Any], current: Mapping[str, Any]) -> list[str]:
+    """How two observations differ, in plain words, one line per difference.
+
+    Args:
+        saved: The description (`ObservationSpec.description`) a model was trained with.
+        current: The description of the observations it would be given now.
+    """
+    problems: list[str] = []
+    if saved.get("version") != current.get("version"):
+        problems.append(
+            f"observation format: version {current.get('version')} here, "
+            f"{saved.get('version')} in the model"
+        )
+    before = {feature["name"]: feature for feature in saved.get("features", [])}
+    now = {feature["name"]: feature for feature in current.get("features", [])}
+    problems += [f"{name}: in the model, but turned off here" for name in before if name not in now]
+    problems += [
+        f"{name}: turned on here, but not in the model" for name in now if name not in before
+    ]
+    for name in (name for name in now if name in before):
+        old, new = before[name], now[name]
+        if len(old["labels"]) != len(new["labels"]):
+            problems.append(
+                f"{name}: {len(new['labels'])} values here, {len(old['labels'])} in the model"
+            )
+        for key in sorted(set(old["constants"]) | set(new["constants"])):
+            here, there = new["constants"].get(key), old["constants"].get(key)
+            if here != there:
+                problems.append(f"{name}: {key} is {here} here, {there} in the model")
+        if (old["low"], old["high"]) != (new["low"], new["high"]):
+            problems.append(
+                f"{name}: bounds {new['low']}..{new['high']} here, "
+                f"{old['low']}..{old['high']} in the model"
+            )
+    if [name for name in before if name in now] != [name for name in now if name in before]:
+        problems.append("the inputs are in a different order")
+    return problems
 
 
 class ObservationBuilder:

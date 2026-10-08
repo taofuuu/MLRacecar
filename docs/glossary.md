@@ -153,6 +153,8 @@
 | **Reward** | A score after each step telling the agent how well it did. | + for moving forward along the track, − for leaving it. |
 | **Episode** | One attempt from start until it ends (crash, finish, or time limit). | One run around the track. |
 | **Termination vs. truncation** | The episode ended because something happened (crashed) vs. because we stopped it (time limit). The difference matters to learning. | Env end rules. |
+| **Model card** | A file kept with a trained AI that says what it expects to see, how it was trained, and with which code. | `model_card.json`, checked whenever a model is loaded ([Trained agents](agents.md)). |
+| **Deterministic action** | Always the policy's best guess instead of a random draw around it, so the same situation gives the same action. | How a trained agent drives by default. |
 | **Policy** | The agent's "brain": the rule mapping observations to actions. A neural network here. | What training produces. |
 | **MDP** (Markov decision process) | The formal description of an RL problem: states, actions, what happens next, rewards. *Markov*: the next state depends only on the current one and the action. | [RL fundamentals](rl-guide.md) §2. |
 | **Partially observable** | The agent sees only part of the state, so it can't tell some different situations apart. | Our agent gets rays and a few numbers, not the whole world. |
