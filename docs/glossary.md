@@ -168,7 +168,9 @@
 | **Epoch** | One pass over the collected data while learning. PPO does several per batch; its clipping makes that safe. | `n_epochs` (10 by default). |
 | **Training** | Running many episodes and adjusting the policy to get more reward. | `racecar train` |
 | **Evaluation** | Testing a trained policy without learning, to measure how good it is. | `racecar eval` |
-| **Gymnasium** | The standard Python interface for single-agent RL environments. | `RacingEnv` follows it. |
+| **Gymnasium** | The standard Python interface for single-agent RL environments. | `RacingEnv` follows it ([The RL environment](environment.md)). |
+| **Render mode** | How an environment shows itself: `human` opens a window, `rgb_array` returns pictures (for videos). | `gymnasium.make(..., render_mode="human")`. |
+| **Dependency injection** | Handing a part the pieces it needs from outside, instead of it creating them itself, so it doesn't depend on them. | The environment is handed its viewer, so it never imports pygame. |
 | **PettingZoo** | The same idea as Gymnasium, for multiple agents at once. | Multi-car racing (M7). |
 | **PPO** (Proximal Policy Optimization) | A popular, reliable RL algorithm. It improves the policy in small, safe steps. | Our first algorithm. |
 | **SAC** (Soft Actor-Critic) | Another RL algorithm that reuses past experience; often more data-efficient. | Comparison in M8. |

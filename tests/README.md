@@ -41,5 +41,5 @@ The second command turns the world step results into the speed table in the READ
 the measurements on every push to `main` (the Benchmarks workflow) and keeps the results.
 
 Markers: `slow` (more than a few seconds) and `gpu` (needs CUDA) are skipped unless selected,
-e.g. `uv run pytest -m slow`. See [architecture.md §6](../docs/architecture.md#6-testing-strategy)
+e.g. `uv run pytest -m slow --no-cov`. See [architecture.md §6](../docs/architecture.md#6-testing-strategy)
 for the full testing strategy.

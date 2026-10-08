@@ -6,7 +6,7 @@
 > lists the choices coming up when we build the AI's environment (M3), so you can make them
 > knowing what each one changes. The questions at the end double as interview practice.
 
-Parts marked **(M3-4)** and **(M3-5)** don't exist yet; the ticket that builds them
+Parts marked **(M3-5)** don't exist yet; the ticket that builds them
 will update this page with what was decided.
 
 ## 1. The loop: agent and environment
@@ -29,7 +29,7 @@ In MLRacecar the pieces already exist, except the wrapper that ties them togethe
 | Agent | Anything with `act(observations) -> actions`: the `Agent` protocol in `agents/base.py`. You at the keyboard are one (`KeyboardAgent`); the scripted test driver is another; the trained network will be the third. |
 | Environment's physics | `World.step(actions)` in `core/world.py`: moves every car one decision forward and returns a `Snapshot`. |
 | What the agent sees | `ObservationBuilder` (`env/observations.py`, [Observations](observations.md)): the distance rays ([Sensors](sensors.md)) and a few more numbers. |
-| The wrapper | `RacingEnv` **(M3-4)**: the standard Gymnasium interface, `reset() -> observation, info` and `step(action) -> observation, reward, terminated, truncated, info`. |
+| The wrapper | `RacingEnv` (`env/racing.py`, [The RL environment](environment.md)): the standard Gymnasium interface, `reset() -> observation, info` and `step(action) -> observation, reward, terminated, truncated, info`. |
 
 One step of the loop is one **decision**: 1/20 of a second. The physics runs 6 smaller steps
 inside it (120 a second), with the action held the whole time (*action repeat*). Deciding 20
@@ -166,9 +166,10 @@ environment **(M3-5)** uses that to run 64 cars as 64 independent episodes in on
 
 Decided in M3-3 (`env/episodes.py`): leaving the road **terminates** the run; the **time limit**
 (60 s, about a lap and a quarter of the technical track) and being **stuck** (slower than 1 m/s
-for 5 s) **truncate** it. Random starts anywhere on the lap (`StartPosition.RANDOM`) will help
-too **(M3-4)**: the agent practises every corner from the beginning instead of only the first
-one.
+for 5 s) **truncate** it. Runs start on the grid (decided in M3-4). Random starts anywhere on
+the lap are one setting away (`episode.start: random`): they let the agent practise every
+corner from the beginning instead of mostly the first ones, so they're the first thing to try
+if it learns the start of the lap much better than the end.
 
 ## 7. Policy and value
 
@@ -250,7 +251,7 @@ What each M3 ticket will need from you, with this page's sections as background:
 |--------|------------|----------|
 | M3-2 (#27) observation | Decided: every input in, including curvature ahead, out to 150 m. | 2, 3 |
 | M3-3 (#28) rewards and termination | Decided: progress (10 m = 1 point) and −10 for leaving the road, which also ends the run; runs stop after 60 s, or 5 s stuck. | 5, 6 |
-| M3-4 (#29) `RacingEnv` | Random or grid starts; which track to train on (the plan says `technical.json`: a short lap means more laps per hour). | 1, 6 |
+| M3-4 (#29) `RacingEnv` | Decided: runs start on the grid. The track to train on is chosen in M4 (the plan says `technical.json`: a short lap means more laps per hour). | 1, 6 |
 | M3-5 (#30) batched env | How many cars per world. Mostly a speed question. | 1, 8 |
 
 ## Further reading

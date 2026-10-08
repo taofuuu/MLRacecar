@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- The RL environment (`mlracecar.env.racing.RacingEnv`), registered with Gymnasium as
+  `MLRacecar-v0`: one car on a track, driven 1/20 s per step, with the observation, reward,
+  and end-of-run rules above. `reset(seed=..., options={"track": ..., "start": ...})` repeats a
+  run exactly from a seed; runs start on the grid unless `episode.start` (new) or the `start`
+  option says `random`. `info` carries each step's points per reward term and, when a run
+  ends, why and the run's points per term. Watch it with `render_mode="human"` (a window) or
+  `"rgb_array"` (pictures); training never needs pygame. Gymnasium is now a dependency.
 - How the AI is scored (`mlracecar.env.rewards`): a reward made of named terms (progress
   along the lap, leaving the road, time, driving the wrong way, jerky controls, valid laps),
   each with a weight in the new `reward` settings section and its points reported separately.

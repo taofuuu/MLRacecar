@@ -43,6 +43,7 @@ nav:
   - Sensors: sensors.md
   - Observations: observations.md
   - Rewards and episodes: rewards.md
+  - The RL environment: environment.md
   - RL fundamentals: rl-guide.md
   - Roadmap: roadmap.md
   - Glossary: glossary.md

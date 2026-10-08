@@ -233,6 +233,8 @@ class EpisodeConfig(BaseModel):
     """The longest a run lasts, in seconds of racing."""
     stuck_time: Positive = 5.0
     """End the run after this many seconds in a row slower than 1 m/s."""
+    start: Literal["grid", "random"] = "grid"
+    """Where runs start: grid, or random (anywhere on the lap)."""
 
 
 class RacecarConfig(BaseModel):

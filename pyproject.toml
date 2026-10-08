@@ -18,6 +18,7 @@ classifiers = [
   "Typing :: Typed",
 ]
 dependencies = [
+  "gymnasium>=1.4.0",
   "numpy>=2.5.3",
   "pydantic>=2.13.5",
   "pyyaml>=6.0.3",
@@ -179,8 +180,8 @@ addopts = [
   "--strict-markers",
   "--strict-config",
   "--import-mode=importlib",
-  # Slow, GPU, and benchmark tests are opt-in: `uv run pytest -m slow` (or gpu), and
-  # `uv run pytest -m benchmark --no-cov` (coverage would slow down what is being timed).
+  # Slow, GPU, and benchmark tests are opt-in, e.g. `uv run pytest -m slow --no-cov`
+  # (alone they can't reach the coverage minimum, and coverage slows down what is timed).
   "-m", "not slow and not gpu and not benchmark",
   "--cov=mlracecar",
   "--cov-report=term-missing:skip-covered",
