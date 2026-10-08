@@ -2,7 +2,9 @@
 
 import re
 import sys
+from importlib import metadata
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -295,3 +297,69 @@ def test_drive_does_not_hide_other_import_errors(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setitem(sys.modules, "mlracecar.play.drive", None)
     result = runner.invoke(app, ["drive", str(SAMPLES / "oval.json")])
     assert isinstance(result.exception, ModuleNotFoundError)
+
+
+# --------------------------------------------------------------------------- #
+# racecar doctor
+# --------------------------------------------------------------------------- #
+
+
+def fake_torch(cuda: str | None, *, gpu: bool) -> SimpleNamespace:
+    """Just enough of PyTorch for `racecar doctor`, whether or not the real one is installed."""
+    card = SimpleNamespace(name="Test GPU", total_memory=8 * 1024**3)
+    return SimpleNamespace(
+        version=SimpleNamespace(cuda=cuda),
+        cuda=SimpleNamespace(is_available=lambda: gpu, get_device_properties=lambda index: card),
+    )
+
+
+def doctor(monkeypatch: pytest.MonkeyPatch, torch: SimpleNamespace | None) -> list[str]:
+    monkeypatch.setitem(sys.modules, "torch", torch)  # None: importing it fails
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    return result.output.splitlines()
+
+
+def test_doctor_lists_the_libraries_and_their_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    lines = doctor(monkeypatch, fake_torch("13.0", gpu=True))
+
+    assert lines[0] == f"mlracecar {mlracecar.__version__}"
+    assert lines[1].startswith(f"Python {sys.version.split()[0]}")
+    assert any(
+        re.match(rf"numpy +{re.escape(metadata.version('numpy'))} +the simulation", line)
+        for line in lines
+    )
+    assert any(line.startswith("gymnasium ") for line in lines)
+
+
+@pytest.mark.parametrize(
+    ("torch", "expected"),
+    [
+        (fake_torch("13.0", gpu=True), "GPU: Test GPU (8.0 GB), CUDA 13.0"),
+        (fake_torch(None, gpu=False), "GPU: not used: this PyTorch is built for the CPU only"),
+        (
+            fake_torch("13.0", gpu=False),
+            "GPU: none found: PyTorch is built for CUDA 13.0; check the NVIDIA driver",
+        ),
+        (None, "GPU: unknown: PyTorch isn't installed"),
+    ],
+)
+def test_doctor_says_whether_training_can_use_the_gpu(
+    monkeypatch: pytest.MonkeyPatch, torch: SimpleNamespace | None, expected: str
+) -> None:
+    assert doctor(monkeypatch, torch)[-1].startswith(expected)
+
+
+def test_doctor_says_how_to_install_what_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    def version(name: str) -> str:
+        if name in {"torch", "stable-baselines3", "tensorboard"}:
+            raise metadata.PackageNotFoundError(name)
+        return "1.0"
+
+    monkeypatch.setattr("mlracecar.cli.metadata.version", version)
+
+    lines = doctor(monkeypatch, None)
+
+    torch_line = next(line for line in lines if line.startswith("torch "))
+    assert "not installed" in torch_line
+    assert "uv sync --extra train" in torch_line

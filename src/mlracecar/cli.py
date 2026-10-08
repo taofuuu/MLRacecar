@@ -1,6 +1,10 @@
 """The `racecar` command line. Subcommands for training come later."""
 
+import importlib
 import os
+import platform
+import sys
+from importlib import metadata
 from pathlib import Path
 from typing import Annotated
 
@@ -19,6 +23,18 @@ app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
 )
+
+
+LIBRARIES = {
+    "numpy": "the simulation",
+    "gymnasium": "the RL environment",
+    "pydantic": "the settings",
+    "pygame-ce": "drawing: racecar drive and edit (uv sync --extra render)",
+    "torch": "training (uv sync --extra train, or --extra train-cpu without an NVIDIA GPU)",
+    "stable-baselines3": "training",
+    "tensorboard": "training charts",
+}
+"""The libraries `racecar doctor` reports on, and what each is for."""
 
 
 def _print_version(value: bool) -> None:
@@ -179,3 +195,35 @@ def show_config(
         typer.echo(str(error), err=True)
         raise typer.Exit(1) from None
     typer.echo(format_config(config), nl=False)
+
+
+@app.command()
+def doctor() -> None:
+    """Show what is installed, and whether training can use an NVIDIA GPU."""
+    typer.echo(f"mlracecar {__version__}")
+    typer.echo(f"Python {platform.python_version()} ({sys.executable})")
+    width = max(len(name) for name in LIBRARIES)
+    for name, purpose in LIBRARIES.items():
+        try:
+            version = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            version = "not installed"
+        typer.echo(f"{name:<{width}}  {version:<15}  {purpose}")
+    typer.echo(f"GPU: {_gpu()}")
+
+
+def _gpu() -> str:
+    """Whether PyTorch can train on a CUDA GPU, and which; or why not."""
+    try:
+        torch = importlib.import_module("torch")  # by name: it's only there for training
+    except ImportError:
+        return "unknown: PyTorch isn't installed"
+    if torch.version.cuda is None:
+        return "not used: this PyTorch is built for the CPU only (uv sync --extra train)"
+    if not torch.cuda.is_available():
+        return (
+            f"none found: PyTorch is built for CUDA {torch.version.cuda}; check the NVIDIA driver"
+        )
+    properties = torch.cuda.get_device_properties(0)
+    memory = properties.total_memory / 1024**3
+    return f"{properties.name} ({memory:.1f} GB), CUDA {torch.version.cuda}"
