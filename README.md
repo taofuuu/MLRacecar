@@ -59,7 +59,8 @@ uv run racecar train configs/smoke.yaml
 ```
 
 The smoke run only checks that everything works, in a few seconds; `uv run racecar train` on
-its own trains properly. Everything about a run goes into a folder under `runs/`; see
+its own trains properly. Everything about a run goes into a folder under `runs/`; watch it learn,
+with videos of the AI driving, in TensorBoard (`uv run tensorboard --logdir runs`). See
 [docs/training.md](docs/training.md).
 
 ## Speed

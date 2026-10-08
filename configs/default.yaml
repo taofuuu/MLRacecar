@@ -73,6 +73,7 @@ training:
   checkpoint_every: 100000      # Save the AI every this many car-steps, and at the end.
   eval_every: 50000             # Test it every this many car-steps, and at the end.
   eval_runs: 10                 # Test runs, from the same random places each time.
+  video_every: 200000           # Film it from the grid every this many car-steps (0: never).
 
 # How PPO, the learning algorithm, learns.
 ppo:

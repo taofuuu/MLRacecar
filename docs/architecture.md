@@ -321,7 +321,7 @@ runs/2026-10-08_153012_technical-seed0/
 ├── meta.json        # status, git SHA + dirty flag, versions, seeds, track hash, hardware, sessions
 ├── checkpoints/     # step_N/ periodic, best/ by evaluation score, last/ for resuming (SB3Agent folders)
 ├── eval/            # evaluations.jsonl: one line per evaluation; reports (M4-5) and videos (M4-7)
-├── tensorboard/     # training curves and custom racing metrics (M4-4)
+├── tensorboard/     # SB3 scalars, practice/test racing metrics, grid-run GIFs
 └── replays/         # recorded episodes (M4-6)
 ```
 
@@ -332,6 +332,18 @@ seeded from `training.seed` (`set_random_seed`, `seed + i` per car), so a CPU ru
 reproducible on one machine. Ctrl+C saves `checkpoints/last` and marks the run interrupted;
 `--resume` continues to `training.steps` (episodes restart, so it isn't bitwise equal to an
 uninterrupted run), refusing if the track file's hash changed.
+
+Tracking goes through a `training.tracking.Tracker` protocol (`scalars`, `video`, `close`), so
+Weights & Biases can be added without touching the run; `TensorBoardTracker` is the default.
+SB3's logger is redirected to the same tracker by a `KVWriter` (`SB3Output`), so SB3's metrics
+and ours share one sink and one step axis (car-steps); a `VecMonitor` supplies
+`rollout/ep_rew_mean`. Practice metrics come from the `info` of finished episodes
+(`metrics.PracticeRuns`, a 100-episode window like SB3's `ep_info_buffer`), test metrics from
+`summarize`; both are named `<group>/…`, `<group>_ends/…`, and `<group>_reward/…`. Every
+`training.video_every` steps the grid test run is replayed alone in a `RacingEnv` with
+`render_mode="rgb_array"` and an injected viewer (the CLI injects `RaceViewer`, so training
+never imports pygame), streamed frame by frame into a GIF (Pillow: half size and frame rate, one
+shared palette), and stored as a TensorBoard image summary.
 
 ### 4.11 Rendering, replays and video
 

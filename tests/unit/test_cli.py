@@ -431,9 +431,39 @@ def test_train_runs_and_says_where(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     [folder] = (tmp_path / "runs").iterdir()
     assert folder.name.endswith("_cli")
-    assert result.output.startswith(f"Training in {folder}\n")
+    assert result.output.startswith(
+        f"Training in {folder}\n"
+        f"Watch it in TensorBoard: uv run tensorboard --logdir {tmp_path / 'runs'}\n"
+    )
     assert "step  64/128  score" in result.output
     assert "Finished: 128 steps." in result.output
+    assert "No videos" not in result.output
+    assert any((folder / "tensorboard").iterdir())
+
+
+@needs_training
+def test_train_without_pygame_trains_without_videos(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delitem(sys.modules, "mlracecar.render.viewer", raising=False)
+    monkeypatch.setitem(sys.modules, "pygame", None)  # importing it fails
+
+    result = runner.invoke(app, ["train", str(tiny_run(tmp_path)), "--runs", str(tmp_path)])
+
+    assert result.exit_code == 0, result.output
+    assert "No videos: drawing them needs pygame (uv sync --extra render)." in result.output
+    assert "Finished: 128 steps." in result.output
+
+
+@needs_training
+def test_train_doesnt_hide_other_problems_with_drawing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(sys.modules, "mlracecar.render.viewer", None)
+
+    result = runner.invoke(app, ["train", str(tiny_run(tmp_path)), "--runs", str(tmp_path)])
+
+    assert isinstance(result.exception, ImportError)
 
 
 @needs_training

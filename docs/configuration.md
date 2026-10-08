@@ -53,7 +53,7 @@ limit in seconds (`time_limit`), or being stuck for `stuck_time` seconds; and wh
 [The RL environment](environment.md).
 
 `training` and `ppo` set up `racecar train`: the track, how long, how many cars, the seed,
-how often to save and test, and how PPO learns. See [Training](training.md).
+how often to save, test, and film, and how PPO learns. See [Training](training.md).
 
 ## Changing settings
 

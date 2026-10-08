@@ -6,7 +6,7 @@ import platform
 import sys
 from importlib import metadata
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
@@ -16,6 +16,9 @@ from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
 from mlracecar.editor.document import TrackDocument
 from mlracecar.io.track_file import TrackFileError, read_track_file
+
+if TYPE_CHECKING:
+    from mlracecar.env.racing import ViewerFactory
 
 app = typer.Typer(
     name="racecar",
@@ -197,7 +200,7 @@ def show_config(
     typer.echo(format_config(config), nl=False)
 
 
-TRAINING_LIBRARIES = frozenset({"torch", "stable_baselines3", "tensorboard"})
+TRAINING_LIBRARIES = frozenset({"torch", "stable_baselines3", "tensorboard", "PIL"})
 
 
 @app.command()
@@ -227,8 +230,9 @@ def train(
     """Train an AI driver, saving everything about the run in a new folder under runs/.
 
     The settings say which track, how long, and how PPO learns (see configs/default.yaml).
-    Press Ctrl+C to stop: the agent is saved first, and --resume carries on. Needs the training
-    libraries (uv sync --extra train). Exits with status 1 if the run can't start.
+    TensorBoard shows how it's going (uv run tensorboard --logdir runs), with videos if pygame
+    is installed. Press Ctrl+C to stop: the agent is saved first, and --resume carries on. Needs
+    the training libraries (uv sync --extra train). Exits with status 1 if the run can't start.
     """
     try:
         from mlracecar.training.run import TrainingError, TrainingRun  # only for training
@@ -256,7 +260,22 @@ def train(
         typer.echo(str(error), err=True)
         raise typer.Exit(1) from None
     typer.echo(f"Training in {run.directory}")
-    run.train(report=typer.echo)
+    typer.echo(f"Watch it in TensorBoard: uv run tensorboard --logdir {run.directory.parent}")
+    viewer = _race_pictures()
+    if viewer is None and run.config.training.video_every:
+        typer.echo("No videos: drawing them needs pygame (uv sync --extra render).")
+    run.train(report=typer.echo, viewer=viewer)
+
+
+def _race_pictures() -> "ViewerFactory | None":
+    """Draws the race as pictures, for videos; ``None`` without pygame."""
+    try:
+        from mlracecar.render.viewer import RaceViewer  # pygame
+    except ImportError as error:
+        if error.name != "pygame":
+            raise
+        return None
+    return RaceViewer
 
 
 @app.command()

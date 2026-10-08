@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- TensorBoard charts for every training run (`uv run tensorboard --logdir runs`):
+  Stable-Baselines3's learning numbers, and racing numbers for the practice runs and each test:
+  score, distance, speed, the share of runs with a lap, the best lap, how runs ended, and each
+  reward term's points. Every `training.video_every` steps (200,000) and at the end, a video of
+  the test run from the grid. A `Tracker` interface lets another tracker, such as Weights &
+  Biases, take TensorBoard's place. Test results in `evaluations.jsonl` gain `lap_rate` and
+  `terms`.
 - `racecar train`: trains an AI driver with PPO on many cars at once, into a run folder
   with every setting, the git commit, library versions, seeds, saved agents (every
   `training.checkpoint_every` steps, the best by testing, and the last), and every test's

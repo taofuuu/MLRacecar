@@ -7,10 +7,19 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from mlracecar.config.models import EpisodeConfig, RacecarConfig
+from mlracecar.config.models import REWARD_TERMS, EpisodeConfig, RacecarConfig
+from mlracecar.core.geometry import FloatArray
+from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
+from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.env.racing import RacingEnv, load_track
-from mlracecar.training.evaluation import RunResult, as_dict, drive_test_runs, summarize
+from mlracecar.training.evaluation import (
+    RunResult,
+    as_dict,
+    drive_test_runs,
+    film_run,
+    summarize,
+)
 
 TECHNICAL = load_track(Path(__file__).parents[3] / "tracks" / "technical.json")
 ANGLES = np.linspace(0, 2 * np.pi, 48, endpoint=False)
@@ -49,6 +58,7 @@ def alone(track: Track, config: RacecarConfig, seed: int, start: str, agent: Ste
                 info["best_lap"],
                 info["end_reason"],
                 steps * env.timing.decision_dt,
+                info["episode_terms"],
             )
 
 
@@ -101,11 +111,68 @@ class _CircleDriver:
         return np.column_stack([steer, pedal]).astype(np.float32)
 
 
+def test_a_runs_reward_is_the_sum_of_its_terms() -> None:
+    [result] = drive_test_runs(Steady(0.05, 0.4), TECHNICAL, SHORT, [3])
+
+    assert set(result.terms) == set(REWARD_TERMS)
+    assert sum(result.terms.values()) == pytest.approx(result.reward)
+    assert result.terms["progress"] > 0
+
+
+class Pictures:
+    """A viewer that draws tiny pictures: each one shows how far the car has driven."""
+
+    made: list["Pictures"] = []  # noqa: RUF012  # every one made, to look at after
+
+    def __init__(self, track: Track, car: VehicleParams, mode: str, fps: float) -> None:
+        assert mode == "rgb_array"
+        self.closed = False
+        Pictures.made.append(self)
+
+    def render(self, snapshot: Snapshot, rays: FloatArray | None) -> NDArray[np.uint8]:
+        distance = min(int(snapshot.race.distance[0]), 255)
+        return np.full((4, 6, 3), distance, dtype=np.uint8)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.parametrize("start", ["random", "grid"])
+def test_a_filmed_run_is_the_test_run_with_the_same_seed(start: str) -> None:
+    agent = Steady(0.05, 0.4)
+    [result] = drive_test_runs(agent, TECHNICAL, SHORT, [7], start)
+    Pictures.made.clear()
+
+    frames = list(film_run(agent, TECHNICAL, SHORT, 7, start, Pictures))
+
+    assert len(frames) == round(result.seconds / 0.05) + 1  # the start, then every step
+    assert frames[0].shape == (4, 6, 3)
+    assert frames[-1][0, 0, 0] == min(int(result.distance), 255)
+    [viewer] = Pictures.made
+    assert viewer.closed
+
+
+def test_a_film_is_made_as_its_pictures_are_asked_for() -> None:
+    Pictures.made.clear()
+    frames = film_run(Steady(0.0, 0.4), TECHNICAL, SHORT, 7, "grid", Pictures)
+    assert Pictures.made == []  # nothing driven yet
+
+    first = next(frames)
+    frames.close()  # stopped early: the environment is closed all the same
+
+    assert first.shape == (4, 6, 3)
+    assert Pictures.made[0].closed
+
+
+def points(progress: float, off_track: float) -> dict[str, float]:
+    return {"progress": progress, "off_track": off_track}
+
+
 def test_the_summary_gives_the_score_and_how_the_runs_went() -> None:
     results = [
-        RunResult(10.0, 100.0, 1, 50.0, "time_limit", 10.0),
-        RunResult(-6.0, 40.0, 0, None, "off_track", 4.0),
-        RunResult(2.0, 20.0, 2, 45.0, "time_limit", 10.0),
+        RunResult(10.0, 100.0, 1, 50.0, "time_limit", 10.0, points(10.0, 0.0)),
+        RunResult(-6.0, 40.0, 0, None, "off_track", 4.0, points(4.0, -10.0)),
+        RunResult(2.0, 20.0, 2, 45.0, "time_limit", 10.0, points(2.0, 0.0)),
     ]
 
     summary = summarize(results)
@@ -116,14 +183,17 @@ def test_the_summary_gives_the_score_and_how_the_runs_went() -> None:
         "distance": pytest.approx(160 / 3),
         "average_speed": pytest.approx((10 + 10 + 2) / 3),
         "laps": 3,
+        "lap_rate": pytest.approx(2 / 3),
         "best_lap": 45.0,
         "end_reasons": {"off_track": 1, "time_limit": 2},
+        "terms": {"progress": pytest.approx(16 / 3), "off_track": pytest.approx(-10 / 3)},
     }
     assert summarize(results[1:2])["best_lap"] is None
+    assert summarize(results[1:2])["lap_rate"] == 0.0
 
 
 def test_a_result_as_plain_data_includes_its_average_speed() -> None:
-    result = RunResult(1.0, 30.0, 0, None, "stuck", 6.0)
+    result = RunResult(1.0, 30.0, 0, None, "stuck", 6.0, points(1.0, 0.0))
 
     assert as_dict(result) == {
         "reward": 1.0,
@@ -132,5 +202,6 @@ def test_a_result_as_plain_data_includes_its_average_speed() -> None:
         "best_lap": None,
         "end_reason": "stuck",
         "seconds": 6.0,
+        "terms": {"progress": 1.0, "off_track": 0.0},
         "average_speed": 5.0,
     }
