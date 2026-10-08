@@ -81,6 +81,12 @@ jobs:
       - name: Run tests with coverage
         run: uv run pytest
 
+      # The slow tests: the smoke training run (configs/smoke.yaml, twice: it must take under
+      # a minute and give the same results) and 10,000 random-driver steps.
+      - name: Run the slow tests, the smoke training run among them
+        if: matrix.extras != ''
+        run: uv run --no-sync pytest -m slow --no-cov
+
       - name: Add coverage table to the job summary
         if: always()
         run: |

@@ -197,6 +197,68 @@ def show_config(
     typer.echo(format_config(config), nl=False)
 
 
+TRAINING_LIBRARIES = frozenset({"torch", "stable_baselines3", "tensorboard"})
+
+
+@app.command()
+def train(
+    files: Annotated[
+        list[Path] | None,
+        typer.Argument(help="Settings files (YAML), e.g. configs/smoke.yaml, applied in order."),
+    ] = None,
+    overrides: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--set",
+            metavar="KEY=VALUE",
+            help="Change one setting, e.g. --set training.steps=200000. Repeat for several.",
+        ),
+    ] = None,
+    name: Annotated[
+        str | None,
+        typer.Option(help="A name for the run, in its folder's name (default: track and seed)."),
+    ] = None,
+    runs: Annotated[Path, typer.Option(help="Where run folders are made.")] = Path("runs"),
+    resume: Annotated[
+        Path | None,
+        typer.Option(help="Carry on a stopped run instead: its folder, e.g. runs/2026-...-seed0."),
+    ] = None,
+) -> None:
+    """Train an AI driver, saving everything about the run in a new folder under runs/.
+
+    The settings say which track, how long, and how PPO learns (see configs/default.yaml).
+    Press Ctrl+C to stop: the agent is saved first, and --resume carries on. Needs the training
+    libraries (uv sync --extra train). Exits with status 1 if the run can't start.
+    """
+    try:
+        from mlracecar.training.run import TrainingError, TrainingRun  # only for training
+    except ImportError as error:
+        if error.name not in TRAINING_LIBRARIES:
+            raise
+        typer.echo(
+            "Training needs PyTorch and Stable-Baselines3: uv sync --extra train "
+            "(or --extra train-cpu without an NVIDIA GPU).",
+            err=True,
+        )
+        raise typer.Exit(1) from None
+    try:
+        if resume is not None:
+            if files or overrides or name:
+                typer.echo(
+                    "--resume carries on a run with its own settings: give nothing else.", err=True
+                )
+                raise typer.Exit(1)
+            run = TrainingRun.resume(resume)
+        else:
+            config = load_config(files or (), overrides or ())
+            run = TrainingRun.start(config, runs, name)
+    except (ConfigError, TrackFileError, TrainingError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from None
+    typer.echo(f"Training in {run.directory}")
+    run.train(report=typer.echo)
+
+
 @app.command()
 def doctor() -> None:
     """Show what is installed, and whether training can use an NVIDIA GPU."""

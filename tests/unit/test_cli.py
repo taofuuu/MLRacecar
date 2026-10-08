@@ -1,5 +1,6 @@
 """Smoke tests for the `racecar` command line."""
 
+import importlib.util
 import re
 import sys
 from importlib import metadata
@@ -363,3 +364,102 @@ def test_doctor_says_how_to_install_what_is_missing(monkeypatch: pytest.MonkeyPa
     torch_line = next(line for line in lines if line.startswith("torch "))
     assert "not installed" in torch_line
     assert "uv sync --extra train" in torch_line
+
+
+# --------------------------------------------------------------------------- #
+# racecar train
+# --------------------------------------------------------------------------- #
+
+needs_training = pytest.mark.skipif(
+    importlib.util.find_spec("stable_baselines3") is None,
+    reason="needs the training libraries (uv sync --extra train)",
+)
+
+TINY_RUN = """\
+training:
+  track: {track}
+  steps: 128
+  cars: 2
+  checkpoint_every: 64
+  eval_every: 64
+  eval_runs: 1
+ppo:
+  steps_per_car: 32
+  batch_size: 64
+  epochs: 1
+  layers: 1
+  layer_size: 8
+episode:
+  time_limit: 2
+"""
+
+
+def tiny_run(folder: Path) -> Path:
+    path = folder / "tiny.yaml"
+    path.write_text(
+        TINY_RUN.format(track=SAMPLES.joinpath("oval.json").as_posix()), encoding="utf-8"
+    )
+    return path
+
+
+def test_train_says_what_to_install_without_the_training_libraries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delitem(sys.modules, "mlracecar.training.run", raising=False)
+    monkeypatch.setitem(sys.modules, "stable_baselines3", None)  # importing it fails
+
+    result = runner.invoke(app, ["train"])
+
+    assert result.exit_code == 1
+    assert "Training needs PyTorch and Stable-Baselines3: uv sync --extra train" in result.output
+
+
+def test_train_doesnt_hide_other_import_problems(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "mlracecar.training.run", None)
+
+    result = runner.invoke(app, ["train"])
+
+    assert isinstance(result.exception, ImportError)
+
+
+@needs_training
+def test_train_runs_and_says_where(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["train", str(tiny_run(tmp_path)), "--runs", str(tmp_path / "runs"), "--name", "cli"]
+    )
+
+    assert result.exit_code == 0, result.output
+    [folder] = (tmp_path / "runs").iterdir()
+    assert folder.name.endswith("_cli")
+    assert result.output.startswith(f"Training in {folder}\n")
+    assert "step  64/128  score" in result.output
+    assert "Finished: 128 steps." in result.output
+
+
+@needs_training
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (["--set", "training.cars=0"], "training.cars: must be at least 1"),
+        (["--set", "training.track=missing.json"], "missing.json: can't read the file"),
+        (["--set", "ppo.batch_size=48"], "ppo.batch_size (48) must divide"),
+        (["--resume", "nowhere", "--name", "x"], "--resume carries on a run with its own settings"),
+    ],
+)
+def test_train_explains_why_a_run_cant_start(
+    tmp_path: Path, arguments: list[str], message: str
+) -> None:
+    result = runner.invoke(
+        app, ["train", str(tiny_run(tmp_path)), "--runs", str(tmp_path / "runs"), *arguments]
+    )
+
+    assert result.exit_code == 1
+    assert message in result.output
+
+
+@needs_training
+def test_train_resume_needs_a_run_folder(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["train", "--resume", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert f"{tmp_path}: not a training run" in result.output
