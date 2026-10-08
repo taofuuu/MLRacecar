@@ -33,3 +33,16 @@ sensors:
   rays: 15            # How many rays fan out from the car.
   field_of_view: 180  # The angle they fan across, in degrees, centred on where the car points.
   range: 100          # How far they reach, in metres.
+
+# What the AI sees: each input can be turned off with false.
+observation:
+  rays: true             # The distance rays, each as a fraction of their range.
+  speed: true            # The car's forward speed.
+  heading: true          # Which way the car points compared with the road (2 values).
+  offset: true           # Distance from the middle of the road, as a share of half its width.
+  yaw_rate: true         # How fast the car is turning.
+  steering: true         # Where the front wheels point now, as a share of full lock.
+  previous_action: true  # The steering and pedal it chose last time (2 values).
+  curvature: true        # How much the road bends in each stretch ahead (one value per stretch).
+  lookahead: 150         # How far ahead the bends are measured, in metres.
+  lookahead_points: 8    # How many equal stretches that distance is split into.

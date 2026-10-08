@@ -103,6 +103,7 @@
 | **Raycast** | Shooting an invisible line from the car and measuring how far until it hits the track edge, like a laser rangefinder. | The car's "eyes": [Sensors](sensors.md). |
 | **Lidar** | A sensor that measures distances with laser beams fanned out around it. Our rays work the same way, without the lasers. | [Sensors](sensors.md). |
 | **Field of view** | How wide an angle a sensor covers. 180° is from straight left to straight right. | `sensors.field_of_view`. |
+| **Digest (hash)** | A short fingerprint computed from some data: the same data always gives the same digest, and any change gives a different one. | `ObservationSpec.digest` ties a trained AI to the exact observations it learned from. |
 | **Normalized** | Rescaled to a standard range, usually 0 to 1, so a neural network gets inputs of similar size. | Ray distances divided by the range. |
 | **Broad phase** | A quick first pass that skips obviously-irrelevant things before doing precise math. | Rays only check nearby track edges. |
 | **Vectorized** | Doing math on whole arrays at once instead of looping one item at a time. Much faster in Python. | All cars update in one go. |

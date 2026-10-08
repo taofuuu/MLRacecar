@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- What the AI sees (`mlracecar.env.observations`): `ObservationBuilder` turns a snapshot into
+  31 numbers per car, scaled to about -1..1: the distance rays, speed, heading (sine and
+  cosine), offset from the middle of the road, yaw rate, steering angle, the previous action,
+  and how much the road bends over 8 stretches of the next 150 m. Each input can be switched
+  off in the new `observation` settings section. An `ObservationSpec` labels every value and
+  has a digest that changes whenever the observation does, for tying trained models to it.
+- Settings can now be on/off values, written `true` or `false`.
 - An RL fundamentals guide (`docs/rl-guide.md`): the agent-environment loop, MDPs,
   observations, actions, rewards, episodes (termination vs. truncation), policy and value, PPO
   and why it clips, and what to watch while training, each tied to the code, with the choices

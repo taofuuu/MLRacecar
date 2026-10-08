@@ -9,6 +9,8 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from mlracecar.config.models import (
+    OBSERVATION_INPUTS,
+    ObservationConfig,
     RacecarConfig,
     RaceConfig,
     SensorConfig,
@@ -20,7 +22,13 @@ from mlracecar.core.sensors import RaySettings
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.core.world import Timing
 
-SECTIONS: list[type[BaseModel]] = [VehicleConfig, SimulationConfig, RaceConfig, SensorConfig]
+SECTIONS: list[type[BaseModel]] = [
+    VehicleConfig,
+    SimulationConfig,
+    RaceConfig,
+    SensorConfig,
+    ObservationConfig,
+]
 
 
 def test_every_setting_has_a_default() -> None:
@@ -127,6 +135,33 @@ def test_time_needs_at_least_one_step(setting: str) -> None:
 def test_impossible_sensors_are_rejected(setting: str, value: float) -> None:
     with pytest.raises(ValidationError):
         SensorConfig.model_validate({setting: value})
+
+
+@pytest.mark.parametrize(("setting", "value"), [("lookahead", 0.0), ("lookahead_points", 0)])
+def test_impossible_lookaheads_are_rejected(setting: str, value: float) -> None:
+    with pytest.raises(ValidationError):
+        ObservationConfig.model_validate({setting: value})
+
+
+def test_the_ai_must_see_something() -> None:
+    with pytest.raises(ValidationError, match="turn on at least one input"):
+        ObservationConfig.model_validate(dict.fromkeys(OBSERVATION_INPUTS, False))
+
+
+def test_any_one_input_is_enough() -> None:
+    for name in OBSERVATION_INPUTS:
+        only = {other: other == name for other in OBSERVATION_INPUTS}
+        assert getattr(ObservationConfig.model_validate(only), name)
+
+
+def test_every_input_can_be_turned_on_and_off() -> None:
+    switches = {
+        name for name, field in ObservationConfig.model_fields.items() if field.annotation is bool
+    }
+    assert switches == set(OBSERVATION_INPUTS)
+    assert list(ObservationConfig.model_fields)[: len(OBSERVATION_INPUTS)] == list(
+        OBSERVATION_INPUTS
+    )
 
 
 def test_the_sensors_can_see_all_the_way_round() -> None:

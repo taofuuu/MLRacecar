@@ -9,9 +9,16 @@ Every setting's docstring becomes its comment in the YAML written by
 """
 
 import math
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
@@ -30,6 +37,18 @@ _SETTINGS = ConfigDict(
 
 Positive = Annotated[float, Field(gt=0)]
 NonNegative = Annotated[float, Field(ge=0)]
+
+OBSERVATION_INPUTS = (
+    "rays",
+    "speed",
+    "heading",
+    "offset",
+    "yaw_rate",
+    "steering",
+    "previous_action",
+    "curvature",
+)
+"""The inputs an observation can have, in the order they appear in it."""
 
 
 class VehicleConfig(BaseModel):
@@ -148,6 +167,39 @@ class SensorConfig(BaseModel):
         )
 
 
+class ObservationConfig(BaseModel):
+    """What the AI sees: which inputs go into its observation, in this order."""
+
+    model_config = _SETTINGS
+
+    rays: bool = True
+    """The distance rays, each as a fraction of their range."""
+    speed: bool = True
+    """The car's forward speed."""
+    heading: bool = True
+    """Which way the car points compared with the road (2 values)."""
+    offset: bool = True
+    """Distance from the middle of the road, as a share of half its width."""
+    yaw_rate: bool = True
+    """How fast the car is turning."""
+    steering: bool = True
+    """Where the front wheels point now, as a share of full lock."""
+    previous_action: bool = True
+    """The steering and pedal it chose last time (2 values)."""
+    curvature: bool = True
+    """How much the road bends in each stretch ahead (one value per stretch)."""
+    lookahead: Positive = 150.0
+    """How far ahead the bends are measured, in metres."""
+    lookahead_points: Annotated[int, Field(ge=1)] = 8
+    """How many equal stretches that distance is split into."""
+
+    @model_validator(mode="after")
+    def _sees_something(self) -> Self:
+        if not any(getattr(self, name) for name in OBSERVATION_INPUTS):
+            raise PydanticCustomError("no_inputs", "turn on at least one input")
+        return self
+
+
 class RacecarConfig(BaseModel):
     """Every setting, in sections. `mlracecar.config.files.load_config` builds one from files."""
 
@@ -161,3 +213,5 @@ class RacecarConfig(BaseModel):
     """The race rules: what happens when a car leaves the road."""
     sensors: SensorConfig = Field(default_factory=SensorConfig)
     """The car's distance sensors: how many rays, how wide they fan, and how far they reach."""
+    observation: ObservationConfig = Field(default_factory=ObservationConfig)
+    """What the AI sees: each input can be turned off with false."""

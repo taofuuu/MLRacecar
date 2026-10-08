@@ -232,11 +232,14 @@ are ghosts until collisions arrive in M7.
   precomputed bounding circles that each ray tests first, and only segments whose endpoints
   straddle the ray's line get the exact intersection. The result is exact: it matches testing
   every segment.
-- **Observation features** are composable and normalized: rays, speed, lateral offset,
-  heading error, yaw rate, previous action, and look-ahead curvature.
-- An **`ObservationSpec`** (feature names, shapes, normalization, content hash) is saved with
-  every trained model. Loading a model into an incompatible environment fails loudly
-  instead of silently producing a bad driver.
+- **Observation features** (`env.observations.ObservationBuilder`,
+  [Observations](observations.md)) are composable and normalized: rays, speed, heading error
+  (as sine and cosine), lateral offset, yaw rate, steering angle, previous action, and
+  look-ahead curvature (the mean curvature of equal stretches ahead). Each can be switched off
+  in config; they always appear in the same order, and unbounded ones are clipped to ±2.
+- An **`ObservationSpec`** (feature names, labels, bounds, scaling constants, and a SHA-256
+  digest of all of them) is saved with every trained model. Loading a model into an
+  incompatible environment fails loudly instead of silently producing a bad driver.
 
 ### 4.7 Rewards
 
