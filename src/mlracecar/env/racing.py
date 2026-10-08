@@ -194,7 +194,7 @@ class RacingEnv(gymnasium.Env[NDArray[np.float32], NDArray[np.float32]]):
 
     def _use(self, track: TrackSource) -> None:
         """Drive on this track from the next run on."""
-        self.track = track if isinstance(track, Track) else read_track_file(Path(track)).to_track()
+        self.track = load_track(track)
         self.observations = ObservationBuilder(
             self.track, self.car, self.config.observation, self.config.sensors.to_settings()
         )
@@ -215,3 +215,8 @@ class RacingEnv(gymnasium.Env[NDArray[np.float32], NDArray[np.float32]]):
         if not math.isfinite(info["best_lap"]):
             info["best_lap"] = None
         return info
+
+
+def load_track(source: TrackSource) -> Track:
+    """The track itself, or the track read from a file."""
+    return source if isinstance(source, Track) else read_track_file(Path(source)).to_track()

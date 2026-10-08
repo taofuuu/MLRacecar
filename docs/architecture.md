@@ -273,6 +273,16 @@ environment depends only on a `Viewer` protocol, and the registration's entry po
 only when a render mode is requested. That keeps `env` free of `render` and pygame, as the
 import-linter contracts require.
 
+`BatchedRacingEnv` (`env.batched`) is the registration's vector entry point
+(`gymnasium.make_vec(..., vectorization_mode="vector_entry_point")`). One `World` holds all
+`num_envs` cars; every car starts as if alone (pole position via `World.grid`, or
+`random_poses` from its own seeded generator, placed with `World.reset(mask, pose=...)`), so
+its transitions equal a single `RacingEnv`'s bit for bit, which a test checks against
+`SyncVectorEnv`. Both of Gymnasium's autoreset modes are supported: `NEXT_STEP` (default) and
+`SAME_STEP` (`final_obs`/`final_info`, what Stable-Baselines3 expects). Restarted cars'
+observations are built from `Snapshot.select`. At 64 cars it is about 15 times faster than
+64 separate environments.
+
 ### 4.9 Agents
 
 ```python

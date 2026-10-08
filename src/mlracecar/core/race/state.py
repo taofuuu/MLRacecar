@@ -3,7 +3,11 @@
 `mlracecar.core.race.rules` keeps it up to date; renderers and environments only read it.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+from typing import Self
+
+import numpy as np
+from numpy.typing import ArrayLike
 
 from mlracecar.core.geometry import BoolArray, FloatArray, IntArray
 
@@ -47,3 +51,10 @@ class RaceState:
     out: BoolArray
     """Whether the car's run is over (it left the road under `OffTrackPolicy.TERMINATE`); it
     stays where it is, at rest, until it is reset."""
+
+    def select(self, cars: slice | ArrayLike) -> Self:
+        """Some of the cars' races: ``cars`` picks them by index, by slice, or with a mask."""
+        index = cars if isinstance(cars, slice) else np.atleast_1d(np.asarray(cars))
+        return type(self)(
+            **{field.name: getattr(self, field.name)[index] for field in fields(self)}
+        )

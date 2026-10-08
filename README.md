@@ -57,23 +57,36 @@ The simulation moves every car at once with NumPy arrays, so a thousand cars cos
 times more than one. One step is one driver decision: 1/20 s of racing, with six physics
 updates and the race rules for every car. A car-step is one car driving one step: one
 experience for the AI to learn from. The AI also reads each car's distance sensors once per
-step.
+step, and the RL environment adds its observation, reward, and end-of-run rules on top. Its
+batched form runs many cars in one world, each in its own run, much faster than separate
+environments.
 
 | Cars | Time per step | Steps per second | Car-steps per second | Faster than real time |
 |-----:|--------------:|-----------------:|---------------------:|----------------------:|
-| 1 | 0.40 ms | 2,501 | 2,501 | 125x |
-| 64 | 0.50 ms | 1,985 | 127,009 | 99x |
-| 1,024 | 2.35 ms | 426 | 435,847 | 21x |
+| 1 | 0.41 ms | 2,427 | 2,427 | 121x |
+| 64 | 0.53 ms | 1,894 | 121,224 | 95x |
+| 1,024 | 2.16 ms | 462 | 473,449 | 23x |
 
 **Distance sensors**, 15 rays per car, read once per step:
 
 | Cars | Time to read every ray | Car readings per second |
 |-----:|-----------------------:|------------------------:|
-| 1 | 0.08 ms | 12,937 |
-| 64 | 1.35 ms | 47,474 |
-| 1,024 | 25.67 ms | 39,892 |
+| 1 | 0.08 ms | 13,184 |
+| 64 | 0.98 ms | 65,580 |
+| 1,024 | 24.67 ms | 41,505 |
 
-Medians, measured on 12th Gen Intel(R) Core(TM) i5-12400F (Windows 11), Python 3.12.3, NumPy 2.5.3, commit 0776a40.
+**RL environment**, every car's step with its observation and reward:
+
+| Environment | Cars | Time per step | Car-steps per second |
+|-------------|-----:|--------------:|---------------------:|
+| One world (`BatchedRacingEnv`) | 1 | 0.73 ms | 1,362 |
+| One world (`BatchedRacingEnv`) | 64 | 3.60 ms | 17,798 |
+| One world (`BatchedRacingEnv`) | 1,024 | 37.95 ms | 26,983 |
+| Separate (`SyncVectorEnv` of `RacingEnv`) | 64 | 52.69 ms | 1,215 |
+
+With 64 cars, one world is 15 times faster than 64 separate environments.
+
+Medians, measured on 12th Gen Intel(R) Core(TM) i5-12400F (Windows 11), Python 3.12.3, NumPy 2.5.3, commit 6e504ae.
 
 Measure it yourself. Runs back to back agree within about 10%, but on different days the same
 computer has measured up to 30% apart, depending on what else it is doing:

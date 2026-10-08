@@ -5,9 +5,10 @@
 
 The first table shows the world step measurements (`tests/benchmarks/test_world_speed.py`): how
 long one step takes for each number of cars, and how many steps, car-steps, and seconds of
-racing that makes per second. The second shows the distance sensors
-(`tests/benchmarks/test_sensor_speed.py`), when they were measured too. CI adds the same tables
-to the summary of every benchmark run.
+racing that makes per second. The next ones show the distance sensors
+(`tests/benchmarks/test_sensor_speed.py`) and the RL environment
+(`tests/benchmarks/test_env_speed.py`), when they were measured too. CI adds the same tables to
+the summary of every benchmark run.
 """
 
 import json
@@ -18,6 +19,8 @@ from typing import Any
 
 WORLD_STEP = "test_world_step["
 SENSE = "test_sense["
+ONE_WORLD = "test_one_world["
+SEPARATE = "test_separate_environments["
 WORLD_HEADER = (
     "| Cars | Time per step | Steps per second | Car-steps per second | Faster than real time |\n"
     "|-----:|--------------:|-----------------:|---------------------:|----------------------:|"
@@ -26,10 +29,15 @@ SENSE_HEADER = (
     "| Cars | Time to read every ray | Car readings per second |\n"
     "|-----:|-----------------------:|------------------------:|"
 )
+ENV_HEADER = (
+    "| Environment | Cars | Time per step | Car-steps per second |\n"
+    "|-------------|-----:|--------------:|---------------------:|"
+)
 
 
 def speed_table(results: Mapping[str, Any]) -> str:
-    """The README tables for the world step and sensor results, then where they were measured.
+    """The README tables for the world step, sensor, and environment results, then where they
+    were measured.
 
     Raises:
         ValueError: If the results have no world step measurements.
@@ -54,6 +62,7 @@ def speed_table(results: Mapping[str, Any]) -> str:
             cars = bench["extra_info"]["cars"]
             seconds = bench["stats"]["median"]
             rows.append(f"| {cars:,} | {_milliseconds(seconds)} | {cars / seconds:,.0f} |")
+    rows += _environment_rows(results)
     machine = results["machine_info"]
     cpu = machine["cpu"].get("brand_raw") or machine["processor"]
     rows.append(
@@ -62,6 +71,31 @@ def speed_table(results: Mapping[str, Any]) -> str:
         f"commit {results['commit_info'].get('id', 'unknown')[:7]}."
     )
     return "\n".join(rows)
+
+
+def _environment_rows(results: Mapping[str, Any]) -> list[str]:
+    """The RL environment table, and how much faster one world is than separate environments."""
+    together, apart = _measured(results, ONE_WORLD), _measured(results, SEPARATE)
+    if not together and not apart:
+        return []
+    rows = ["", "**RL environment**, every car's step with its observation and reward:", ""]
+    rows.append(ENV_HEADER)
+    measured = [("One world (`BatchedRacingEnv`)", bench) for bench in together]
+    measured += [("Separate (`SyncVectorEnv` of `RacingEnv`)", bench) for bench in apart]
+    for kind, bench in measured:
+        cars = bench["extra_info"]["cars"]
+        seconds = bench["stats"]["median"]
+        rows.append(f"| {kind} | {cars:,} | {_milliseconds(seconds)} | {cars / seconds:,.0f} |")
+    same = {bench["extra_info"]["cars"]: bench for bench in together}
+    for bench in apart:
+        cars = bench["extra_info"]["cars"]
+        if cars in same:
+            speedup = bench["stats"]["median"] / same[cars]["stats"]["median"]
+            rows.append(
+                f"\nWith {cars:,} cars, one world is {speedup:,.0f} times faster than "
+                f"{cars:,} separate environments."
+            )
+    return rows
 
 
 def _measured(results: Mapping[str, Any], name: str) -> list[Mapping[str, Any]]:

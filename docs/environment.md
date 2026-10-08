@@ -78,6 +78,40 @@ the environment from importing the drawing code. Instead, `gymnasium.make` build
 `mlracecar.play.environment.make_racing_env`, which hands it a `RaceViewer`
 (`mlracecar.render.viewer`) only when a render mode is asked for. pygame is only loaded then.
 
+## Many cars at once
+
+Training goes much faster with many runs at the same time. `BatchedRacingEnv`
+(`mlracecar.env.batched`) is a Gymnasium **vector environment**: `num_envs` cars in one world,
+each in its own run, moved, scored, and observed together. With 64 cars it's about 15 times
+faster than 64 separate `RacingEnv`s (the [speed table](https://github.com/taofuuu/MLRacecar#speed)).
+
+```python
+env = gymnasium.make_vec("MLRacecar-v0", num_envs=64,
+                         vectorization_mode="vector_entry_point", track="tracks/technical.json")
+observations, infos = env.reset(seed=42)  # observations: (64, 31)
+observations, rewards, terminated, truncated, infos = env.step(actions)  # actions: (64, 2)
+```
+
+The cars are ghosts that drive through each other, and each starts as if it were alone: on pole
+position, or at a random place drawn from its own random generator (`reset(seed=s)` gives car
+`i` the seed `s + i`, as Gymnasium's vector environments do). So every car's run is **exactly**
+what a single `RacingEnv` with the same seed would give, bit for bit. A test checks it against
+Gymnasium's `SyncVectorEnv` of separate environments.
+
+When a car's run ends it starts again by itself, while the others carry on. `autoreset_mode`
+(passed as a keyword to `make_vec`) says when:
+
+| Mode | The step that ends a run returns | The car's next step |
+|------|----------------------------------|---------------------|
+| `NextStep` (default) | Its last observation, with `info["end_reason"]` and `info["episode_terms"]`. | Restarts it instead of driving: reward 0, not ended. |
+| `SameStep` | The new run's first observation; the last one is in `info["final_obs"]`, the last info in `info["final_info"]`. | Drives on as usual. |
+
+Stable-Baselines3 works the `SameStep` way; its adapter comes with the first trained agent (M4).
+
+`infos` follows Gymnasium's vector convention: each key holds one entry per car, and
+`infos["_key"]` says which cars have it (for example, only cars whose run just ended have an
+`end_reason`). A best lap not yet set is `NaN` here, not `None`.
+
 ## Checks
 
 - Gymnasium's own checker (`gymnasium.utils.env_checker.check_env`) passes, for every render
@@ -85,3 +119,5 @@ the environment from importing the drawing code. Instead, `gymnasium.make` build
 - A random driver runs 10,000 steps without errors (`uv run pytest -m slow --no-cov`; a
   2,000-step version runs with every test run).
 - Runs repeat exactly from a seed.
+- `BatchedRacingEnv` gives exactly the transitions of separate environments with the same
+  seeds, in both autoreset modes, from the grid and from random starts.

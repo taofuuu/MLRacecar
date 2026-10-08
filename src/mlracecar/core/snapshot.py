@@ -6,6 +6,9 @@ snapshots alone.
 """
 
 from dataclasses import dataclass
+from typing import Self
+
+from numpy.typing import ArrayLike
 
 from mlracecar.core.race.events import RaceEvent
 from mlracecar.core.race.state import RaceState
@@ -26,3 +29,10 @@ class Snapshot:
     """Every car's race: where it is along the lap, its laps, and its times."""
     events: tuple[RaceEvent, ...]
     """What happened since the previous snapshot, in order."""
+
+    def select(self, cars: slice | ArrayLike) -> Self:
+        """The same moment for some of the cars: picked by index, by slice, or with a mask.
+
+        The events are left out: they number the cars as the whole snapshot does.
+        """
+        return type(self)(self.tick, self.time, self.cars.select(cars), self.race.select(cars), ())

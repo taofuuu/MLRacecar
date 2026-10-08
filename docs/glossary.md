@@ -169,6 +169,8 @@
 | **Training** | Running many episodes and adjusting the policy to get more reward. | `racecar train` |
 | **Evaluation** | Testing a trained policy without learning, to measure how good it is. | `racecar eval` |
 | **Gymnasium** | The standard Python interface for single-agent RL environments. | `RacingEnv` follows it ([The RL environment](environment.md)). |
+| **Vector environment** | Many copies of an environment stepped together: one call moves every copy, with one row per copy in each result. | `BatchedRacingEnv`: many cars in one world. |
+| **Autoreset** | A vector environment starting a copy's next run by itself when its run ends, while the others carry on. | `NextStep` or `SameStep`. |
 | **Render mode** | How an environment shows itself: `human` opens a window, `rgb_array` returns pictures (for videos). | `gymnasium.make(..., render_mode="human")`. |
 | **Dependency injection** | Handing a part the pieces it needs from outside, instead of it creating them itself, so it doesn't depend on them. | The environment is handed its viewer, so it never imports pygame. |
 | **PettingZoo** | The same idea as Gymnasium, for multiple agents at once. | Multi-car racing (M7). |
