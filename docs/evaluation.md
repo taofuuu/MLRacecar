@@ -27,6 +27,7 @@ uv run racecar eval --model runs/.../checkpoints/best --json best.json --markdow
 | `--start` | `random` | `random` places on the lap, or `grid`. |
 | `--set KEY=VALUE` | | Change one of the agents' settings for this evaluation. |
 | `--json FILE`, `--markdown FILE` | | Also save the report. |
+| `--record FOLDER` | | Save every run as a replay, to watch with `racecar replay` ([Replays](replays.md)). |
 
 The report is printed as Markdown; what's being driven goes to the error stream, so
 `racecar eval ... > report.md` saves just the report. A track with errors, a folder without a

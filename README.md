@@ -56,14 +56,17 @@ To train an AI driver, install the training libraries (about 2 GB) and start a r
 ```bash
 uv sync --extra train
 uv run racecar train configs/smoke.yaml
-uv run racecar eval --model runs/<run>/checkpoints/best
+uv run racecar eval --model runs/<run>/checkpoints/best --record replays
+uv run racecar replay replays/technical-A-01.npz
 ```
 
 The smoke run only checks that everything works, in a few seconds; `uv run racecar train` on
 its own trains properly. Everything about a run goes into a folder under `runs/`; watch it learn,
 with videos of the AI driving, in TensorBoard (`uv run tensorboard --logdir runs`).
-`racecar eval` then scores the saved AI, or compares several side by side. See
-[docs/training.md](docs/training.md) and [docs/evaluation.md](docs/evaluation.md).
+`racecar eval` then scores the saved AI, or compares several side by side, and `--record`
+saves each run it drives as a replay to watch with `racecar replay`. See
+[docs/training.md](docs/training.md), [docs/evaluation.md](docs/evaluation.md), and
+[docs/replays.md](docs/replays.md).
 
 ## Speed
 

@@ -242,7 +242,7 @@ class RaceRules:
             elif line == 0:
                 if checkpoint[car] > 0:  # a lap was under way: it ends here
                     time = crossing.at - float(lap_start[car])
-                    valid = bool(clean[car]) and checkpoint[car] == self._count - 1
+                    valid = bool(clean[car] and checkpoint[car] == self._count - 1)
                     edges = [0.0, *splits[car].tolist(), time]
                     sectors = tuple(after - before for before, after in itertools.pairwise(edges))
                     events.append(LapCompleted(car, time, sectors, valid, crossing.at))

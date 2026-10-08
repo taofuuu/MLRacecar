@@ -167,6 +167,8 @@ def test_a_clean_lap_counts_with_its_time_and_sectors() -> None:
 
     (lap,) = drive.laps()
     assert lap.valid
+    assert all(type(value) is float for value in (lap.time, *lap.sectors, lap.at))
+    assert (type(lap.car), type(lap.valid)) == (int, bool)  # plain values, for logs and replays
     assert lap.time == pytest.approx(LENGTH / 10.0, abs=1e-3)
     assert lap.at == drive.race.lap_start[0]  # the next lap starts as this one ends
     assert sum(lap.sectors) == pytest.approx(lap.time)

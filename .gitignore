@@ -26,6 +26,8 @@ site/
 
 # Training output (runs are reproducible from config + git SHA)
 runs/
+# Replays recorded by racecar eval --record (made again from the run's agent and a seed)
+replays/
 *.ckpt
 
 # Web demo

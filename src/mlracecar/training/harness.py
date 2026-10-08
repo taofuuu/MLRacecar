@@ -7,6 +7,10 @@ the same places for every agent, so agents are compared on the same runs, and di
 the places training tests on, so an agent picked as the best during training isn't flattered by
 the places it was picked on.
 
+With somewhere to record them, every run is also saved as a replay (`mlracecar.io.replay`),
+named after its track, agent, and number, such as ``technical-A-03.npz``: exactly the run that
+was scored, to watch with ``racecar replay``.
+
 A report says how each agent did on each track: the completion rate (the share of clean runs:
 until the time limit, never leaving the road), the laps and their mean and best times, the times
 off the road, the average speed and distance, and the score; and every run. It holds nothing
@@ -29,12 +33,13 @@ import numpy as np
 from mlracecar.agents.sb3 import CARD_FILE, MODEL_FILE, SB3Agent, check_compatible
 from mlracecar.config.files import load_config
 from mlracecar.config.models import RacecarConfig
-from mlracecar.core.track.model import Track
+from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.validation import has_errors, validate
 from mlracecar.env.batched import BatchedRacingEnv
 from mlracecar.io.model_card import read_model_card
-from mlracecar.io.track_file import read_track_file
-from mlracecar.training.evaluation import as_dict, drive_test_runs, summarize
+from mlracecar.io.replay import Replay, write_replay
+from mlracecar.io.track_file import TrackFile, read_track_file
+from mlracecar.training.evaluation import alone, as_dict, drive_test_runs, summarize
 
 SCHEMA_VERSION = 1
 """The report's format version."""
@@ -118,6 +123,7 @@ def evaluate(
     start: str = "random",
     overrides: Sequence[str] = (),
     progress: Callable[[str], None] = lambda line: None,
+    record: Path | None = None,
 ) -> Report:
     """Let every agent drive ``episodes`` runs on every track, and report how each went.
 
@@ -130,6 +136,7 @@ def evaluate(
             agent that drives the same way from the same place).
         overrides: The changes made to the agents' settings, to record in the report.
         progress: Told what's being driven, a line at a time.
+        record: A folder to save every run in as a replay, or ``None``.
 
     Raises:
         EvaluationError: If ``episodes`` is under 1, ``start`` is unknown, or a track has
@@ -156,19 +163,54 @@ def evaluate(
         "tracks": [],
     }
     for path in tracks:
-        name, track = _load_track(path)
+        track_file = _load_track(path)
+        track = track_file.to_track()
         results: dict[str, Any] = {}
-        for entrant in entrants:
+        for entrant, agent in zip(entrants, report["agents"], strict=True):
             progress(f"{entrant.label} on {path.as_posix()}: {episodes} runs")
             spec = BatchedRacingEnv(track, 1, entrant.config).observations.spec
             check_compatible(entrant.agent.card, spec, source=str(entrant.path))
-            runs = drive_test_runs(entrant.agent, track, entrant.config, seeds, start)
+            frames: list[Snapshot] = []
+            runs = drive_test_runs(
+                entrant.agent,
+                track,
+                entrant.config,
+                seeds,
+                start,
+                on_step=None if record is None else frames.append,
+            )
             results[entrant.label] = {
                 "summary": summarize(runs),
                 "runs": [as_dict(run) for run in runs],
             }
+            if record is not None:
+                dt = entrant.config.simulation.to_timing().decision_dt
+                for index, run in enumerate(runs):
+                    steps = round(run.seconds / dt)
+                    info = {
+                        "agent": {key: value for key, value in agent.items() if key != "settings"},
+                        "track": {"path": path.as_posix(), "name": track_file.name},
+                        "run": index + 1,
+                        "seed": seeds[index],
+                        "start": start,
+                        "result": as_dict(run),
+                    }
+                    replay = Replay(
+                        [alone(frame, index) for frame in frames[: steps + 1]],
+                        track_file,
+                        agent["settings"],
+                        info,
+                    )
+                    write_replay(
+                        replay, record / f"{path.stem}-{entrant.label}-{index + 1:02d}.npz"
+                    )
         report["tracks"].append(
-            {"path": path.as_posix(), "name": name, "sha256": _sha256(path), "results": results}
+            {
+                "path": path.as_posix(),
+                "name": track_file.name,
+                "sha256": _sha256(path),
+                "results": results,
+            }
         )
     return report
 
@@ -311,8 +353,8 @@ def _flatten(settings: Mapping[str, Any], prefix: str = "") -> dict[str, Any]:
     return flat
 
 
-def _load_track(path: Path) -> tuple[str, Track]:
-    """The track's name and the track, if it can be raced.
+def _load_track(path: Path) -> TrackFile:
+    """The track file, if its track can be raced.
 
     Raises:
         TrackFileError: If the file can't be read.
@@ -321,7 +363,7 @@ def _load_track(path: Path) -> tuple[str, Track]:
     track_file = read_track_file(path)
     if has_errors(validate(track_file.points, track_file.widths)):
         raise EvaluationError(f"{path}: the track has errors; `racecar check {path}` lists them")
-    return track_file.name, track_file.to_track()
+    return track_file
 
 
 def _sha256(path: Path) -> str:

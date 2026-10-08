@@ -176,6 +176,9 @@
 | **Gymnasium** | The standard Python interface for single-agent RL environments. | `RacingEnv` follows it ([The RL environment](environment.md)). |
 | **Vector environment** | Many copies of an environment stepped together: one call moves every copy, with one row per copy in each result. | `BatchedRacingEnv`: many cars in one world. |
 | **Autoreset** | A vector environment starting a copy's next run by itself when its run ends, while the others carry on. | `NextStep` or `SameStep`. |
+| **Replay** | A recording of a race, a picture of it for every driver decision, that can be watched again: paused, skipped through, slowed down or sped up. | `racecar eval --record`, `racecar replay` ([Replays](replays.md)). |
+| **Scrub** | Jump to any moment of a recording by dragging along its timeline. | The bar along the bottom of `racecar replay`. |
+| **npz** | NumPy's file format for several arrays at once: a zip of `.npy` files, optionally compressed. | Replay files, and the golden test recordings. |
 | **Render mode** | How an environment shows itself: `human` opens a window, `rgb_array` returns pictures (for videos). | `gymnasium.make(..., render_mode="human")`. |
 | **Dependency injection** | Handing a part the pieces it needs from outside, instead of it creating them itself, so it doesn't depend on them. | The environment is handed its viewer, so it never imports pygame. |
 | **PettingZoo** | The same idea as Gymnasium, for multiple agents at once. | Multi-car racing (M7). |

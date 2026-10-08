@@ -15,6 +15,7 @@ from mlracecar.config.files import ConfigError, format_config, load_config
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
 from mlracecar.editor.document import TrackDocument
+from mlracecar.io.replay import Replay, ReplayError, read_replay
 from mlracecar.io.track_file import TrackFileError, read_track_file
 
 if TYPE_CHECKING:
@@ -300,6 +301,12 @@ def evaluate(
     markdown_file: Annotated[
         Path | None, typer.Option("--markdown", help="Also save the Markdown report here.")
     ] = None,
+    record: Annotated[
+        Path | None,
+        typer.Option(
+            metavar="FOLDER", help="Save every run here as a replay, to watch: racecar replay."
+        ),
+    ] = None,
 ) -> None:
     """Score saved agents on tracks, from the same start places every time, and print a report.
 
@@ -328,6 +335,7 @@ def evaluate(
             start,
             changes,
             progress=lambda line: typer.echo(line, err=True),
+            record=record,
         )
     except (
         ConfigError,
@@ -347,6 +355,50 @@ def evaluate(
         markdown_file.parent.mkdir(parents=True, exist_ok=True)
         markdown_file.write_text(text, encoding="utf-8", newline="\n")
         typer.echo(f"Saved the Markdown in {markdown_file}", err=True)
+    if record is not None:
+        typer.echo(f"Saved every run as a replay in {record}", err=True)
+
+
+@app.command()
+def replay(
+    file: Annotated[
+        Path, typer.Argument(help="A replay, e.g. one that racecar eval --record saved.")
+    ],
+) -> None:
+    """Watch a recorded race.
+
+    Space plays or pauses, Left and Right skip a second, Up and Down change the speed (x0.25 to
+    x4), Home and End jump to the start and the end, and clicking or dragging the bar along the
+    bottom goes anywhere. C changes the camera and 1-4 the overlays, as in racecar drive. Needs
+    the `render` extra (pygame). Exits with status 1 if the replay can't be read.
+    """
+    try:
+        recorded = read_replay(file)
+        config = load_config(base=(str(file), recorded.settings))
+    except (ReplayError, ConfigError) as error:
+        typer.echo(str(error), err=True)
+        raise typer.Exit(1) from None
+    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+    try:
+        from mlracecar.play.replay import run_replay  # here, not at the top: pygame is optional
+    except ModuleNotFoundError as error:
+        if error.name != "pygame":
+            raise
+        typer.echo(
+            "Watching replays needs pygame. Install it with: pip install 'mlracecar[render]'",
+            err=True,
+        )
+        raise typer.Exit(1) from None
+    run_replay(recorded, config, _replay_title(recorded))
+
+
+def _replay_title(recorded: Replay) -> str:
+    """The track's name, and who drove which run if the replay says: ``Oval - A, run 3``."""
+    agent = recorded.info.get("agent")
+    label = agent.get("label") if isinstance(agent, dict) else None
+    run = recorded.info.get("run")
+    who = ", ".join(part for part in (label, None if run is None else f"run {run}") if part)
+    return f"{recorded.track.name} - {who}" if who else recorded.track.name
 
 
 def _need_training_libraries(error: ImportError, doing: str) -> NoReturn:

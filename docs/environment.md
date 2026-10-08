@@ -113,6 +113,11 @@ Stable-Baselines3 works the `SameStep` way; its adapter comes with the first tra
 `infos["_key"]` says which cars have it (for example, only cars whose run just ended have an
 `end_reason`). A lap time not yet set is `NaN` here, not `None`.
 
+`env.stepped` is the world as the latest step left every car's run, before any car started
+again, with what happened in the step (its race events). Restarting a car replaces the world's
+snapshot and drops the step's events, so recording a run (a [replay](replays.md)) uses
+`stepped`.
+
 ## Checks
 
 - Gymnasium's own checker (`gymnasium.utils.env_checker.check_env`) passes, for every render
