@@ -10,9 +10,12 @@ from pydantic import BaseModel, ValidationError
 
 from mlracecar.config.models import (
     OBSERVATION_INPUTS,
+    REWARD_TERMS,
+    EpisodeConfig,
     ObservationConfig,
     RacecarConfig,
     RaceConfig,
+    RewardConfig,
     SensorConfig,
     SimulationConfig,
     VehicleConfig,
@@ -28,6 +31,8 @@ SECTIONS: list[type[BaseModel]] = [
     RaceConfig,
     SensorConfig,
     ObservationConfig,
+    RewardConfig,
+    EpisodeConfig,
 ]
 
 
@@ -162,6 +167,32 @@ def test_every_input_can_be_turned_on_and_off() -> None:
     assert list(ObservationConfig.model_fields)[: len(OBSERVATION_INPUTS)] == list(
         OBSERVATION_INPUTS
     )
+
+
+def test_every_reward_term_has_a_weight_in_order() -> None:
+    assert tuple(RewardConfig.model_fields) == REWARD_TERMS
+
+
+def test_the_reward_starts_with_progress_and_the_road_penalty_only() -> None:
+    weights = RewardConfig().model_dump()
+
+    assert {term: weight for term, weight in weights.items() if weight} == {
+        "progress": 0.1,
+        "off_track": 10.0,
+    }
+
+
+@pytest.mark.parametrize("term", REWARD_TERMS)
+def test_reward_weights_cannot_be_negative(term: str) -> None:
+    # Each term already knows whether it adds or takes away points.
+    with pytest.raises(ValidationError):
+        RewardConfig.model_validate({term: -1.0})
+
+
+@pytest.mark.parametrize(("setting", "value"), [("time_limit", 0.0), ("stuck_time", 0.0)])
+def test_runs_need_some_time(setting: str, value: float) -> None:
+    with pytest.raises(ValidationError):
+        EpisodeConfig.model_validate({setting: value})
 
 
 def test_the_sensors_can_see_all_the_way_round() -> None:

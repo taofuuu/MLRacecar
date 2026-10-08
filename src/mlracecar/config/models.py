@@ -50,6 +50,9 @@ OBSERVATION_INPUTS = (
 )
 """The inputs an observation can have, in the order they appear in it."""
 
+REWARD_TERMS = ("progress", "off_track", "time", "wrong_way", "smoothness", "lap")
+"""The parts of the reward, each with its own weight in the reward settings."""
+
 
 class VehicleConfig(BaseModel):
     """The car. The defaults describe a light race car: quick, and very grippy and hard-braking."""
@@ -200,6 +203,38 @@ class ObservationConfig(BaseModel):
         return self
 
 
+class RewardConfig(BaseModel):
+    """How the AI is scored each step: points for progress, points off for mistakes."""
+
+    model_config = _SETTINGS
+
+    progress: NonNegative = 0.1
+    """Points per metre gained along the lap; going backwards loses them."""
+    off_track: NonNegative = 10.0
+    """Points lost each time the car's centre leaves the road."""
+    time: NonNegative = 0.0
+    """Points lost per second of racing."""
+    wrong_way: NonNegative = 0.0
+    """Points lost per second spent driving the wrong way."""
+    smoothness: NonNegative = 0.0
+    """Points lost per squared change of steering and pedal between decisions."""
+    lap: NonNegative = 0.0
+    """Points for each valid lap."""
+
+
+class EpisodeConfig(BaseModel):
+    """When a car's run (episode) ends while the AI trains."""
+
+    model_config = _SETTINGS
+
+    end_off_track: bool = True
+    """End the run as soon as the car's centre leaves the road."""
+    time_limit: Positive = 60.0
+    """The longest a run lasts, in seconds of racing."""
+    stuck_time: Positive = 5.0
+    """End the run after this many seconds in a row slower than 1 m/s."""
+
+
 class RacecarConfig(BaseModel):
     """Every setting, in sections. `mlracecar.config.files.load_config` builds one from files."""
 
@@ -215,3 +250,7 @@ class RacecarConfig(BaseModel):
     """The car's distance sensors: how many rays, how wide they fan, and how far they reach."""
     observation: ObservationConfig = Field(default_factory=ObservationConfig)
     """What the AI sees: each input can be turned off with false."""
+    reward: RewardConfig = Field(default_factory=RewardConfig)
+    """How the AI is scored: the weight of each part of the reward (0 turns it off)."""
+    episode: EpisodeConfig = Field(default_factory=EpisodeConfig)
+    """When a training run ends: leaving the road, the time limit, or getting stuck."""
