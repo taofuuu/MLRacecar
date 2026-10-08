@@ -1,0 +1,22 @@
+# A tiny training run that only checks everything works end to end, in seconds:
+#
+#     uv run racecar train configs/smoke.yaml
+#
+# It trains for about 2,000 car-steps, far too few to learn to drive. CI runs it on every pull
+# request (the `slow` tests).
+
+training:
+  steps: 2048
+  cars: 8
+  checkpoint_every: 1024
+  eval_every: 1024
+  eval_runs: 3
+
+ppo:
+  steps_per_car: 64
+  batch_size: 128
+  epochs: 2
+  layer_size: 32
+
+episode:
+  time_limit: 10

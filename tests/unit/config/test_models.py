@@ -13,11 +13,13 @@ from mlracecar.config.models import (
     REWARD_TERMS,
     EpisodeConfig,
     ObservationConfig,
+    PPOConfig,
     RacecarConfig,
     RaceConfig,
     RewardConfig,
     SensorConfig,
     SimulationConfig,
+    TrainingConfig,
     VehicleConfig,
 )
 from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
@@ -33,6 +35,8 @@ SECTIONS: list[type[BaseModel]] = [
     ObservationConfig,
     RewardConfig,
     EpisodeConfig,
+    TrainingConfig,
+    PPOConfig,
 ]
 
 
@@ -200,6 +204,36 @@ def test_every_start_can_be_chosen_in_the_settings() -> None:
 
     assert set(choices) == {start.value for start in StartPosition}
     assert EpisodeConfig().start == "grid"
+
+
+def test_training_defaults_to_the_technical_track_on_the_cpu() -> None:
+    training = TrainingConfig()
+
+    assert (training.track, training.cars, training.device) == ("tracks/technical.json", 16, "cpu")
+    assert PPOConfig().batch_size == 256  # divides 16 cars x 128 steps
+
+
+@pytest.mark.parametrize(
+    ("section", "setting", "value"),
+    [
+        (TrainingConfig, "steps", 0),
+        (TrainingConfig, "cars", 0),
+        (TrainingConfig, "seed", -1),
+        (TrainingConfig, "device", "tpu"),
+        (TrainingConfig, "track", ""),
+        (PPOConfig, "steps_per_car", 1),
+        (PPOConfig, "batch_size", 1),
+        (PPOConfig, "gamma", 1.5),
+        (PPOConfig, "gae_lambda", -0.1),
+        (PPOConfig, "learning_rate", 0.0),
+        (PPOConfig, "layers", 0),
+    ],
+)
+def test_impossible_training_settings_are_rejected(
+    section: type[BaseModel], setting: str, value: object
+) -> None:
+    with pytest.raises(ValidationError):
+        section.model_validate({setting: value})
 
 
 def test_the_sensors_can_see_all_the_way_round() -> None:

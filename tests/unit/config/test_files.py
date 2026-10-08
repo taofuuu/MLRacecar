@@ -21,11 +21,13 @@ from mlracecar.config.models import (
     REWARD_TERMS,
     EpisodeConfig,
     ObservationConfig,
+    PPOConfig,
     RacecarConfig,
     RaceConfig,
     RewardConfig,
     SensorConfig,
     SimulationConfig,
+    TrainingConfig,
     VehicleConfig,
 )
 
@@ -338,6 +340,28 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         stuck_time=draw(positive),
         start=draw(st.sampled_from(["grid", "random"])),
     )
+    training = TrainingConfig(
+        track=draw(st.sampled_from(["tracks/oval.json", "my track.json", "on"])),
+        steps=draw(whole),
+        cars=draw(whole),
+        seed=draw(st.integers(0, 2**32)),
+        device=draw(st.sampled_from(["cpu", "cuda", "auto"])),
+        checkpoint_every=draw(whole),
+        eval_every=draw(whole),
+        eval_runs=draw(whole),
+    )
+    ppo = PPOConfig(
+        learning_rate=draw(positive),
+        steps_per_car=draw(st.integers(2, 10**6)),
+        batch_size=draw(st.integers(2, 10**6)),
+        epochs=draw(whole),
+        gamma=draw(st.floats(0, 1, exclude_min=True)),
+        gae_lambda=draw(st.floats(0, 1)),
+        clip_range=draw(positive),
+        entropy_coef=draw(non_negative),
+        layers=draw(whole),
+        layer_size=draw(whole),
+    )
     return RacecarConfig(
         vehicle=vehicle,
         simulation=simulation,
@@ -346,6 +370,8 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         observation=observation,
         reward=reward,
         episode=episode,
+        training=training,
+        ppo=ppo,
     )
 
 
@@ -411,6 +437,8 @@ def test_written_settings_explain_every_line() -> None:
         ObservationConfig,
         RewardConfig,
         EpisodeConfig,
+        TrainingConfig,
+        PPOConfig,
     )
     assert len(settings) == sum(len(section.model_fields) for section in sections)
     assert all("  # " in line for line in settings)

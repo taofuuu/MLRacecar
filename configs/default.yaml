@@ -62,3 +62,27 @@ episode:
   time_limit: 60       # The longest a run lasts, in seconds of racing.
   stuck_time: 5        # End the run after this many seconds in a row slower than 1 m/s.
   start: grid          # Where runs start: grid, or random (anywhere on the lap).
+
+# A training run: the track, how long, how many cars, and how often to save and test.
+training:
+  track: tracks/technical.json  # The track file to train on.
+  steps: 1000000                # How long to train, in car-steps (16 cars x 1 step = 16).
+  cars: 16                      # Cars practising at once, in one world.
+  seed: 0                       # Same settings + same seed = the same run.
+  device: cpu                   # Where the network learns: cpu (fastest here), cuda, or auto.
+  checkpoint_every: 100000      # Save the AI every this many car-steps, and at the end.
+  eval_every: 50000             # Test it every this many car-steps, and at the end.
+  eval_runs: 10                 # Test runs, from the same random places each time.
+
+# How PPO, the learning algorithm, learns.
+ppo:
+  learning_rate: 0.0003  # How big each learning step is.
+  steps_per_car: 128     # Steps each car drives between updates (x cars = experience per update).
+  batch_size: 256        # Steps per learning step; must divide the experience per update.
+  epochs: 10             # Passes over each update's experience.
+  gamma: 0.99            # Discount: how much later rewards count (0.99: about 5 s ahead).
+  gae_lambda: 0.95       # GAE lambda: trades a little accuracy for less noise in the advantages.
+  clip_range: 0.2        # How far one update may move the policy (the clip, epsilon).
+  entropy_coef: 0        # Bonus for staying random, to keep exploring.
+  layers: 2              # Hidden layers in the policy and value networks.
+  layer_size: 64         # Neurons in each hidden layer.
