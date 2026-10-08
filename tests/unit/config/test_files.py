@@ -17,6 +17,8 @@ from mlracecar.config.files import (
     read_config_file,
 )
 from mlracecar.config.models import (
+    OBSERVATION_INPUTS,
+    ObservationConfig,
     RacecarConfig,
     RaceConfig,
     SensorConfig,
@@ -228,10 +230,17 @@ def test_every_problem_is_listed_with_where_it_came_from(tmp_path: Path) -> None
                                 "'terminate', got \"fast\""),
         ("vehicle.wheelbase=5", "vehicle.wheelbase: must be shorter than the car's length (4.5 m), "
                                 "got 5"),
+        ("observation.rays=1", "observation.rays: must be true or false, got 1"),
     ],
 )  # fmt: skip
 def test_problems_are_explained_in_plain_words(override: str, problem: str) -> None:
     assert problems(overrides=[override]) == [f"{problem} (from --set)"]
+
+
+def test_turning_off_every_input_says_so_without_repeating_them_all() -> None:
+    overrides = [f"observation.{name}=false" for name in OBSERVATION_INPUTS]
+
+    assert problems(overrides=overrides) == ["observation: turn on at least one input (from --set)"]
 
 
 def test_setting_names_must_be_text(tmp_path: Path) -> None:
@@ -309,7 +318,19 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         field_of_view=draw(st.floats(0, 360, exclude_min=True)),
         range=draw(positive),
     )
-    return RacecarConfig(vehicle=vehicle, simulation=simulation, race=race, sensors=sensors)
+    inputs = draw(
+        st.lists(
+            st.booleans(), min_size=len(OBSERVATION_INPUTS), max_size=len(OBSERVATION_INPUTS)
+        ).filter(any)
+    )
+    observation = ObservationConfig(
+        **dict(zip(OBSERVATION_INPUTS, inputs, strict=True)),
+        lookahead=draw(positive),
+        lookahead_points=draw(whole),
+    )
+    return RacecarConfig(
+        vehicle=vehicle, simulation=simulation, race=race, sensors=sensors, observation=observation
+    )
 
 
 class Texts(BaseModel):
@@ -336,13 +357,23 @@ def test_text_is_quoted_only_where_yaml_would_read_it_as_something_else() -> Non
 
 
 def test_a_setting_without_a_yaml_form_is_not_written() -> None:
-    class Switches(BaseModel):
-        enabled: bool = True
+    class Lists(BaseModel):
+        items: list[int] = [1, 2]
 
-    config = RacecarConfig.model_construct(vehicle=Switches())  # type: ignore[arg-type]
+    config = RacecarConfig.model_construct(vehicle=Lists())  # type: ignore[arg-type]
 
-    with pytest.raises(TypeError, match="no YAML form for bool settings"):
+    with pytest.raises(TypeError, match="no YAML form for list settings"):
         format_config(config)
+
+
+def test_on_off_settings_are_written_as_true_and_false() -> None:
+    config = RacecarConfig(observation=ObservationConfig(rays=False))
+
+    text = format_config(config)
+
+    assert "  rays: false " in text
+    assert "  speed: true " in text
+    assert RacecarConfig.model_validate(parse_config_text(text)) == config
 
 
 @given(configs())
@@ -356,7 +387,7 @@ def test_written_settings_explain_every_line() -> None:
     lines = format_config(RacecarConfig()).splitlines()
 
     settings = [line for line in lines if line.startswith("  ")]
-    sections = (VehicleConfig, SimulationConfig, RaceConfig, SensorConfig)
+    sections = (VehicleConfig, SimulationConfig, RaceConfig, SensorConfig, ObservationConfig)
     assert len(settings) == sum(len(section.model_fields) for section in sections)
     assert all("  # " in line for line in settings)
     assert all(len(line) <= 100 for line in lines)
