@@ -258,6 +258,8 @@ class TrainingConfig(BaseModel):
     """Test it every this many car-steps, and at the end."""
     eval_runs: Annotated[int, Field(ge=1)] = 10
     """Test runs, from the same random places each time."""
+    video_every: Annotated[int, Field(ge=0)] = 200_000
+    """Film it from the grid every this many car-steps (0: never)."""
 
 
 class PPOConfig(BaseModel):

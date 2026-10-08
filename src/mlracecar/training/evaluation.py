@@ -4,19 +4,22 @@ Every test run is one car's run in a `BatchedRacingEnv`, all of them at once, so
 about as long as one. Each car's run is exactly what a single `RacingEnv` with the same seed
 would give, so the results are the same whichever way they're driven, and the same every time
 for the same agent and seeds (a deterministic agent drives the same way from the same place).
+That's also how `film_run` films a test run: alone, in a `RacingEnv` that draws.
 """
 
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 from mlracecar.agents.base import Agent
 from mlracecar.config.models import REWARD_TERMS, RacecarConfig
 from mlracecar.core.track.model import Track
 from mlracecar.env.batched import BatchedRacingEnv
+from mlracecar.env.racing import RacingEnv, ViewerFactory
 
 
 @dataclass(frozen=True)
@@ -86,6 +89,48 @@ def drive_test_runs(
             )
         driving &= ~ended
     return [result for result in results if result is not None]
+
+
+def film_run(
+    agent: Agent,
+    track: Track,
+    config: RacecarConfig,
+    seed: int,
+    start: str,
+    viewer: ViewerFactory,
+) -> Generator[NDArray[np.uint8], None, None]:
+    """The pictures of the test run that `drive_test_runs` drives with ``seed`` and ``start``:
+    one at the start and one after each step, until the run ends.
+
+    They're made one at a time, as they're asked for, so a long run doesn't have to fit in
+    memory: a minute of racing is 1,201 pictures. Closing it early closes the environment.
+
+    Args:
+        agent: The driver.
+        track: Where to drive.
+        config: Every setting; the same as the agent's environment had in training.
+        seed: Where a random start is.
+        start: ``"random"`` or ``"grid"``.
+        viewer: Makes the viewer that draws the pictures.
+    """
+    env = RacingEnv(track, config, render_mode="rgb_array", viewer=viewer)
+    try:
+        observation, _ = env.reset(seed=seed, options={"start": start})
+        agent.reset()
+        while True:
+            yield _picture(env)
+            observation, _, terminated, truncated, _ = env.step(agent.act(observation[None])[0])
+            if terminated or truncated:
+                yield _picture(env)
+                return
+    finally:
+        env.close()
+
+
+def _picture(env: RacingEnv) -> NDArray[np.uint8]:
+    picture = env.render()
+    assert picture is not None  # drawn as pictures, not in a window
+    return picture
 
 
 def summarize(results: Sequence[RunResult]) -> dict[str, Any]:

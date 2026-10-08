@@ -10,7 +10,8 @@ everything needed to reproduce or check the result in one folder::
     │   ├── step_000100000/      the agent every `training.checkpoint_every` steps
     │   ├── best/                the agent that scored best in testing
     │   └── last/                the latest agent: what --resume carries on from
-    └── eval/evaluations.jsonl   one line per test: the score and how the runs went
+    ├── eval/evaluations.jsonl   one line per test: the score and how the runs went
+    └── tensorboard/             charts of how training is going, and videos
 
 Each saved agent is an `SB3Agent` folder: the model and its model card.
 
@@ -18,6 +19,11 @@ Each saved agent is an `SB3Agent` folder: the model and its model card.
 `training.eval_runs` runs without learning, from random places on the lap that are the same at
 every test, so scores are comparable. The score is the runs' mean reward. One run from the grid
 is reported too, for information. The best-scoring agent is kept in ``checkpoints/best``.
+
+**Tracking.** A `Tracker` (by default TensorBoard, in ``tensorboard/``) gets Stable-Baselines3's
+own numbers after every update, the practice runs' racing numbers (`metrics.PracticeRuns`), each
+test's, and every `training.video_every` steps and at the end, a video of the test run from the
+grid, if there's a viewer to draw it.
 
 **Reproducible.** On the CPU, the same settings and seed give the same run: the same agent and
 the same test results (a test checks it). Everything random is seeded from `training.seed`.
@@ -44,7 +50,9 @@ import torch
 from gymnasium.vector import AutoresetMode
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import Logger
 from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.vec_env import VecMonitor
 
 from mlracecar.agents.sb3 import SB3Agent, git_commit, library_versions, make_model_card
 from mlracecar.config.files import format_config, load_config
@@ -52,15 +60,20 @@ from mlracecar.config.models import RacecarConfig
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
 from mlracecar.env.batched import BatchedRacingEnv
+from mlracecar.env.racing import ViewerFactory
 from mlracecar.io.model_card import ModelCard
 from mlracecar.io.track_file import read_track_file
-from mlracecar.training.evaluation import as_dict, drive_test_runs, summarize
+from mlracecar.training.evaluation import as_dict, drive_test_runs, film_run, summarize
+from mlracecar.training.metrics import PracticeRuns, evaluation_scalars
+from mlracecar.training.tracking import SB3Output, TensorBoardTracker, Tracker
 from mlracecar.training.vec_env import SB3VecEnv
 
 CONFIG_FILE = "config.yaml"
 META_FILE = "meta.json"
 CHECKPOINTS = "checkpoints"
 EVALUATIONS = Path("eval") / "evaluations.jsonl"
+TENSORBOARD = "tensorboard"
+GRID_VIDEO = "test/grid_run"
 BEST = "best"
 LAST = "last"
 
@@ -160,18 +173,28 @@ class TrainingRun:
             )
         return cls(folder, load_config([folder / CONFIG_FILE]), meta)
 
-    def train(self, report: Report = print) -> Outcome:
+    def train(
+        self,
+        report: Report = print,
+        viewer: ViewerFactory | None = None,
+        tracker: Tracker | None = None,
+    ) -> Outcome:
         """Train until `training.steps` car-steps, testing and saving along the way.
 
         Ctrl+C stops it cleanly: the agent is saved to ``checkpoints/last`` first.
+
+        Args:
+            report: Where to say how it's going.
+            viewer: Draws the test videos; without one, there are none.
+            tracker: Where the numbers and videos go. By default TensorBoard, in the run's
+                ``tensorboard`` folder (closed at the end); one given is left open.
         """
         training, ppo = self.config.training, self.config.ppo
         track = _load_track(Path(self.meta["track"]["path"]))
-        env = SB3VecEnv(
-            BatchedRacingEnv(
-                track, training.cars, self.config, autoreset_mode=AutoresetMode.SAME_STEP
-            )
+        cars = BatchedRacingEnv(
+            track, training.cars, self.config, autoreset_mode=AutoresetMode.SAME_STEP
         )
+        env = VecMonitor(SB3VecEnv(cars))  # for Stable-Baselines3's rollout/ep_rew_mean
         last = self.directory / CHECKPOINTS / LAST / "model.zip"
         if last.is_file():
             model = PPO.load(last, env=env, device=training.device)
@@ -195,10 +218,13 @@ class TrainingRun:
                 seed=training.seed,
                 verbose=0,
             )
+        own_tracker = tracker is None
+        tracker = TensorBoardTracker(self.directory / TENSORBOARD) if tracker is None else tracker
+        model.set_logger(Logger(None, [SB3Output(tracker)]))
         card = make_model_card(
-            model, self.config, env.env.observations.spec, {"run": self.meta["name"]}
+            model, self.config, cars.observations.spec, {"run": self.meta["name"]}
         )
-        progress = _Progress(self, track, card, report)
+        progress = _Progress(self, track, card, report, tracker, viewer)
         session: dict[str, Any] = {
             "started": datetime.now(UTC).isoformat(),
             "from_step": model.num_timesteps,
@@ -220,6 +246,10 @@ class TrainingRun:
                 progress.test(model, steps)
             if progress.saved_at != steps:
                 progress.save(model, _step_folder(steps), steps)
+            if progress.filmed_at != steps:
+                progress.film(model, steps)
+        if own_tracker:
+            tracker.close()
         seconds = time.perf_counter() - clock
         session |= {
             "ended": datetime.now(UTC).isoformat(),
@@ -254,35 +284,57 @@ class TrainingRun:
 
 
 class _Progress(BaseCallback):
-    """Saves and tests the agent as training goes, and says how it's going."""
+    """Saves, tests, and films the agent as training goes, tracks how the practice runs and
+    tests are going, and says how it's going."""
 
-    def __init__(self, run: TrainingRun, track: Track, card: ModelCard, report: Report) -> None:
+    def __init__(
+        self,
+        run: TrainingRun,
+        track: Track,
+        card: ModelCard,
+        report: Report,
+        tracker: Tracker,
+        viewer: ViewerFactory | None,
+    ) -> None:
         super().__init__()
         self.run = run
         self.track = track
         self.card = card
         self.report = report
+        self.tracker = tracker
+        self.viewer = viewer if run.config.training.video_every else None
+        self.practice = PracticeRuns(run.config.simulation.to_timing().decision_dt)
         self.saved_at = -1
         self.tested_at = -1
+        self.filmed_at = -1
         self.clock = time.perf_counter()
 
     def _on_training_start(self) -> None:
         training = self.run.config.training
         steps = self.model.num_timesteps
-        self.next_save = (steps // training.checkpoint_every + 1) * training.checkpoint_every
-        self.next_test = (steps // training.eval_every + 1) * training.eval_every
+        self.next_save = _next(steps, training.checkpoint_every)
+        self.next_test = _next(steps, training.eval_every)
+        self.next_video = _next(steps, training.video_every) if training.video_every else None
 
     def _on_step(self) -> bool:
         training = self.run.config.training
         steps = self.num_timesteps
+        self.practice.add(self.locals["infos"], self.locals["dones"])
         if steps >= self.next_save:
             self.save(self.model, _step_folder(steps), steps)
             self.save(self.model, LAST, steps)
-            self.next_save = (steps // training.checkpoint_every + 1) * training.checkpoint_every
+            self.next_save = _next(steps, training.checkpoint_every)
         if steps >= self.next_test:
             self.test(self.model, steps)
-            self.next_test = (steps // training.eval_every + 1) * training.eval_every
+            self.next_test = _next(steps, training.eval_every)
+            if self.next_video is not None and steps >= self.next_video:
+                self.film(self.model, steps)
+                self.next_video = _next(steps, training.video_every)
         return True
+
+    def _on_rollout_end(self) -> None:
+        if values := self.practice.scalars():
+            self.tracker.scalars(self.num_timesteps, values)
 
     def save(self, model: Any, folder: str, steps: int) -> None:
         """Save the agent, with its card, to ``checkpoints/<folder>``."""
@@ -300,6 +352,7 @@ class _Progress(BaseCallback):
         runs = drive_test_runs(agent, self.track, config, run.meta["seeds"]["tests"])
         grid = drive_test_runs(agent, self.track, config, [config.training.seed], start="grid")[0]
         summary = summarize(runs)
+        self.tracker.scalars(steps, evaluation_scalars(summary, grid))
         record = {
             "step": steps,
             "seconds": round(time.perf_counter() - self.clock, 3),
@@ -325,6 +378,22 @@ class _Progress(BaseCallback):
             f"{'  (best)' if improved else '        '}  {summary['distance']:6.0f} m"
             f"  laps {summary['laps']}  best lap {lap}  grid {grid.distance:.0f} m"
         )
+
+    def film(self, model: Any, steps: int) -> None:
+        """Film the test run from the grid for the tracker, if there's a viewer to draw it."""
+        if self.viewer is None:
+            return
+        config = self.run.config
+        agent = SB3Agent(model, self.card)
+        frames = film_run(agent, self.track, config, config.training.seed, "grid", self.viewer)
+        fps = 1 / config.simulation.to_timing().decision_dt
+        self.tracker.video(steps, GRID_VIDEO, frames, fps)
+        self.filmed_at = steps
+
+
+def _next(steps: int, every: int) -> int:
+    """The first multiple of ``every`` after ``steps``."""
+    return (steps // every + 1) * every
 
 
 def _check_batches(config: RacecarConfig) -> None:

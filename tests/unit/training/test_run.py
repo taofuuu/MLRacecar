@@ -6,6 +6,7 @@ Skipped where the training libraries aren't installed (``uv sync --extra train``
 
 import json
 import shutil
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -14,14 +15,21 @@ import pytest
 
 pytest.importorskip("stable_baselines3")
 
+from numpy.typing import NDArray
 from stable_baselines3 import PPO
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 from mlracecar.agents.sb3 import SB3Agent
 from mlracecar.config.files import load_config
 from mlracecar.config.models import RacecarConfig
+from mlracecar.core.geometry import FloatArray
+from mlracecar.core.snapshot import Snapshot
+from mlracecar.core.track.model import Track
+from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.env.batched import BatchedRacingEnv
 from mlracecar.io.track_file import TrackFile, write_track_file
 from mlracecar.training.run import TrainingError, TrainingRun
+from mlracecar.training.tracking import Frame
 
 TECHNICAL = Path(__file__).parents[3] / "tracks" / "technical.json"
 
@@ -43,6 +51,45 @@ def tiny(track: Path = TECHNICAL, **changes: Any) -> RacecarConfig:
     for section, values in changes.items():
         settings[section] = settings.get(section, {}) | values
     return RacecarConfig.model_validate(settings)
+
+
+class Recorder:
+    """A tracker that keeps everything it's given."""
+
+    def __init__(self) -> None:
+        self.numbers: list[tuple[int, dict[str, float]]] = []
+        self.videos: list[tuple[int, str, int, float]] = []
+        """Each video's step, name, number of pictures, and pictures a second."""
+
+    def scalars(self, step: int, values: Mapping[str, float]) -> None:
+        self.numbers.append((step, dict(values)))
+
+    def video(self, step: int, name: str, frames: Iterable[Frame], fps: float) -> None:
+        self.videos.append((step, name, len(list(frames)), fps))
+
+    def close(self) -> None:
+        raise AssertionError("a tracker that was given is left open")
+
+    def steps_of(self, name: str) -> list[int]:
+        """The steps at which ``name`` was recorded."""
+        return [step for step, values in self.numbers if name in values]
+
+
+class Pictures:
+    """A viewer that draws tiny grey pictures."""
+
+    def __init__(self, track: Track, car: VehicleParams, mode: str, fps: float) -> None:
+        pass
+
+    def render(self, snapshot: Snapshot, rays: FloatArray | None) -> NDArray[np.uint8]:
+        return np.full((4, 6, 3), 128, dtype=np.uint8)
+
+    def close(self) -> None:
+        pass
+
+
+def practice_steps(recorder: Recorder) -> list[int]:
+    return recorder.steps_of("practice/score")
 
 
 def results(run: TrainingRun) -> list[dict[str, Any]]:
@@ -121,6 +168,96 @@ def test_the_end_of_a_run_is_always_tested_and_saved(tmp_path: Path) -> None:
     assert [test["step"] for test in run.evaluations()] == [192, 256]
     checkpoints = sorted(path.name for path in (run.directory / "checkpoints").iterdir())
     assert checkpoints == ["best", "last", "step_000000192", "step_000000256"]
+
+
+# --------------------------------------------------------------------------- #
+# Tracking
+# --------------------------------------------------------------------------- #
+
+
+def test_the_tracker_gets_learning_practice_and_test_numbers(tmp_path: Path) -> None:
+    recorder = Recorder()
+    run = TrainingRun.start(tiny(), tmp_path)
+
+    run.train(report=lambda line: None, tracker=recorder)
+
+    updates = recorder.steps_of("train/loss")  # Stable-Baselines3's, after every update
+    assert updates == [128, 192, 256]  # written after the next rollout, as SB3 does
+    assert recorder.steps_of("time/fps") == [64, 128, 192, 256]
+    assert recorder.steps_of("rollout/ep_rew_mean") == practice_steps(recorder)
+    practice = practice_steps(recorder)  # once the first practice runs have ended
+    assert practice
+    assert practice == sorted(practice)
+    assert set(practice) <= {64, 128, 192, 256}
+    assert recorder.steps_of("test/score") == [128, 256]
+    tests = [values for _, values in recorder.numbers if "test/score" in values]
+    for values, test in zip(tests, run.evaluations(), strict=True):
+        assert values["test/score"] == test["score"]
+        assert values["test/grid_distance"] == test["grid"]["distance"]
+        assert sum(values[name] for name in values if name.startswith("test_ends/")) == 1.0
+
+
+@pytest.mark.parametrize(
+    ("video_every", "steps"),
+    [
+        (200_000, [256]),  # the default: only at the end, in a run this short
+        (128, [128, 256]),
+        (0, []),
+    ],
+)
+def test_the_grid_run_is_filmed_every_so_often_and_at_the_end(
+    video_every: int, steps: list[int], tmp_path: Path
+) -> None:
+    recorder = Recorder()
+    run = TrainingRun.start(tiny(training={"video_every": video_every}), tmp_path)
+
+    run.train(report=lambda line: None, viewer=Pictures, tracker=recorder)
+
+    assert [video[0] for video in recorder.videos] == steps
+    grid_seconds = [test["grid"]["seconds"] for test in run.evaluations()]
+    for step, name, pictures, fps in recorder.videos:
+        assert (name, fps) == ("test/grid_run", 20.0)
+        test = [test["step"] for test in run.evaluations()].index(step)
+        assert pictures == round(grid_seconds[test] / 0.05) + 1
+
+
+def test_without_a_viewer_there_are_no_videos(tmp_path: Path) -> None:
+    recorder = Recorder()
+    run = TrainingRun.start(tiny(training={"video_every": 128}), tmp_path)
+
+    run.train(report=lambda line: None, tracker=recorder)
+
+    assert recorder.videos == []
+
+
+def test_by_default_tensorboard_charts_are_in_the_run_folder(tmp_path: Path) -> None:
+    run = TrainingRun.start(tiny(), tmp_path)
+    run.train(report=lambda line: None, viewer=Pictures)
+
+    board = EventAccumulator(str(run.directory / "tensorboard"))
+    board.Reload()
+
+    scores = [(point.step, point.value) for point in board.Scalars("test/score")]
+    assert scores == [(test["step"], pytest.approx(test["score"])) for test in run.evaluations()]
+    assert {"train/loss", "practice/score", "practice_reward/progress"} <= set(
+        board.Tags()["scalars"]
+    )
+    assert [image.step for image in board.Images("test/grid_run")] == [256]
+
+
+def test_filming_doesnt_change_what_is_learned(tmp_path: Path) -> None:
+    plain = TrainingRun.start(tiny(), tmp_path / "a")
+    plain.train(report=lambda line: None)
+    filmed = TrainingRun.start(tiny(training={"video_every": 64}), tmp_path / "b")
+    filmed.train(report=lambda line: None, viewer=Pictures)
+
+    assert results(plain) == results(filmed)
+    observations = np.random.default_rng(0).uniform(-1, 1, (4, 31)).astype(np.float32)
+    actions = [
+        SB3Agent.load(run.directory / "checkpoints" / "last").act(observations)
+        for run in (plain, filmed)
+    ]
+    np.testing.assert_array_equal(actions[0], actions[1])
 
 
 # --------------------------------------------------------------------------- #

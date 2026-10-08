@@ -8,9 +8,18 @@ import pytest
 from numpy.typing import NDArray
 
 from mlracecar.config.models import REWARD_TERMS, EpisodeConfig, RacecarConfig
+from mlracecar.core.geometry import FloatArray
+from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
+from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.env.racing import RacingEnv, load_track
-from mlracecar.training.evaluation import RunResult, as_dict, drive_test_runs, summarize
+from mlracecar.training.evaluation import (
+    RunResult,
+    as_dict,
+    drive_test_runs,
+    film_run,
+    summarize,
+)
 
 TECHNICAL = load_track(Path(__file__).parents[3] / "tracks" / "technical.json")
 ANGLES = np.linspace(0, 2 * np.pi, 48, endpoint=False)
@@ -108,6 +117,51 @@ def test_a_runs_reward_is_the_sum_of_its_terms() -> None:
     assert set(result.terms) == set(REWARD_TERMS)
     assert sum(result.terms.values()) == pytest.approx(result.reward)
     assert result.terms["progress"] > 0
+
+
+class Pictures:
+    """A viewer that draws tiny pictures: each one shows how far the car has driven."""
+
+    made: list["Pictures"] = []  # noqa: RUF012  # every one made, to look at after
+
+    def __init__(self, track: Track, car: VehicleParams, mode: str, fps: float) -> None:
+        assert mode == "rgb_array"
+        self.closed = False
+        Pictures.made.append(self)
+
+    def render(self, snapshot: Snapshot, rays: FloatArray | None) -> NDArray[np.uint8]:
+        distance = min(int(snapshot.race.distance[0]), 255)
+        return np.full((4, 6, 3), distance, dtype=np.uint8)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.mark.parametrize("start", ["random", "grid"])
+def test_a_filmed_run_is_the_test_run_with_the_same_seed(start: str) -> None:
+    agent = Steady(0.05, 0.4)
+    [result] = drive_test_runs(agent, TECHNICAL, SHORT, [7], start)
+    Pictures.made.clear()
+
+    frames = list(film_run(agent, TECHNICAL, SHORT, 7, start, Pictures))
+
+    assert len(frames) == round(result.seconds / 0.05) + 1  # the start, then every step
+    assert frames[0].shape == (4, 6, 3)
+    assert frames[-1][0, 0, 0] == min(int(result.distance), 255)
+    [viewer] = Pictures.made
+    assert viewer.closed
+
+
+def test_a_film_is_made_as_its_pictures_are_asked_for() -> None:
+    Pictures.made.clear()
+    frames = film_run(Steady(0.0, 0.4), TECHNICAL, SHORT, 7, "grid", Pictures)
+    assert Pictures.made == []  # nothing driven yet
+
+    first = next(frames)
+    frames.close()  # stopped early: the environment is closed all the same
+
+    assert first.shape == (4, 6, 3)
+    assert Pictures.made[0].closed
 
 
 def points(progress: float, off_track: float) -> dict[str, float]:
