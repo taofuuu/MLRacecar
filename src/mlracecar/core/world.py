@@ -112,6 +112,11 @@ class World:
         """The world as it is now."""
         return self._snapshot
 
+    @property
+    def grid(self) -> Pose:
+        """The starting grid: car ``i``'s spot is entry ``i``."""
+        return self._grid
+
     def step(self, actions: ArrayLike) -> Snapshot:
         """Drive every car for one driver decision: ``timing.action_repeat`` physics steps.
 
@@ -136,7 +141,11 @@ class World:
         return self._take_snapshot(cars, race, events)
 
     def reset(
-        self, cars: ArrayLike | None = None, *, start: StartPosition = StartPosition.GRID
+        self,
+        cars: ArrayLike | None = None,
+        *,
+        start: StartPosition = StartPosition.GRID,
+        pose: Pose | None = None,
     ) -> Snapshot:
         """Put some cars back at the start, at rest. The others carry on as they were.
 
@@ -147,15 +156,27 @@ class World:
         Args:
             cars: Which cars, as a boolean mask of shape ``(N,)``; all of them if ``None``.
             start: Where they go.
+            pose: Where they go instead of ``start``: one position and heading per reset car,
+                in car order. An RL environment uses it to start each car as if it were alone.
 
         Raises:
-            ValueError: If the mask doesn't have one entry per car.
+            ValueError: If the mask doesn't have one entry per car, or ``pose`` doesn't have
+                one entry per reset car.
         """
         count = len(self)
         mask = np.ones(count, dtype=bool) if cars is None else np.asarray(cars, dtype=bool)
         if mask.shape != (count,):
             raise ValueError(f"expected a mask of shape ({count},), got {mask.shape}")
-        placed = self._placed(np.flatnonzero(mask), start)
+        chosen = np.flatnonzero(mask)
+        if pose is None:
+            placed = self._placed(chosen, start)
+        elif pose.position.shape != (len(chosen), 2) or pose.heading.shape != (len(chosen),):
+            raise ValueError(
+                f"expected a pose for each of the {len(chosen)} cars reset, got positions of "
+                f"shape {pose.position.shape} and headings of shape {pose.heading.shape}"
+            )
+        else:
+            placed = VehicleState.at_rest(pose.position, pose.heading)
         current = self._snapshot
         merged = _merged(current.cars, placed, mask)
         race = _merged(current.race, self.rules.start(placed), mask)
@@ -167,14 +188,8 @@ class World:
         if start is StartPosition.GRID:
             pose = Pose(self._grid.position[index], self._grid.heading[index])
         else:
-            pose = self._random_poses(len(index))
+            pose = random_poses(self.track, self.model.params.width, self._rng, len(index))
         return VehicleState.at_rest(pose.position, pose.heading)
-
-    def _random_poses(self, count: int) -> Pose:
-        """Anywhere along the lap, and across the road as far as the whole car stays on it."""
-        arc_length = self._rng.uniform(0.0, self.track.length, count)
-        room = np.maximum(self.track.width_at(arc_length) - self.model.params.width, 0.0) / 2
-        return self.track.pose_at(arc_length, self._rng.uniform(-1.0, 1.0, count) * room)
 
     @property
     def _time(self) -> float:
@@ -198,3 +213,15 @@ def _merged[State: (VehicleState, RaceState)](current: State, new: State, mask: 
         column[mask] = getattr(new, field.name)
         columns[field.name] = column
     return type(current)(**columns)
+
+
+def random_poses(track: Track, car_width: float, rng: np.random.Generator, count: int) -> Pose:
+    """Random starting places: anywhere along the lap, and across the road as far as a car
+    ``car_width`` wide stays wholly on it; facing the driving direction.
+
+    Draws first every car's distance along the lap, then every car's place across the road, so
+    the same generator state always gives the same places.
+    """
+    arc_length = rng.uniform(0.0, track.length, count)
+    room = np.maximum(track.width_at(arc_length) - car_width, 0.0) / 2
+    return track.pose_at(arc_length, rng.uniform(-1.0, 1.0, count) * room)

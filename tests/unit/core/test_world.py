@@ -11,10 +11,10 @@ from mlracecar.core.geometry import BoolArray, FloatArray, wrap_angle
 from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
 from mlracecar.core.race.state import RaceState
 from mlracecar.core.snapshot import Snapshot
-from mlracecar.core.track.model import GridLayout, Track
+from mlracecar.core.track.model import GridLayout, Pose, Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.vehicle.state import VehicleState
-from mlracecar.core.world import StartPosition, Timing, World
+from mlracecar.core.world import StartPosition, Timing, World, random_poses
 from roads import road_coordinates
 
 ANGLES = np.linspace(0, 2 * np.pi, 12, endpoint=False)
@@ -211,6 +211,45 @@ def test_a_reset_needs_one_entry_per_car() -> None:
         make_world().reset([True, False, True])
 
 
+def test_the_grid_has_a_spot_for_each_car() -> None:
+    grid = make_world().grid
+
+    np.testing.assert_array_equal(grid.position, GRID.position)
+    np.testing.assert_array_equal(grid.heading, GRID.heading)
+
+
+def test_cars_can_be_reset_to_places_of_our_choosing() -> None:
+    world = make_world(cars=3)
+    for _ in range(10):
+        world.step(np.tile([0.0, 1.0], (3, 1)))
+    moved = world.snapshot.cars
+    pole = Pose(np.repeat(GRID.position[:1], 2, axis=0), np.repeat(GRID.heading[:1], 2))
+
+    snapshot = world.reset([True, False, True], pose=pole)
+
+    np.testing.assert_array_equal(snapshot.cars.position[[0, 2]], pole.position)
+    np.testing.assert_array_equal(snapshot.cars.yaw[[0, 2]], pole.heading)
+    assert_at_rest(snapshot.cars.select(np.array([0, 2])))
+    np.testing.assert_array_equal(snapshot.cars.position[1], moved.position[1])
+    assert snapshot.race.distance[[0, 2]].tolist() == [0.0, 0.0]
+
+
+def test_a_chosen_place_is_needed_for_each_car_reset() -> None:
+    pole = Pose(GRID.position[:1], GRID.heading[:1])
+
+    with pytest.raises(ValueError, match="a pose for each of the 2 cars reset"):
+        make_world(cars=3).reset([True, True, False], pose=pole)
+
+
+def test_random_places_depend_only_on_the_generator() -> None:
+    first = random_poses(TRACK, CAR.width, np.random.default_rng(5), 3)
+    again = random_poses(TRACK, CAR.width, np.random.default_rng(5), 3)
+    world = make_world(cars=3, seed=5, start=StartPosition.RANDOM)
+
+    np.testing.assert_array_equal(first.position, again.position)
+    np.testing.assert_array_equal(world.snapshot.cars.position, first.position)
+
+
 def test_random_starts_put_the_whole_car_on_the_road_facing_the_way_round() -> None:
     cars = make_world(cars=500, start=StartPosition.RANDOM).snapshot.cars
 
@@ -253,3 +292,18 @@ def test_a_car_whose_run_is_over_stays_where_it_is_until_it_is_reset() -> None:
     world.reset()
     assert not world.snapshot.race.out[0]
     assert world.step([[0.0, 1.0]]).cars.speed[0] > 0
+
+
+def test_a_snapshot_can_be_narrowed_to_some_cars() -> None:
+    world = make_world(cars=3)
+    world.step(np.array([[0.0, 1.0], [0.0, 0.5], [0.0, 0.0]]))
+    snapshot = world.snapshot
+
+    some = snapshot.select(np.array([True, False, True]))
+
+    assert (some.tick, some.time, some.events) == (snapshot.tick, snapshot.time, ())
+    assert_same(some.cars, snapshot.cars.select([0, 2]))
+    for field in fields(RaceState):
+        np.testing.assert_array_equal(
+            getattr(some.race, field.name), getattr(snapshot.race, field.name)[[0, 2]]
+        )
