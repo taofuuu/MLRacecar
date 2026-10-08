@@ -239,9 +239,12 @@ SB3 logs these every iteration (names as in its logger):
 | `train/std` | The spread of the action distribution. | Shrinks slowly. |
 | `time/fps` | Decisions simulated and learned from per second. | As high as possible; the [speed table](https://github.com/taofuuu/MLRacecar#speed) says the simulation won't be the limit. |
 
-Our own numbers matter more than any of these: laps completed, best valid lap time, share of
-time off the road. And above all, **watch it drive**: a rising reward with a car cutting across
-the grass is reward hacking, and only a video shows it.
+Our own numbers matter more than any of these: the share of runs with a valid lap
+(`practice/lap_rate`, `test/lap_rate`), the best lap (`best_lap`), and the share of runs that
+left the road (`practice_ends/off_track`); see
+[Training](training.md#watching-it-learn-in-tensorboard). And above all, **watch it drive**: a
+rising reward with a car cutting across the grass is reward hacking, and only a video shows it
+(TensorBoard's Images tab).
 
 ## 10. Choices coming up
 

@@ -154,6 +154,7 @@
 | **Episode** | One attempt from start until it ends (crash, finish, or time limit). | One run around the track. |
 | **Termination vs. truncation** | The episode ended because something happened (crashed) vs. because we stopped it (time limit). The difference matters to learning. | Env end rules. |
 | **Run folder** | Everything about one training run in one place: its settings, code version, seeds, saved AIs, and test results. | `runs/<date>_<name>/` ([Training](training.md)). |
+| **Practice run** | One of the cars' runs while the AI learns. It still acts a little randomly, to explore, unlike in a test. | The `practice/` charts in TensorBoard. |
 | **Saved agent (training checkpoint)** | A copy of the AI saved while it trains, to keep the best one or carry on after stopping. Not the same as a track checkpoint. | `checkpoints/best`, `checkpoints/last`. |
 | **Deterministic action** | Always the policy's best guess instead of a random draw around it, so the same situation gives the same action. | How a trained agent drives by default. |
 | **Policy** | The agent's "brain": the rule mapping observations to actions. A neural network here. | What training produces. |
@@ -181,7 +182,8 @@
 | **SAC** (Soft Actor-Critic) | Another RL algorithm that reuses past experience; often more data-efficient. | Comparison in M8. |
 | **PyTorch** | The library that builds and trains neural networks; Stable-Baselines3 runs on it. | The `train` extra. |
 | **GPU / CUDA** | A graphics card can do the many small sums of neural-network training much faster than the processor (CPU). CUDA is NVIDIA's way for programs to use it. | PyTorch built for CUDA 13.0, on the RTX 4060; `racecar doctor` says if it's found. |
-| **TensorBoard** | A web page that charts training as it runs: rewards, losses, and more. | M4-4. |
+| **TensorBoard** | A web page that charts training as it runs: rewards, losses, racing numbers, and videos. | `uv run tensorboard --logdir runs`; each run's `tensorboard/` folder ([Training](training.md)). |
+| **Experiment tracking / tracker** | Recording a training run's numbers and videos as it goes, to chart them and compare runs. The tracker is where they're sent. | `Tracker`: TensorBoard now; Weights & Biases could be added. |
 | **SB3** (Stable-Baselines3) | A well-tested library of RL algorithms. | First learner (M4). |
 | **Hyperparameters** | Settings of the learning process itself (learning rate, batch size…), not learned by the AI. | Tuned in M4 and M8. |
 | **Generalization** | Doing well on situations never seen in training. | Driving brand-new tracks (M5). |

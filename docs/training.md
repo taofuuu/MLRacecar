@@ -5,7 +5,8 @@
 > Everything about the run goes into one folder: the exact settings, which code and library
 > versions, the seeds, the saved AIs, and every test result. Run the same settings with the
 > same seed again on the CPU and you get exactly the same AI. Press Ctrl+C to stop; the AI is
-> saved first, and you can carry on later.
+> saved first, and you can carry on later. While it trains, TensorBoard (a web page) draws
+> charts of how it's going, with a video of the AI driving every so often.
 
 Training needs the training libraries: `uv sync --extra train` (see
 [CONTRIBUTING](https://github.com/taofuuu/MLRacecar/blob/main/CONTRIBUTING.md)). The ideas
@@ -33,6 +34,7 @@ two sections for training:
 | | `checkpoint_every` | 100,000 | Save the AI every this many car-steps, and at the end. |
 | | `eval_every` | 50,000 | Test it every this many car-steps, and at the end. |
 | | `eval_runs` | 10 | Test runs per test. |
+| | `video_every` | 200,000 | Film the test run from the grid every this many car-steps, and at the end, for TensorBoard. 0: no videos. |
 | `ppo` | `learning_rate`, `gamma`, `gae_lambda`, `clip_range`, `entropy_coef`, `epochs` | SB3's usual values | How PPO learns ([RL fundamentals](rl-guide.md) §8). |
 | | `steps_per_car` | 128 | Steps each car drives between updates. 16 cars × 128 = 2,048 steps of experience per update. |
 | | `batch_size` | 256 | Steps per learning step. It must divide the experience per update; a run that doesn't is refused before it starts. |
@@ -50,6 +52,47 @@ The **score** is the test runs' mean reward (with the default reward, a tenth of
 driven along the lap, minus 10 for each time the car left the road). **laps** counts valid laps
 in the test runs, and **grid** is how far one run from the starting grid got.
 
+## Watching it learn in TensorBoard
+
+```bash
+uv run tensorboard --logdir runs
+```
+
+Then open <http://localhost:6006>. Each run writes its charts into its own `tensorboard/`
+folder as it trains, so the page follows it live (it refreshes every 30 s, or press its reload
+button), and every run under `runs/` is a line on the same charts, to compare.
+
+**Practice and tests.** *Practice runs* are the cars' runs while the AI learns. It still acts a
+little randomly, to explore, so they're noisier and a bit worse than the tests, where it always
+acts on its best guess. The practice numbers are over the latest 100 runs that ended, written
+after every update; the test numbers come from each test.
+
+| Charts | What they show |
+|--------|----------------|
+| `practice/`, `test/` | `score` (mean reward), `distance` (metres along the lap), `average_speed` (m/s), `lap_rate` (the share of runs with a valid lap), and `best_lap` (seconds, once there is one). |
+| `practice_ends/`, `test_ends/` | The share of runs that ended each way: `off_track`, `out`, `time_limit`, `stuck`. |
+| `practice_reward/`, `test_reward/` | Each reward term's mean points per run: what the score is made of ([Rewards and episodes](rewards.md)). |
+| `test/grid_*` | The run from the grid: `grid_score`, `grid_distance`, and `grid_best_lap`. |
+| `rollout/` | Stable-Baselines3's practice numbers: `ep_rew_mean` (the same as `practice/score`) and `ep_len_mean` (steps per run). |
+| `train/` | How PPO's learning is going: its losses, `approx_kl`, `clip_fraction`, `entropy_loss`, `explained_variance`, and `std` ([RL fundamentals](rl-guide.md) §9). |
+| `time/fps` | Car-steps a second since the run (or the resume) started, tests and videos included. |
+
+Stable-Baselines3 writes an update's `train/` numbers after the next stretch of practice, so
+they show one update late, and the last update's aren't written.
+
+**Videos.** Every `video_every` steps (200,000 by default) and at the end, the test run from the
+grid is filmed and shown in TensorBoard's **Images** tab as `test/grid_run`, with a slider to
+pick the step. It's the same run as **grid** in the line above, so you can watch what the
+numbers say: a rising score with a car cutting across the grass is reward hacking. Videos are
+half size (480 × 300) at 10 pictures a second: about 4 MB, and 6–10 s to make, per minute of
+racing. They need pygame (`uv sync --extra render`, part of the developer setup); without it,
+`racecar train` says there are no videos and trains anyway.
+
+**Other trackers.** Everything goes through a `Tracker` (`mlracecar.training.tracking`) with three
+methods: `scalars(step, values)`, `video(step, name, frames, fps)`, and `close()`.
+`TensorBoardTracker` is the default; to send everything somewhere else, such as Weights &
+Biases, pass another to `TrainingRun.train(tracker=...)`.
+
 ## The run folder
 
 ```
@@ -60,7 +103,8 @@ runs/2026-10-08_153012_technical-seed0/
 │   ├── step_000100000/      the agent every training.checkpoint_every steps
 │   ├── best/                the agent that scored best in testing
 │   └── last/                the latest agent: what --resume carries on from
-└── eval/evaluations.jsonl   one line per test
+├── eval/evaluations.jsonl   one line per test
+└── tensorboard/             charts and videos for TensorBoard
 ```
 
 `runs/` is not committed: a run can be made again from its `config.yaml` and the commit in
@@ -78,8 +122,9 @@ runs/2026-10-08_153012_technical-seed0/
 
 **`eval/evaluations.jsonl`** has one JSON object per test: the step, the time since the
 session started, and the test runs' `score`, mean `distance` and `average_speed`, total `laps`,
-`best_lap`, and `end_reasons` (how many runs left the road, ran out of time, ...). It also has
-`grid`, the run from the starting grid.
+`lap_rate`, `best_lap`, `end_reasons` (how many runs left the road, ran out of time, ...), and
+`terms` (each reward term's mean points per run). It also has `grid`, the run from the starting
+grid, with its own `terms`.
 
 ## Testing during training
 
