@@ -161,7 +161,7 @@ def test_outside_git_the_card_has_no_commit(
 
     monkeypatch.setattr(subprocess, "run", no_git)
 
-    assert sb3._git_commit() is None
+    assert sb3.git_commit() is None
 
 
 def test_a_library_that_isnt_installed_is_recorded_as_such(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -174,7 +174,7 @@ def test_a_library_that_isnt_installed_is_recorded_as_such(monkeypatch: pytest.M
 
     monkeypatch.setattr(metadata, "version", version)
 
-    assert sb3._versions()["gymnasium"] == "not installed"
+    assert sb3.library_versions()["gymnasium"] == "not installed"
 
 
 # --------------------------------------------------------------------------- #

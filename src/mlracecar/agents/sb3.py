@@ -81,8 +81,8 @@ def make_model_card(
         observation_digest=spec.digest,
         action=ACTIONS,
         config=config.model_dump(mode="json"),
-        versions=_versions(),
-        git=_git_commit(),
+        versions=library_versions(),
+        git=git_commit(),
         metadata=extra or {},
     )
 
@@ -174,7 +174,7 @@ class SB3Agent:
         return cls(model, card, deterministic=deterministic)
 
 
-def _versions() -> dict[str, str]:
+def library_versions() -> dict[str, str]:
     """Python's version and each of `LIBRARIES`'s."""
     versions = {"python": platform.python_version()}
     for library in LIBRARIES:
@@ -185,7 +185,7 @@ def _versions() -> dict[str, str]:
     return versions
 
 
-def _git_commit() -> GitCommit | None:
+def git_commit() -> GitCommit | None:
     """The commit the working folder is on, or ``None`` outside a git checkout."""
     try:
         commit = _git("rev-parse", "HEAD")
