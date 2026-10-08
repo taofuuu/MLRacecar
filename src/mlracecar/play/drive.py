@@ -73,7 +73,7 @@ class DriveWindow:
 
     def __init__(self, track: Track, config: RacecarConfig, title: str, seed: int = 0) -> None:
         pygame.display.init()
-        self._screen = pygame.display.set_mode(_fitting_window_size(), pygame.RESIZABLE)
+        self._screen = pygame.display.set_mode(fitting_window_size(), pygame.RESIZABLE)
         car = config.vehicle.to_params()
         self.timing = config.simulation.to_timing()
         self.world = World(
@@ -183,7 +183,7 @@ def _slowest_if_none(seconds: float) -> float:
     return math.inf if math.isnan(seconds) else seconds
 
 
-def _fitting_window_size() -> tuple[int, int]:
+def fitting_window_size() -> tuple[int, int]:
     """`WINDOW_SIZE`, shrunk to fit on smaller screens."""
     screen_width, screen_height = pygame.display.get_desktop_sizes()[0]
     return (

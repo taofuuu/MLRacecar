@@ -7,6 +7,7 @@ import sys
 from importlib import metadata
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import numpy as np
 import pytest
@@ -18,6 +19,8 @@ from mlracecar.config.models import RacecarConfig
 from mlracecar.core.track.model import Track
 from mlracecar.editor.document import TrackDocument
 from mlracecar.editor.draft import TrackDraft
+from mlracecar.env.racing import RacingEnv
+from mlracecar.io.replay import Replay, write_replay
 from mlracecar.io.track_file import TrackFile, read_track_file, write_track_file
 
 runner = CliRunner()
@@ -298,6 +301,115 @@ def test_drive_without_pygame_explains_how_to_get_it(monkeypatch: pytest.MonkeyP
 def test_drive_does_not_hide_other_import_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "mlracecar.play.drive", None)
     result = runner.invoke(app, ["drive", str(SAMPLES / "oval.json")])
+    assert isinstance(result.exception, ModuleNotFoundError)
+
+
+# --------------------------------------------------------------------------- #
+# racecar replay
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def watched(monkeypatch: pytest.MonkeyPatch) -> list[tuple[Replay, RacecarConfig, str]]:
+    """Stands in for the replay window and records what it was opened with."""
+    calls: list[tuple[Replay, RacecarConfig, str]] = []
+
+    def fake_run_replay(replay: Replay, config: RacecarConfig, title: str) -> None:
+        calls.append((replay, config, title))
+
+    monkeypatch.setattr("mlracecar.play.replay.run_replay", fake_run_replay)
+    return calls
+
+
+def saved_replay(path: Path, info: dict[str, Any], settings: dict[str, Any] | None = None) -> Path:
+    """A short recorded race on the oval."""
+    track_file = read_track_file(SAMPLES / "oval.json")
+    env = RacingEnv(track_file.to_track(), RacecarConfig())
+    env.reset(seed=0)
+    assert env.world is not None
+    snapshots = [env.world.snapshot]
+    for _ in range(5):
+        env.step(np.array([0.0, 1.0], dtype=np.float32))
+        snapshots.append(env.world.snapshot)
+    config = RacecarConfig.model_validate({"vehicle": {"mass": 1500}}).model_dump(mode="json")
+    write_replay(Replay(snapshots, track_file, settings or config, info), path)
+    return path
+
+
+def test_replay_opens_the_recorded_race_with_its_settings(
+    watched: list[tuple[Replay, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    path = saved_replay(tmp_path / "oval-A-03.npz", {"agent": {"label": "A"}, "run": 3})
+
+    result = runner.invoke(app, ["replay", str(path)])
+
+    assert result.exit_code == 0, result.output
+    ((replay, config, title),) = watched
+    assert len(replay.snapshots) == 6
+    assert config.vehicle.mass == 1500.0
+    assert title == "Oval - A, run 3"
+
+
+def test_a_replay_without_details_is_titled_by_its_track(
+    watched: list[tuple[Replay, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    result = runner.invoke(app, ["replay", str(saved_replay(tmp_path / "r.npz", {}))])
+
+    assert result.exit_code == 0, result.output
+    assert watched[0][2] == "Oval"
+
+
+def test_replay_reports_a_file_it_cant_read(
+    watched: list[tuple[Replay, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    result = runner.invoke(app, ["replay", str(tmp_path / "missing.npz")])
+
+    assert result.exit_code == 1
+    assert "can't read the replay" in result.output
+    assert watched == []
+
+
+def test_replay_reports_settings_it_cant_use(
+    watched: list[tuple[Replay, RacecarConfig, str]], tmp_path: Path
+) -> None:
+    path = saved_replay(tmp_path / "odd.npz", {}, settings={"vehicle": {"mass": -1}})
+
+    result = runner.invoke(app, ["replay", str(path)])
+
+    assert result.exit_code == 1
+    assert f"vehicle.mass: must be greater than 0, got -1 (from {path})" in result.output
+    assert watched == []
+
+
+def test_replay_without_pygame_explains_how_to_get_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = saved_replay(tmp_path / "r.npz", {})
+    for module in [
+        "mlracecar.play.replay",
+        "mlracecar.play.drive",
+        "mlracecar.render.race",
+        "mlracecar.render.hud",
+        "mlracecar.render.drawing",
+        "mlracecar.render.timeline",
+    ]:
+        monkeypatch.delitem(sys.modules, module, raising=False)
+    monkeypatch.setitem(sys.modules, "pygame", None)  # makes `import pygame` fail
+
+    result = runner.invoke(app, ["replay", str(path)])
+
+    assert result.exit_code == 1
+    assert "Watching replays needs pygame" in result.output
+
+
+def test_replay_does_not_hide_other_import_errors(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = saved_replay(tmp_path / "r.npz", {})
+    monkeypatch.setitem(sys.modules, "mlracecar.play.replay", None)
+
+    result = runner.invoke(app, ["replay", str(path)])
+
     assert isinstance(result.exception, ModuleNotFoundError)
 
 
