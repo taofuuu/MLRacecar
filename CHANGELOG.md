@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Many cars at once (`mlracecar.env.batched.BatchedRacingEnv`): a Gymnasium vector
+  environment running every car in one world, each in its own run, about 15 times faster
+  than separate environments at 64 cars and exactly as if each were alone. Make it with
+  `gymnasium.make_vec("MLRacecar-v0", num_envs=..., vectorization_mode="vector_entry_point")`;
+  runs restart on the next step or the same step (`autoreset_mode`). The README's speed
+  section has an RL environment table.
 - The RL environment (`mlracecar.env.racing.RacingEnv`), registered with Gymnasium as
   `MLRacecar-v0`: one car on a track, driven 1/20 s per step, with the observation, reward,
   and end-of-run rules above. `reset(seed=..., options={"track": ..., "start": ...})` repeats a

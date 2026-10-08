@@ -6,8 +6,7 @@
 > lists the choices coming up when we build the AI's environment (M3), so you can make them
 > knowing what each one changes. The questions at the end double as interview practice.
 
-Parts marked **(M3-5)** don't exist yet; the ticket that builds them
-will update this page with what was decided.
+Every part this page describes now exists; the M3 tickets updated it with what was decided.
 
 ## 1. The loop: agent and environment
 
@@ -162,7 +161,8 @@ and its value estimates (section 7) go wrong near the limit. Gymnasium split the
 
 In our code, `race.out` marks a car whose run is over (the `terminate` policy), and
 `World.reset(mask, start=...)` restarts just those cars while the others keep going. The batched
-environment **(M3-5)** uses that to run 64 cars as 64 independent episodes in one world.
+environment ([many cars at once](environment.md#many-cars-at-once)) uses that to run 64
+cars as 64 independent episodes in one world.
 
 Decided in M3-3 (`env/episodes.py`): leaving the road **terminates** the run; the **time limit**
 (60 s, about a lap and a quarter of the technical track) and being **stuck** (slower than 1 m/s
@@ -252,7 +252,7 @@ What each M3 ticket will need from you, with this page's sections as background:
 | M3-2 (#27) observation | Decided: every input in, including curvature ahead, out to 150 m. | 2, 3 |
 | M3-3 (#28) rewards and termination | Decided: progress (10 m = 1 point) and −10 for leaving the road, which also ends the run; runs stop after 60 s, or 5 s stuck. | 5, 6 |
 | M3-4 (#29) `RacingEnv` | Decided: runs start on the grid. The track to train on is chosen in M4 (the plan says `technical.json`: a short lap means more laps per hour). | 1, 6 |
-| M3-5 (#30) batched env | How many cars per world. Mostly a speed question. | 1, 8 |
+| M3-5 (#30) batched env | Built: one world for many cars, exactly like separate environments and about 15 times faster at 64 cars. How many cars to train with is chosen in M4. | 1, 8 |
 
 ## Further reading
 
