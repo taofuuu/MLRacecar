@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from mlracecar.agents.base import Agent
 from mlracecar.config.models import REWARD_TERMS, EpisodeConfig, RacecarConfig
 from mlracecar.core.geometry import FloatArray
 from mlracecar.core.snapshot import Snapshot
@@ -41,21 +42,26 @@ class Steady:
         return np.tile(self.action, (len(observations), 1))
 
 
-def alone(track: Track, config: RacecarConfig, seed: int, start: str, agent: Steady) -> RunResult:
-    """The same run driven in a single environment."""
+def alone(track: Track, config: RacecarConfig, seed: int, start: str, agent: Agent) -> RunResult:
+    """The same run driven in a single environment, followed step by step."""
     env = RacingEnv(track, config)
     observation, _ = env.reset(seed=seed, options={"start": start})
-    total, steps = 0.0, 0
+    total, steps, off_tracks, was_off = 0.0, 0, 0, False
+    laps: list[float] = []
     while True:
         observation, reward, terminated, truncated, info = env.step(agent.act(observation[None])[0])
         total += reward
         steps += 1
+        if info["laps"] > len(laps):
+            laps.append(info["last_lap"])
+        off_tracks += info["off_track"] and not was_off
+        was_off = info["off_track"]
         if terminated or truncated:
             return RunResult(
                 total,
                 info["distance"],
-                info["laps"],
-                info["best_lap"],
+                tuple(laps),
+                off_tracks,
                 info["end_reason"],
                 steps * env.timing.decision_dt,
                 info["episode_terms"],
@@ -84,6 +90,18 @@ def test_runs_end_for_different_reasons_and_each_is_recorded_once() -> None:
     assert stuck.seconds == pytest.approx(5.0)  # the stuck rule
     assert stuck.distance == 0.0
     assert stuck.average_speed == 0.0
+
+
+@pytest.mark.parametrize("start", ["random", "grid"])
+def test_every_lap_time_is_what_a_single_environment_gives(start: str) -> None:
+    config = RacecarConfig(episode=EpisodeConfig(time_limit=60.0))
+    agent = _CircleDriver()
+    seeds = [0, 1]  # from random places: the first leaves the road, the second laps
+
+    results = drive_test_runs(agent, CIRCLE, config, seeds, start)
+
+    assert results == [alone(CIRCLE, config, seed, start, agent) for seed in seeds]
+    assert max(result.laps for result in results) >= 2
 
 
 def test_a_lap_driven_in_the_run_is_counted_with_its_time() -> None:
@@ -168,11 +186,29 @@ def points(progress: float, off_track: float) -> dict[str, float]:
     return {"progress": progress, "off_track": off_track}
 
 
+def test_a_run_is_clean_if_it_lasts_without_ever_leaving_the_road() -> None:
+    def ending(off_tracks: int, reason: str) -> RunResult:
+        return RunResult(1.0, 10.0, (), off_tracks, reason, 6.0, {})
+
+    assert ending(0, "time_limit").clean
+    assert not ending(1, "time_limit").clean  # it left the road, and carried on
+    assert not ending(1, "off_track").clean
+    assert not ending(0, "stuck").clean
+    assert not ending(0, "out").clean
+
+
+def test_a_runs_laps_are_its_lap_times() -> None:
+    result = RunResult(1.0, 10.0, (33.0, 31.5, 32.0), 0, "time_limit", 60.0, {})
+
+    assert (result.laps, result.best_lap) == (3, 31.5)
+    assert RunResult(1.0, 10.0, (), 0, "time_limit", 60.0, {}).best_lap is None
+
+
 def test_the_summary_gives_the_score_and_how_the_runs_went() -> None:
     results = [
-        RunResult(10.0, 100.0, 1, 50.0, "time_limit", 10.0, points(10.0, 0.0)),
-        RunResult(-6.0, 40.0, 0, None, "off_track", 4.0, points(4.0, -10.0)),
-        RunResult(2.0, 20.0, 2, 45.0, "time_limit", 10.0, points(2.0, 0.0)),
+        RunResult(10.0, 100.0, (50.0,), 0, "time_limit", 10.0, points(10.0, 0.0)),
+        RunResult(-6.0, 40.0, (), 1, "off_track", 4.0, points(4.0, -10.0)),
+        RunResult(2.0, 20.0, (45.0, 46.0), 2, "time_limit", 10.0, points(2.0, 0.0)),
     ]
 
     summary = summarize(results)
@@ -180,28 +216,35 @@ def test_the_summary_gives_the_score_and_how_the_runs_went() -> None:
     assert summary == {
         "runs": 3,
         "score": 2.0,
+        "completion_rate": pytest.approx(1 / 3),  # the last run left the road twice
         "distance": pytest.approx(160 / 3),
         "average_speed": pytest.approx((10 + 10 + 2) / 3),
         "laps": 3,
         "lap_rate": pytest.approx(2 / 3),
+        "mean_lap": pytest.approx(47.0),
         "best_lap": 45.0,
+        "off_tracks": 3,
         "end_reasons": {"off_track": 1, "time_limit": 2},
         "terms": {"progress": pytest.approx(16 / 3), "off_track": pytest.approx(-10 / 3)},
     }
     assert summarize(results[1:2])["best_lap"] is None
+    assert summarize(results[1:2])["mean_lap"] is None
     assert summarize(results[1:2])["lap_rate"] == 0.0
 
 
-def test_a_result_as_plain_data_includes_its_average_speed() -> None:
-    result = RunResult(1.0, 30.0, 0, None, "stuck", 6.0, points(1.0, 0.0))
+def test_a_result_as_plain_data_includes_what_follows_from_it() -> None:
+    result = RunResult(1.0, 30.0, (5.0, 4.0), 0, "time_limit", 6.0, points(1.0, 0.0))
 
     assert as_dict(result) == {
         "reward": 1.0,
         "distance": 30.0,
-        "laps": 0,
-        "best_lap": None,
-        "end_reason": "stuck",
+        "lap_times": [5.0, 4.0],
+        "off_tracks": 0,
+        "end_reason": "time_limit",
         "seconds": 6.0,
         "terms": {"progress": 1.0, "off_track": 0.0},
+        "laps": 2,
+        "best_lap": 4.0,
+        "clean": True,
         "average_speed": 5.0,
     }
