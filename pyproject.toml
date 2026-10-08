@@ -26,10 +26,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-render = ["pygame-ce>=2.5.8"]  # the track editor and race window (ADR-0012)
+# The track editor, the race and replay windows (ADR-0012), and GIFs (Pillow).
+render = ["pillow>=12.3.0", "pygame-ce>=2.5.8"]
+# MP4 videos of replays: imageio-ffmpeg comes with the ffmpeg encoder built in (about 30 MB).
+video = ["imageio-ffmpeg>=0.6.0"]
 # Training (ADR-0006). `train` gets PyTorch built for CUDA 13.0 (NVIDIA GPUs) on Windows and
 # Linux; `train-cpu` is the same without CUDA, for CI and computers without an NVIDIA GPU.
-# Install one or the other, never both (see [tool.uv] below). Pillow makes the TensorBoard videos.
+# Install one or the other, never both (see [tool.uv] below). Pillow makes TensorBoard's videos.
 train = ["pillow>=12.3.0", "stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
 train-cpu = ["pillow>=12.3.0", "stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
 
@@ -44,7 +47,7 @@ Changelog = "https://github.com/taofuuu/MLRacecar/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
-  "mlracecar[render]",  # the editor and renderer are tested in CI too
+  "mlracecar[render,video]",  # the editor, renderer, and video export are tested in CI too
   "hypothesis>=6.168.5",
   "import-linter>=2.15",
   "mypy>=2.4.0",
@@ -141,6 +144,10 @@ plugins = ["pydantic.mypy"]
 module = ["tensorboard.*"]  # TensorBoard has no type hints; only training code uses it
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["imageio_ffmpeg.*"]  # no type hints; only render.video uses it, for MP4s
+ignore_missing_imports = true
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
@@ -178,6 +185,7 @@ source_modules = [
   "mlracecar.agents",
   "mlracecar.training",
   "mlracecar.render.camera",
+  "mlracecar.render.video",
   "mlracecar.editor.draft",
   "mlracecar.editor.controller",
   "mlracecar.editor.document",
@@ -198,7 +206,26 @@ source_modules = [
   "mlracecar.editor",
   "mlracecar.play",
 ]
-forbidden_modules = ["torch", "stable_baselines3", "tensorboard", "PIL"]
+forbidden_modules = ["torch", "stable_baselines3", "tensorboard"]
+
+[[tool.importlinter.contracts]]
+name = "Only video code imports the image and video encoders: the rest runs without them"
+type = "forbidden"
+source_modules = [
+  "mlracecar.core",
+  "mlracecar.config",
+  "mlracecar.io",
+  "mlracecar.env",
+  "mlracecar.agents",
+  "mlracecar.editor",
+  "mlracecar.render.camera",
+  "mlracecar.render.drawing",
+  "mlracecar.render.hud",
+  "mlracecar.render.race",
+  "mlracecar.render.timeline",
+  "mlracecar.render.viewer",
+]
+forbidden_modules = ["PIL", "imageio_ffmpeg"]
 
 [[tool.importlinter.contracts]]
 name = "The renderer draws snapshots: it never runs or changes the simulation"

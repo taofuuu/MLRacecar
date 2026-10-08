@@ -28,8 +28,8 @@ from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.env.batched import BatchedRacingEnv
 from mlracecar.io.track_file import TrackFile, write_track_file
+from mlracecar.render.video import Frame
 from mlracecar.training.run import TrainingError, TrainingRun
-from mlracecar.training.tracking import Frame
 
 TECHNICAL = Path(__file__).parents[3] / "tracks" / "technical.json"
 
