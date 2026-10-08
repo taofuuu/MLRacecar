@@ -4,7 +4,7 @@ import io
 import json
 import math
 import zipfile
-from dataclasses import fields, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,7 @@ from mlracecar.core.snapshot import Snapshot
 from mlracecar.env.racing import RacingEnv
 from mlracecar.io.replay import Replay, ReplayError, read_replay, write_replay
 from mlracecar.io.track_file import TrackFile
+from snapshots import assert_same_snapshots
 
 ANGLES = np.linspace(0, 2 * np.pi, 48, endpoint=False)
 CIRCLE = TrackFile.from_arrays(
@@ -59,21 +60,6 @@ def replay_of(snapshots: list[Snapshot]) -> Replay:
     )
 
 
-def assert_same_race(first: list[Snapshot], second: list[Snapshot]) -> None:
-    """Snapshot by snapshot, field by field, bit for bit; events too (NaN equal to NaN)."""
-    assert len(first) == len(second)
-    for one, other in zip(first, second, strict=True):
-        assert (one.tick, one.time) == (other.tick, other.time)
-        for part in ("cars", "race"):
-            for field in fields(getattr(one, part)):
-                np.testing.assert_array_equal(
-                    getattr(getattr(one, part), field.name),
-                    getattr(getattr(other, part), field.name),
-                    err_msg=f"{part}.{field.name}",
-                )
-        assert repr(one.events) == repr(other.events)
-
-
 def test_a_replay_reads_back_exactly_as_it_was_written(tmp_path: Path) -> None:
     snapshots = with_events(race(2.0))
     replay = replay_of(snapshots)
@@ -81,7 +67,7 @@ def test_a_replay_reads_back_exactly_as_it_was_written(tmp_path: Path) -> None:
     write_replay(replay, tmp_path / "circle.npz")
     back = read_replay(tmp_path / "circle.npz")
 
-    assert_same_race(list(back.snapshots), snapshots)
+    assert_same_snapshots(list(back.snapshots), snapshots)
     assert back.track == CIRCLE
     assert back.settings == CONFIG.model_dump(mode="json")
     assert back.info == {"driver": "circling", "laps": 3}

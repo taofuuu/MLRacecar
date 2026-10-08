@@ -10,17 +10,20 @@ from numpy.typing import NDArray
 from mlracecar.agents.base import Agent
 from mlracecar.config.models import REWARD_TERMS, EpisodeConfig, RacecarConfig
 from mlracecar.core.geometry import FloatArray
+from mlracecar.core.race.events import LapCompleted
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.params import VehicleParams
 from mlracecar.env.racing import RacingEnv, load_track
 from mlracecar.training.evaluation import (
     RunResult,
+    alone,
     as_dict,
     drive_test_runs,
     film_run,
     summarize,
 )
+from snapshots import assert_same_snapshots, live_snapshots
 
 TECHNICAL = load_track(Path(__file__).parents[3] / "tracks" / "technical.json")
 ANGLES = np.linspace(0, 2 * np.pi, 48, endpoint=False)
@@ -42,7 +45,9 @@ class Steady:
         return np.tile(self.action, (len(observations), 1))
 
 
-def alone(track: Track, config: RacecarConfig, seed: int, start: str, agent: Agent) -> RunResult:
+def driven_alone(
+    track: Track, config: RacecarConfig, seed: int, start: str, agent: Agent
+) -> RunResult:
     """The same run driven in a single environment, followed step by step."""
     env = RacingEnv(track, config)
     observation, _ = env.reset(seed=seed, options={"start": start})
@@ -75,7 +80,7 @@ def test_each_run_is_exactly_what_a_single_environment_gives(start: str) -> None
 
     results = drive_test_runs(agent, TECHNICAL, SHORT, seeds, start)
 
-    assert results == [alone(TECHNICAL, SHORT, seed, start, agent) for seed in seeds]
+    assert results == [driven_alone(TECHNICAL, SHORT, seed, start, agent) for seed in seeds]
     assert agent.resets == 1
 
 
@@ -92,6 +97,23 @@ def test_runs_end_for_different_reasons_and_each_is_recorded_once() -> None:
     assert stuck.average_speed == 0.0
 
 
+def test_each_cars_snapshots_are_its_run_as_if_driven_alone() -> None:
+    config = RacecarConfig(episode=EpisodeConfig(time_limit=30.0))
+    agent = _CircleDriver()
+    seeds = [0, 1, 2]  # from random places: one leaves the road early, one laps
+    frames: list[Snapshot] = []
+
+    results = drive_test_runs(agent, CIRCLE, config, seeds, "random", on_step=frames.append)
+
+    for car, (seed, result) in enumerate(zip(seeds, results, strict=True)):
+        steps = round(result.seconds / 0.05)
+        recorded = [alone(frame, car) for frame in frames[: steps + 1]]
+        assert_same_snapshots(recorded, live_snapshots(CIRCLE, config, seed, "random", agent))
+    assert len(frames) == max(round(result.seconds / 0.05) for result in results) + 1
+    lapped = [alone(frame, 1) for frame in frames]
+    assert any(isinstance(event, LapCompleted) for frame in lapped for event in frame.events)
+
+
 @pytest.mark.parametrize("start", ["random", "grid"])
 def test_every_lap_time_is_what_a_single_environment_gives(start: str) -> None:
     config = RacecarConfig(episode=EpisodeConfig(time_limit=60.0))
@@ -100,7 +122,7 @@ def test_every_lap_time_is_what_a_single_environment_gives(start: str) -> None:
 
     results = drive_test_runs(agent, CIRCLE, config, seeds, start)
 
-    assert results == [alone(CIRCLE, config, seed, start, agent) for seed in seeds]
+    assert results == [driven_alone(CIRCLE, config, seed, start, agent) for seed in seeds]
     assert max(result.laps for result in results) >= 2
 
 

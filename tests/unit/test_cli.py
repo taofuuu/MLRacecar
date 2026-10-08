@@ -524,8 +524,21 @@ def test_eval_prints_a_report_and_can_save_it(saved_agent: Path, tmp_path: Path)
     assert re.search(r"\| Completion rate \| +\S+ \(\d/2\) \| +\S+ \(\d/2\) \|", result.stdout)
     assert "A on " in result.stderr
     assert (tmp_path / "report.md").read_text(encoding="utf-8") == result.stdout
+    assert "Saved every run" not in result.stderr
     report = json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))
     assert [agent["label"] for agent in report["agents"]] == ["A", "B"]
+
+
+@needs_training
+def test_eval_can_save_every_run_as_a_replay(saved_agent: Path, tmp_path: Path) -> None:
+    replays = tmp_path / "replays"
+    arguments = ["--episodes", "2", "--record", str(replays)]
+
+    result = runner.invoke(app, ["eval", "--model", str(saved_agent), *arguments])
+
+    assert result.exit_code == 0, result.output
+    assert sorted(path.name for path in replays.iterdir()) == ["oval-A-01.npz", "oval-A-02.npz"]
+    assert f"Saved every run as a replay in {replays}" in result.stderr
 
 
 @needs_training

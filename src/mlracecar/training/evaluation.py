@@ -1,18 +1,22 @@
 """Testing an agent: let it drive from set places, without learning, and see how each run went.
 
 Every test run is one car's run in a `BatchedRacingEnv`, all of them at once, so ten runs take
-about as long as one. Each car's run is exactly what a single `RacingEnv` with the same seed
-would give, so the results are the same whichever way they're driven, and the same every time
-for the same agent and seeds (a deterministic agent drives the same way from the same place).
-That's also how `film_run` films a test run: alone, in a `RacingEnv` that draws.
+about as long as one. Given the same actions, each car's run is exactly what a single
+`RacingEnv` with the same seed would give, and the results are the same every time for the same
+agent and seeds (a deterministic agent drives the same way from the same place).
+
+A neural network, though, can round its last digits differently when it acts for one car than
+for several at once (about 1e-7), so driving a run again alone can drift from the run that was
+scored. `film_run` films a run alone, which is exact for the run from the grid (tested alone
+too); a replay records the scored run itself (``on_step``).
 
 A run is **clean** if the car drove until the time limit without ever leaving the road; the
 share of clean runs is the **completion rate**.
 """
 
 from collections import Counter
-from collections.abc import Generator, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from collections.abc import Callable, Generator, Mapping, Sequence
+from dataclasses import asdict, dataclass, replace
 from typing import Any
 
 import numpy as np
@@ -20,6 +24,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from mlracecar.agents.base import Agent
 from mlracecar.config.models import REWARD_TERMS, RacecarConfig
+from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.env.batched import BatchedRacingEnv
 from mlracecar.env.racing import RacingEnv, ViewerFactory
@@ -120,6 +125,7 @@ def drive_test_runs(
     config: RacecarConfig,
     seeds: Sequence[int],
     start: str = "random",
+    on_step: Callable[[Snapshot], None] | None = None,
 ) -> list[RunResult]:
     """Let ``agent`` drive one run per seed, all at once, and say how each went.
 
@@ -129,17 +135,25 @@ def drive_test_runs(
         config: Every setting; the same as the agent's environment had in training.
         seeds: One seed per run: where a random start is.
         start: ``"random"`` or ``"grid"``.
+        on_step: Given the world's snapshot at the start and after every step, with every
+            run as a car (`alone` picks one out): `BatchedRacingEnv.stepped`, so each run's
+            last step keeps its events. A run's snapshots end at the step it ends
+            (``round(seconds / decision_dt)``); after that, its car is starting again.
     """
     count = len(seeds)
     env = BatchedRacingEnv(track, count, config)
     observations, _ = env.reset(seed=list(seeds), options={"start": start})
     agent.reset()
+    if on_step is not None:
+        on_step(_stepped(env))
     tally = RunTally(count, env.timing.decision_dt)
     rewards = np.zeros(count)
     driving = np.ones(count, dtype=bool)
     results: list[RunResult | None] = [None] * count
     while driving.any():
         observations, reward, terminated, truncated, info = env.step(agent.act(observations))
+        if on_step is not None:
+            on_step(_stepped(env))
         rewards[driving] += reward[driving]
         tally.step(info["laps"], info["last_lap"], info["off_track"])
         ended = (terminated | truncated) & driving
@@ -153,6 +167,17 @@ def drive_test_runs(
             )
         driving &= ~ended
     return [result for result in results if result is not None]
+
+
+def alone(snapshot: Snapshot, car: int) -> Snapshot:
+    """One car's part of a snapshot, as if it raced alone: the car and its events, as car 0."""
+    events = tuple(replace(event, car=0) for event in snapshot.events if event.car == car)
+    return replace(snapshot.select([car]), events=events)
+
+
+def _stepped(env: BatchedRacingEnv) -> Snapshot:
+    assert env.stepped is not None  # set by reset and step
+    return env.stepped
 
 
 def film_run(

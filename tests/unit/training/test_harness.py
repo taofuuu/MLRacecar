@@ -5,6 +5,7 @@ drive well, but they're real saved agents with real model cards.
 """
 
 import hashlib
+import itertools
 import json
 from pathlib import Path
 from typing import Any
@@ -13,10 +14,13 @@ import pytest
 
 pytest.importorskip("stable_baselines3")
 
+
 from mlracecar.agents.sb3 import IncompatibleModelError
 from mlracecar.config.files import ConfigError
 from mlracecar.config.models import RacecarConfig
+from mlracecar.core.race.events import LapCompleted
 from mlracecar.io.model_card import ModelCardError
+from mlracecar.io.replay import read_replay
 from mlracecar.io.track_file import TrackFile, write_track_file
 from mlracecar.training.harness import (
     EvaluationError,
@@ -148,6 +152,53 @@ def test_from_the_grid_every_run_is_the_same(agents: tuple[Path, Path]) -> None:
 
     runs = report["tracks"][0]["results"]["A"]["runs"]
     assert all(run == runs[0] for run in runs)
+
+
+def test_every_run_can_be_saved_as_a_replay_of_exactly_that_run(
+    agents: tuple[Path, Path], tmp_path: Path
+) -> None:
+    report = report_of(list(agents), tracks=[TECHNICAL, OVAL], record=tmp_path / "replays")
+
+    names = sorted(path.name for path in (tmp_path / "replays").iterdir())
+    assert names == [
+        f"{track}-{agent}-0{run}.npz"
+        for track in ("oval", "technical")
+        for agent in "AB"
+        for run in range(1, 5)
+    ]
+    for label, run in (("A", 1), ("B", 1), ("B", 4)):
+        replay = read_replay(tmp_path / "replays" / f"technical-{label}-0{run}.npz")
+        scored = report["tracks"][0]["results"][label]["runs"][run - 1]
+        # The replay is the run that was scored: what it shows adds up to the run's results.
+        snapshots = replay.snapshots
+        laps = [
+            event.time
+            for snapshot in snapshots
+            for event in snapshot.events
+            if isinstance(event, LapCompleted) and event.valid
+        ]
+        off = [bool(snapshot.race.off_track[0]) for snapshot in snapshots]
+        assert laps == scored["lap_times"]
+        assert (
+            sum(now and not before for before, now in itertools.pairwise(off))
+            == scored["off_tracks"]
+        )
+        assert float(snapshots[-1].race.distance[0]) == scored["distance"]
+        assert replay.duration == pytest.approx(scored["seconds"])
+        assert snapshots[0].time == 0.0
+        assert all(len(snapshot.cars) == 1 for snapshot in snapshots)
+        assert replay.info["result"] == scored
+        seed = report["seeds"][run - 1]
+        assert (replay.info["run"], replay.info["seed"], replay.info["start"]) == (
+            run,
+            seed,
+            "random",
+        )
+        assert replay.info["agent"]["label"] == label
+        assert "settings" not in replay.info["agent"]
+        assert replay.settings == report["agents"]["AB".index(label)]["settings"]
+        assert replay.track.name == "Technical Circuit"
+        assert replay.info["track"] == {"path": TECHNICAL.as_posix(), "name": "Technical Circuit"}
 
 
 def test_a_report_is_written_as_json(agents: tuple[Path, Path], tmp_path: Path) -> None:

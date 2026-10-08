@@ -95,6 +95,10 @@ class BatchedRacingEnv(gymnasium.vector.VectorEnv[_Observations, NDArray[np.floa
         self.action_space = batch_space(self.single_action_space, num_envs)
         self.world: World | None = None
         """All the cars' world; ``None`` until `reset`."""
+        self.stepped: Snapshot | None = None
+        """The world as the latest `reset` or `step` left every car's run, before any car
+        started again, with what happened in the step (its events). `world`'s snapshot is the
+        same but for the cars that started again, and their restart drops the step's events."""
         self._generators: list[np.random.Generator | None] = [None] * num_envs
         self._previous = np.zeros((num_envs, 2))
         self._restarting = np.zeros(num_envs, dtype=bool)  # NEXT_STEP: runs that ended last step
@@ -131,6 +135,7 @@ class BatchedRacingEnv(gymnasium.vector.VectorEnv[_Observations, NDArray[np.floa
         )
         everyone = np.ones(self.num_envs, dtype=bool)
         snapshot = self.world.reset(everyone, pose=self._start_poses(everyone, start))
+        self.stepped = snapshot
         self._previous[:] = 0.0
         self._restarting[:] = False
         self.episodes.start()
@@ -151,6 +156,7 @@ class BatchedRacingEnv(gymnasium.vector.VectorEnv[_Observations, NDArray[np.floa
         actions_now = checked_actions(actions, self.num_envs)
         before = self.world.snapshot
         after = self.world.step(actions_now)
+        self.stepped = after
         rewards = self.rewards(before, after, actions_now, self._previous)
         endings = self.episodes.check(after)
 

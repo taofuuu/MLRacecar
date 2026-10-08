@@ -300,6 +300,12 @@ def evaluate(
     markdown_file: Annotated[
         Path | None, typer.Option("--markdown", help="Also save the Markdown report here.")
     ] = None,
+    record: Annotated[
+        Path | None,
+        typer.Option(
+            metavar="FOLDER", help="Save every run here as a replay, to watch: racecar replay."
+        ),
+    ] = None,
 ) -> None:
     """Score saved agents on tracks, from the same start places every time, and print a report.
 
@@ -328,6 +334,7 @@ def evaluate(
             start,
             changes,
             progress=lambda line: typer.echo(line, err=True),
+            record=record,
         )
     except (
         ConfigError,
@@ -347,6 +354,8 @@ def evaluate(
         markdown_file.parent.mkdir(parents=True, exist_ok=True)
         markdown_file.write_text(text, encoding="utf-8", newline="\n")
         typer.echo(f"Saved the Markdown in {markdown_file}", err=True)
+    if record is not None:
+        typer.echo(f"Saved every run as a replay in {record}", err=True)
 
 
 def _need_training_libraries(error: ImportError, doing: str) -> NoReturn:
