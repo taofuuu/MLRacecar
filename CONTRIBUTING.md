@@ -101,6 +101,17 @@ uv sync                       # create .venv and install the project
 uv run racecar --version      # check the install
 ```
 
+To train the AI you also need PyTorch, Stable-Baselines3, and TensorBoard (about 2 GB):
+
+```bash
+uv sync --extra train         # with an NVIDIA GPU: PyTorch built for CUDA 13.0
+uv sync --extra train-cpu     # without one (or in CI): CPU-only PyTorch
+uv run racecar doctor         # what's installed, and whether training sees the GPU
+```
+
+Keep the `--extra` on later `uv sync`s too: a plain `uv sync` removes the training libraries
+again. `train` and `train-cpu` can't be installed together.
+
 Once after cloning, turn on the automatic checks for every commit:
 
 ```bash

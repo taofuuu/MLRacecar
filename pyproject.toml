@@ -26,9 +26,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Filled in by later tickets; declared now so the install commands never change.
 render = ["pygame-ce>=2.5.8"]  # the track editor and race window (ADR-0012)
-train = []   # torch, stable-baselines3, tensorboard (M4-1)
+# Training (ADR-0006). `train` gets PyTorch built for CUDA 13.0 (NVIDIA GPUs) on Windows and
+# Linux; `train-cpu` is the same without CUDA, for CI and computers without an NVIDIA GPU.
+# Install one or the other, never both (see [tool.uv] below).
+train = ["stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
+train-cpu = ["stable-baselines3>=2.9.0", "tensorboard>=2.21.0", "torch>=2.14.1"]
 
 [project.scripts]
 racecar = "mlracecar.cli:app"
@@ -63,6 +66,30 @@ docs = [
 [build-system]
 requires = ["uv_build>=0.12,<0.13"]
 build-backend = "uv_build"
+
+# --------------------------------------------------------------------------- #
+# PyTorch builds (M4-1): CUDA 13.0 for `train`, CPU-only for `train-cpu`
+# --------------------------------------------------------------------------- #
+
+[tool.uv]
+conflicts = [[{ extra = "train" }, { extra = "train-cpu" }]]
+
+[tool.uv.sources]
+# PyPI's Windows torch has no CUDA, so it comes from PyTorch's own index; on macOS, from PyPI.
+torch = [
+  { index = "pytorch-cu130", extra = "train", marker = "sys_platform != 'darwin'" },
+  { index = "pytorch-cpu", extra = "train-cpu", marker = "sys_platform != 'darwin'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true  # only for torch
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 # --------------------------------------------------------------------------- #
 # Lint and format (ADR-0007)
@@ -154,6 +181,20 @@ source_modules = [
   "mlracecar.editor.history",
 ]
 forbidden_modules = ["pygame"]
+
+[[tool.importlinter.contracts]]
+name = "Only training code imports PyTorch: the simulation and environments run without it"
+type = "forbidden"
+source_modules = [
+  "mlracecar.core",
+  "mlracecar.config",
+  "mlracecar.io",
+  "mlracecar.env",
+  "mlracecar.render",
+  "mlracecar.editor",
+  "mlracecar.play",
+]
+forbidden_modules = ["torch", "stable_baselines3", "tensorboard"]
 
 [[tool.importlinter.contracts]]
 name = "The renderer draws snapshots: it never runs or changes the simulation"

@@ -70,3 +70,30 @@ jobs:
         run: |
           echo "### Coverage (${{ matrix.os }})" >> "$GITHUB_STEP_SUMMARY"
           uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
+
+  # The training libraries install and work, with CPU-only PyTorch (CI has no GPU). Not a
+  # required check: it downloads a few hundred megabytes.
+  training:
+    name: Training libraries (CPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0 (no major tag published; pinned to the release commit)
+        with:
+          enable-cache: true
+
+      - name: Install with the train-cpu extra (must match uv.lock exactly)
+        run: uv sync --locked --extra train-cpu
+
+      - name: Show what's installed
+        run: uv run --no-sync racecar doctor
+
+      - name: Check PyTorch, Stable-Baselines3, and TensorBoard load
+        run: |
+          uv run --no-sync python -c "
+          import stable_baselines3, tensorboard, torch
+          assert torch.version.cuda is None, 'expected CPU-only PyTorch'
+          print('torch', torch.__version__, '| stable-baselines3', stable_baselines3.__version__)
+          "
