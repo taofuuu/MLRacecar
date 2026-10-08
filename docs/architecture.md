@@ -75,7 +75,8 @@ flowchart TB
   config --> core
 ```
 
-Rules (checked on every commit and in CI: the layer order and the pygame boundary by
+Rules (checked on every commit and in CI: the layer order and the pygame and PyTorch
+boundaries by
 [import-linter](https://import-linter.readthedocs.io/), configured in `pyproject.toml`, and the
 core's import allow-list by `tests/unit/test_architecture.py`):
 
@@ -89,8 +90,10 @@ core's import allow-list by `tests/unit/test_architecture.py`):
    editor's view and window.
 4. **Only `cli` wires concrete implementations together.** Everything else receives its
    dependencies through constructors, so tests can swap in fakes.
-5. **Heavy dependencies are optional extras:** `render` (pygame-ce), `train` (PyTorch,
-   Stable-Baselines3, TensorBoard). `core` and `env` install in seconds in CI.
+5. **Heavy dependencies are optional extras:** `render` (pygame-ce), `train` (PyTorch built
+   for CUDA 13.0, Stable-Baselines3, TensorBoard) or `train-cpu` (the same with CPU-only
+   PyTorch, for CI). Only `agents` and `training` may import them, so `core`, `env`, and
+   everything that draws install in seconds and run without them.
 
 ## 3. Package map
 

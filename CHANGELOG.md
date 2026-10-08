@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Training libraries as optional extras: `uv sync --extra train` installs PyTorch built for
+  CUDA 13.0 (NVIDIA GPUs), Stable-Baselines3, and TensorBoard; `--extra train-cpu` the same
+  with CPU-only PyTorch. Only training code may import them, so the simulation and the
+  environments still run without them.
+- `racecar doctor`: shows the installed versions, and whether training can use an NVIDIA
+  GPU (and which), or what to install.
 - Many cars at once (`mlracecar.env.batched.BatchedRacingEnv`): a Gymnasium vector
   environment running every car in one world, each in its own run, about 15 times faster
   than separate environments at 64 cars and exactly as if each were alone. Make it with

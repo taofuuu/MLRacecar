@@ -176,6 +176,9 @@
 | **PettingZoo** | The same idea as Gymnasium, for multiple agents at once. | Multi-car racing (M7). |
 | **PPO** (Proximal Policy Optimization) | A popular, reliable RL algorithm. It improves the policy in small, safe steps. | Our first algorithm. |
 | **SAC** (Soft Actor-Critic) | Another RL algorithm that reuses past experience; often more data-efficient. | Comparison in M8. |
+| **PyTorch** | The library that builds and trains neural networks; Stable-Baselines3 runs on it. | The `train` extra. |
+| **GPU / CUDA** | A graphics card can do the many small sums of neural-network training much faster than the processor (CPU). CUDA is NVIDIA's way for programs to use it. | PyTorch built for CUDA 13.0, on the RTX 4060; `racecar doctor` says if it's found. |
+| **TensorBoard** | A web page that charts training as it runs: rewards, losses, and more. | M4-4. |
 | **SB3** (Stable-Baselines3) | A well-tested library of RL algorithms. | First learner (M4). |
 | **Hyperparameters** | Settings of the learning process itself (learning rate, batch size…), not learned by the AI. | Tuned in M4 and M8. |
 | **Generalization** | Doing well on situations never seen in training. | Driving brand-new tracks (M5). |
