@@ -6,7 +6,7 @@
 > lists the choices coming up when we build the AI's environment (M3), so you can make them
 > knowing what each one changes. The questions at the end double as interview practice.
 
-Parts marked **(M3-2)**, **(M3-3)**, and so on don't exist yet; the ticket that builds them
+Parts marked **(M3-3)**, **(M3-4)**, and so on don't exist yet; the ticket that builds them
 will update this page with what was decided.
 
 ## 1. The loop: agent and environment
@@ -28,7 +28,7 @@ In MLRacecar the pieces already exist, except the wrapper that ties them togethe
 |---------|-------------|
 | Agent | Anything with `act(observations) -> actions`: the `Agent` protocol in `agents/base.py`. You at the keyboard are one (`KeyboardAgent`); the scripted test driver is another; the trained network will be the third. |
 | Environment's physics | `World.step(actions)` in `core/world.py`: moves every car one decision forward and returns a `Snapshot`. |
-| What the agent sees | The distance rays (`core/sensors.py`, [Sensors](sensors.md)), plus more features **(M3-2)**. |
+| What the agent sees | `ObservationBuilder` (`env/observations.py`, [Observations](observations.md)): the distance rays ([Sensors](sensors.md)) and a few more numbers. |
 | The wrapper | `RacingEnv` **(M3-4)**: the standard Gymnasium interface, `reset() -> observation, info` and `step(action) -> observation, reward, terminated, truncated, info`. |
 
 One step of the loop is one **decision**: 1/20 of a second. The physics runs 6 smaller steps
@@ -78,21 +78,23 @@ network. Two rules of thumb:
   thousands and another in the thousandths. The rays already come normalized: distance divided
   by the range.
 
-Candidates (architecture §4.6), to choose in **M3-2**:
+What our agent sees (decided in M3-2; the full reference, with how each input is scaled, is
+[Observations](observations.md)):
 
-| Feature | Why it helps | Already available as |
-|---------|--------------|----------------------|
-| Ray distances | Where the edges are: the road's shape near the car. | `RaySensor.sense(...).normalized` |
-| Speed | When to brake; how hard it can turn. | `cars.speed` |
-| Heading error | Pointing along the road, or across it. | `race.heading_error` |
-| Lateral offset | Where it is across the road. | `race.offset` (divide by half the width) |
-| Yaw rate, steering angle | How it's turning now, and how fast it can change that. | `cars.yaw_rate`, `cars.steer` |
-| Previous action | Smooth driving; the steering limit. | kept by the environment |
-| Curvature ahead | Bends beyond the rays' 100 m, in time to brake from top speed. | `track.centerline.curvature`, sampled ahead of `race.arc_length` |
+| Input | Why it helps |
+|-------|--------------|
+| Ray distances (15) | Where the edges are: the road's shape near the car. |
+| Speed | When to brake; how hard it can turn. |
+| Heading (2: sine and cosine of the angle to the road) | Pointing along the road, or across it. |
+| Lateral offset | Where it is across the road. |
+| Yaw rate, steering angle | How it's turning now, and how fast it can change that. |
+| Previous action (2) | Smooth driving; the steering limit. |
+| Curvature ahead (8 stretches over 150 m) | Bends beyond the rays' 100 m, in time to brake from top speed (about 115 m). |
 
 Curvature ahead is "map knowledge" that a real driver gets from memory of the track. It speeds
 learning up a lot; whether it hurts driving unseen tracks is something we can measure later
-(an *ablation*: train with and without it, compare).
+(an *ablation*: train with and without it, compare). Every input can be turned off in the
+settings for exactly that.
 
 ## 4. Actions: what the agent controls
 
@@ -240,7 +242,7 @@ What each M3 ticket will need from you, with this page's sections as background:
 
 | Ticket | The choice | Sections |
 |--------|------------|----------|
-| M3-2 (#27) observation | Which features go in; curvature ahead or not; how far ahead. | 2, 3 |
+| M3-2 (#27) observation | Decided: every input in, including curvature ahead, out to 150 m. | 2, 3 |
 | M3-3 (#28) rewards and termination | The terms and their weights; what ends an episode; the off-track rule while training (the grass shortcut). | 5, 6 |
 | M3-4 (#29) `RacingEnv` | Time limit; random or grid starts; which track to train on (the plan says `technical.json`: a short lap means more laps per hour). | 1, 6 |
 | M3-5 (#30) batched env | How many cars per world. Mostly a speed question. | 1, 8 |

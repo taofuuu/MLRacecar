@@ -41,6 +41,11 @@ A fourth, `sensors`, sets up the car's distance sensors: how many rays (`rays`),
 fan across in degrees (`field_of_view`), and how far they reach in metres (`range`). See
 [Sensors](sensors.md).
 
+A fifth, `observation`, chooses what the AI sees. Each input is switched on or off with `true`
+or `false` (for example `--set observation.curvature=false`), and `lookahead` and
+`lookahead_points` set how far ahead, and in how many stretches, the road's bends are
+measured. See [Observations](observations.md).
+
 ## Changing settings
 
 Write a file with only the settings you want to change, under their section:
