@@ -1,6 +1,7 @@
 """Tests for mlracecar.render.video: GIFs and MP4s from pictures."""
 
 import io
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -91,11 +92,14 @@ def test_an_mp4_keeps_every_picture_at_its_size(tmp_path: Path) -> None:
 
     write_video(path, moving_square(12), fps=25)
 
-    reader = imageio_ffmpeg.read_frames(str(path))
-    meta = next(reader)
-    frames = [np.frombuffer(frame, dtype=np.uint8).reshape(40, 64, 3) for frame in reader]
-    assert (meta["size"], meta["fps"]) == ((64, 40), 25.0)
+    # Decoded by ffmpeg in one go (its streaming reader leaves pipes open on Linux).
+    decode = [imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-i", str(path)]
+    raw = subprocess.run(
+        [*decode, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True
+    ).stdout
+    frames = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 40, 64, 3)  # 64 x 40 each
     assert len(frames) == 12
+    assert imageio_ffmpeg.count_frames_and_secs(str(path)) == (12, pytest.approx(12 / 25))
     # Lossy, but close: the square is where it was drawn, on the green field.
     expected = list(moving_square(12))
     assert np.abs(frames[5].astype(int) - expected[5]).mean() < 4
