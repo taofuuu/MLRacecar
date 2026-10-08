@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from mlracecar.config.models import EpisodeConfig, RacecarConfig
+from mlracecar.config.models import REWARD_TERMS, EpisodeConfig, RacecarConfig
 from mlracecar.core.track.model import Track
 from mlracecar.env.racing import RacingEnv, load_track
 from mlracecar.training.evaluation import RunResult, as_dict, drive_test_runs, summarize
@@ -49,6 +49,7 @@ def alone(track: Track, config: RacecarConfig, seed: int, start: str, agent: Ste
                 info["best_lap"],
                 info["end_reason"],
                 steps * env.timing.decision_dt,
+                info["episode_terms"],
             )
 
 
@@ -101,11 +102,23 @@ class _CircleDriver:
         return np.column_stack([steer, pedal]).astype(np.float32)
 
 
+def test_a_runs_reward_is_the_sum_of_its_terms() -> None:
+    [result] = drive_test_runs(Steady(0.05, 0.4), TECHNICAL, SHORT, [3])
+
+    assert set(result.terms) == set(REWARD_TERMS)
+    assert sum(result.terms.values()) == pytest.approx(result.reward)
+    assert result.terms["progress"] > 0
+
+
+def points(progress: float, off_track: float) -> dict[str, float]:
+    return {"progress": progress, "off_track": off_track}
+
+
 def test_the_summary_gives_the_score_and_how_the_runs_went() -> None:
     results = [
-        RunResult(10.0, 100.0, 1, 50.0, "time_limit", 10.0),
-        RunResult(-6.0, 40.0, 0, None, "off_track", 4.0),
-        RunResult(2.0, 20.0, 2, 45.0, "time_limit", 10.0),
+        RunResult(10.0, 100.0, 1, 50.0, "time_limit", 10.0, points(10.0, 0.0)),
+        RunResult(-6.0, 40.0, 0, None, "off_track", 4.0, points(4.0, -10.0)),
+        RunResult(2.0, 20.0, 2, 45.0, "time_limit", 10.0, points(2.0, 0.0)),
     ]
 
     summary = summarize(results)
@@ -116,14 +129,17 @@ def test_the_summary_gives_the_score_and_how_the_runs_went() -> None:
         "distance": pytest.approx(160 / 3),
         "average_speed": pytest.approx((10 + 10 + 2) / 3),
         "laps": 3,
+        "lap_rate": pytest.approx(2 / 3),
         "best_lap": 45.0,
         "end_reasons": {"off_track": 1, "time_limit": 2},
+        "terms": {"progress": pytest.approx(16 / 3), "off_track": pytest.approx(-10 / 3)},
     }
     assert summarize(results[1:2])["best_lap"] is None
+    assert summarize(results[1:2])["lap_rate"] == 0.0
 
 
 def test_a_result_as_plain_data_includes_its_average_speed() -> None:
-    result = RunResult(1.0, 30.0, 0, None, "stuck", 6.0)
+    result = RunResult(1.0, 30.0, 0, None, "stuck", 6.0, points(1.0, 0.0))
 
     assert as_dict(result) == {
         "reward": 1.0,
@@ -132,5 +148,6 @@ def test_a_result_as_plain_data_includes_its_average_speed() -> None:
         "best_lap": None,
         "end_reason": "stuck",
         "seconds": 6.0,
+        "terms": {"progress": 1.0, "off_track": 0.0},
         "average_speed": 5.0,
     }
