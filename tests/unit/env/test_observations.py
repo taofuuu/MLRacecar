@@ -1,7 +1,11 @@
 """Tests for mlracecar.env.observations: what the AI sees, and the spec that describes it."""
 
+import copy
+import hashlib
+import json
 import math
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -15,7 +19,11 @@ from mlracecar.core.sensors import RaySettings
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.state import VehicleState
-from mlracecar.env.observations import ObservationBuilder, ObservationSpec
+from mlracecar.env.observations import (
+    ObservationBuilder,
+    ObservationSpec,
+    observation_differences,
+)
 from mlracecar.io.track_file import read_track_file
 from strategies import cars_and_actions
 
@@ -313,3 +321,82 @@ def test_the_spec_says_how_many_values_there_are_whatever_is_chosen(
 
     assert observations.shape == (1, builder.spec.size)
     assert len(builder.spec.labels) == builder.spec.size
+
+
+# --------------------------------------------------------------------------- #
+# Saying how two observations differ
+# --------------------------------------------------------------------------- #
+
+
+def description(config: ObservationConfig, rays: RaySettings | None = None) -> dict[str, Any]:
+    return ObservationBuilder(CIRCLE, CAR, config, rays).spec.description()
+
+
+def test_the_digest_is_made_from_the_description() -> None:
+    spec = ObservationBuilder(CIRCLE, CAR, ObservationConfig()).spec
+    text = json.dumps(spec.description(), sort_keys=True)
+
+    assert hashlib.sha256(text.encode()).hexdigest() == spec.digest == DEFAULT_DIGEST
+
+
+def test_the_same_observations_have_no_differences() -> None:
+    assert (
+        observation_differences(description(ObservationConfig()), description(ObservationConfig()))
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    ("saved", "current", "expected"),
+    [
+        (
+            ObservationConfig(),
+            ObservationConfig(curvature=False),
+            ["curvature: in the model, but turned off here"],
+        ),
+        (
+            ObservationConfig(speed=False),
+            ObservationConfig(),
+            ["speed: turned on here, but not in the model"],
+        ),
+        (
+            ObservationConfig(),
+            ObservationConfig(lookahead=200.0),
+            ["curvature: stretch is 25.0 here, 18.75 in the model"],
+        ),
+        (
+            ObservationConfig(),
+            ObservationConfig(lookahead_points=4, lookahead=75.0),
+            ["curvature: 4 values here, 8 in the model"],
+        ),
+    ],
+)
+def test_each_difference_is_named(
+    saved: ObservationConfig, current: ObservationConfig, expected: list[str]
+) -> None:
+    assert observation_differences(description(saved), description(current)) == expected
+
+
+def test_different_rays_are_named() -> None:
+    differences = observation_differences(
+        description(ObservationConfig()), description(ObservationConfig(), RaySettings(count=19))
+    )
+
+    assert differences == [
+        "rays: 19 values here, 15 in the model",
+        "rays: count is 19 here, 15 in the model",
+    ]
+
+
+def test_a_new_format_order_or_bounds_are_named() -> None:
+    saved = description(only("speed", "offset"))
+    current = copy.deepcopy(saved)
+    current["version"] = 2
+    current["features"].reverse()
+    current["features"][0]["high"] = 3.0  # offset
+
+    assert observation_differences(saved, current) == [
+        "observation format: version 2 here, 1 in the model",
+        "offset: bounds -2.0..3.0 here, -2.0..2.0 in the model",
+        "the inputs are in a different order",
+    ]
