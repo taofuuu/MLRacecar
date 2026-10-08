@@ -69,7 +69,7 @@ after every update; the test numbers come from each test.
 
 | Charts | What they show |
 |--------|----------------|
-| `practice/`, `test/` | `score` (mean reward), `distance` (metres along the lap), `average_speed` (m/s), `lap_rate` (the share of runs with a valid lap), and `best_lap` (seconds, once there is one). |
+| `practice/`, `test/` | `score` (mean reward), `completion_rate` (the share of clean runs: until the time limit, never leaving the road), `distance` (metres along the lap), `average_speed` (m/s), `lap_rate` (the share of runs with a valid lap), and `mean_lap` and `best_lap` (seconds, once there is a lap). |
 | `practice_ends/`, `test_ends/` | The share of runs that ended each way: `off_track`, `out`, `time_limit`, `stuck`. |
 | `practice_reward/`, `test_reward/` | Each reward term's mean points per run: what the score is made of ([Rewards and episodes](rewards.md)). |
 | `test/grid_*` | The run from the grid: `grid_score`, `grid_distance`, and `grid_best_lap`. |
@@ -121,10 +121,11 @@ runs/2026-10-08_153012_technical-seed0/
   or resume: from which step to which, how long, and how many steps a second).
 
 **`eval/evaluations.jsonl`** has one JSON object per test: the step, the time since the
-session started, and the test runs' `score`, mean `distance` and `average_speed`, total `laps`,
-`lap_rate`, `best_lap`, `end_reasons` (how many runs left the road, ran out of time, ...), and
-`terms` (each reward term's mean points per run). It also has `grid`, the run from the starting
-grid, with its own `terms`.
+session started, and the test runs' `score`, `completion_rate`, mean `distance` and
+`average_speed`, total `laps`, `lap_rate`, `mean_lap`, `best_lap`, `off_tracks` (times the cars
+left the road), `end_reasons` (how many runs left the road, ran out of time, ...), and `terms`
+(each reward term's mean points per run). It also has `grid`, the run from the starting grid,
+with its lap times and its own `terms`.
 
 ## Testing during training
 
@@ -134,6 +135,10 @@ are the **same at every test** (their seeds are in `meta.json`), so scores are c
 one test to the next, and every corner gets tested. All the test runs are driven at once in
 one world, so ten take about as long as one. The best-scoring agent is copied to
 `checkpoints/best`.
+
+To score a saved agent afterwards, on more runs and other tracks, or against another agent, use
+[`racecar eval`](evaluation.md). It starts from different places than these tests, so the
+agent picked as the best isn't flattered by the places it was picked on.
 
 ## The same run again
 

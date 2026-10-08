@@ -171,7 +171,8 @@
 | **Entropy** | How random the policy's choices are. A small bonus for it keeps the agent exploring. | `ent_coef`, `train/entropy_loss`. |
 | **Epoch** | One pass over the collected data while learning. PPO does several per batch; its clipping makes that safe. | `n_epochs` (10 by default). |
 | **Training** | Running many episodes and adjusting the policy to get more reward. | `racecar train` |
-| **Evaluation** | Testing a trained policy without learning, to measure how good it is. | `racecar eval` |
+| **Evaluation** | Testing a trained policy without learning, to measure how good it is. | `racecar eval` ([Evaluation](evaluation.md)). |
+| **Clean run / completion rate** | A run in which the car drives until the time runs out without ever leaving the road. The completion rate is the share of runs that are clean. | The headline number of `racecar eval` reports. |
 | **Gymnasium** | The standard Python interface for single-agent RL environments. | `RacingEnv` follows it ([The RL environment](environment.md)). |
 | **Vector environment** | Many copies of an environment stepped together: one call moves every copy, with one row per copy in each result. | `BatchedRacingEnv`: many cars in one world. |
 | **Autoreset** | A vector environment starting a copy's next run by itself when its run ends, while the others carry on. | `NextStep` or `SameStep`. |
