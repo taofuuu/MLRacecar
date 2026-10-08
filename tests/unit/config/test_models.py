@@ -23,7 +23,7 @@ from mlracecar.config.models import (
 from mlracecar.core.race.rules import OffTrackPolicy, RaceSettings
 from mlracecar.core.sensors import RaySettings
 from mlracecar.core.vehicle.params import VehicleParams
-from mlracecar.core.world import Timing
+from mlracecar.core.world import StartPosition, Timing
 
 SECTIONS: list[type[BaseModel]] = [
     VehicleConfig,
@@ -193,6 +193,13 @@ def test_reward_weights_cannot_be_negative(term: str) -> None:
 def test_runs_need_some_time(setting: str, value: float) -> None:
     with pytest.raises(ValidationError):
         EpisodeConfig.model_validate({setting: value})
+
+
+def test_every_start_can_be_chosen_in_the_settings() -> None:
+    choices = typing.get_args(EpisodeConfig.model_fields["start"].annotation)
+
+    assert set(choices) == {start.value for start in StartPosition}
+    assert EpisodeConfig().start == "grid"
 
 
 def test_the_sensors_can_see_all_the_way_round() -> None:

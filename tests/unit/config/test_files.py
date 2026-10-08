@@ -336,6 +336,7 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         end_off_track=draw(st.booleans()),
         time_limit=draw(positive),
         stuck_time=draw(positive),
+        start=draw(st.sampled_from(["grid", "random"])),
     )
     return RacecarConfig(
         vehicle=vehicle,

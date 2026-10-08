@@ -61,3 +61,4 @@ episode:
   end_off_track: true  # End the run as soon as the car's centre leaves the road.
   time_limit: 60       # The longest a run lasts, in seconds of racing.
   stuck_time: 5        # End the run after this many seconds in a row slower than 1 m/s.
+  start: grid          # Where runs start: grid, or random (anywhere on the lap).
