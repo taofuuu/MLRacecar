@@ -26,6 +26,10 @@ def sense(cars: int, median: float) -> dict[str, Any]:
     }
 
 
+def env_step(name: str, cars: int, median: float) -> dict[str, Any]:
+    return {"name": f"{name}[{cars}]", "extra_info": {"cars": cars}, "stats": {"median": median}}
+
+
 def results(*benchmarks: dict[str, Any]) -> dict[str, Any]:
     return {
         "benchmarks": list(benchmarks),
@@ -70,6 +74,26 @@ def test_the_sensors_get_their_own_table_when_they_were_measured() -> None:
         "| 1 | 0.10 ms | 10,000 |",
         "| 64 | 1.60 ms | 40,000 |",
     ]
+
+
+def test_the_environment_gets_its_own_table_and_the_speed_up() -> None:
+    table = speed_table(
+        results(
+            world_step(1, 0.0005),
+            env_step("test_separate_environments", 64, 0.064),
+            env_step("test_one_world", 64, 0.004),
+            env_step("test_one_world", 1, 0.001),
+        )
+    )
+
+    lines = table.splitlines()
+    start = lines.index("| Environment | Cars | Time per step | Car-steps per second |")
+    assert lines[start + 2 : start + 5] == [
+        "| One world (`BatchedRacingEnv`) | 1 | 1.00 ms | 1,000 |",
+        "| One world (`BatchedRacingEnv`) | 64 | 4.00 ms | 16,000 |",
+        "| Separate (`SyncVectorEnv` of `RacingEnv`) | 64 | 64.00 ms | 1,000 |",
+    ]
+    assert "With 64 cars, one world is 16 times faster than 64 separate environments." in lines
 
 
 def test_other_benchmarks_are_left_out() -> None:
