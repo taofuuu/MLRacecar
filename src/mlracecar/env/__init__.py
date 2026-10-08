@@ -13,4 +13,8 @@ ENV_ID = "MLRacecar-v0"
 """The name `RacingEnv` is registered under with Gymnasium."""
 
 if ENV_ID not in gymnasium.registry:
-    gymnasium.register(id=ENV_ID, entry_point="mlracecar.play.environment:make_racing_env")
+    gymnasium.register(
+        id=ENV_ID,
+        entry_point="mlracecar.play.environment:make_racing_env",
+        vector_entry_point="mlracecar.env.batched:BatchedRacingEnv",
+    )
