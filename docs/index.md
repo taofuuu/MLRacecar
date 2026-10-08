@@ -2,6 +2,11 @@
 
 **Draw a race track. Watch an AI learn to master it. Then try to beat it.**
 
+![The AI driving a clean lap of the technical circuit](media/hero.gif)
+
+*The AI's first clean lap of the technical circuit, 30.3 s, after about a minute and a half of
+training on a laptop CPU. The pink lines are the distance sensors it drives by.*
+
 > **In plain words:** This is the documentation website for MLRacecar, a 2D racing game where
 > you design tracks and an AI learns to drive them. Every page starts with a short plain-words
 > summary; technical terms are explained in the [glossary](glossary.md).
@@ -11,9 +16,9 @@ visual track editor and a reinforcement-learning pipeline that teaches cars to d
 track you design.
 
 !!! info "Status"
-    Milestone **M0: Foundations** is wrapping up: tooling, CI, and architecture checks are in
-    place. Next is **M1: Tracks**. Live progress is on the
-    [project board](https://github.com/users/taofuuu/projects/3).
+    Milestones **M0 to M3** are done: the tracks and the editor, a drivable simulation, and the
+    reinforcement-learning environment. In **M4** an AI now learns to lap a track, as above.
+    Live progress is on the [project board](https://github.com/users/taofuuu/projects/3).
 
 ## Where to start
 

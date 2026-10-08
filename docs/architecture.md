@@ -374,6 +374,14 @@ that was scored. `racecar replay` (`play.replay`) plays them back: `Playback` (t
 x0.25 to x4, pause, seek) is window-free logic; `ReplayWindow` reuses `RaceRenderer` with
 interpolation between snapshots and draws a `render.timeline` bar to scrub.
 
+Video export (`play.replay.export_replay`, `racecar replay --export`) samples `Playback` every
+`1 / fps` seconds of race time, draws each picture offscreen with a fresh `RaceRenderer` (the
+chosen camera, rays, and no bottom line), and streams them to `render.video.write_video`: GIF
+through Pillow (one palette from the first picture, frames written as they come) or MP4 through
+imageio-ffmpeg's bundled ffmpeg (H.264, `yuv420p`, CRF 20), from the optional `video` extra.
+`render.video` imports neither pygame nor anything above it, so training's TensorBoard videos
+use the same GIF writer; import-linter keeps Pillow and the encoder in video and training code.
+
 `RaceRenderer` draws the track (with red and white kerbs on bends tighter than 100 m), the
 cars, and a HUD for the followed car (speed, lap, current, last and best lap times, and
 warnings). It has three cameras (follow a car, overview of the whole track, free pan and zoom)

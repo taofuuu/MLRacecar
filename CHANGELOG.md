@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Videos: `racecar replay FILE --export OUT.gif|OUT.mp4` saves a replay as a GIF or an MP4,
+  with `--camera follow|overview`, `--rays`, `--from`/`--to` or `--lap N`, `--fps`, and
+  `--size`; the camera, rays, and start work for watching too. MP4s need the new optional
+  `video` extra (the ffmpeg encoder). The README's GIF of the AI's first clean lap is made by
+  one command from a replay kept in `docs/media/`.
 - Replays: `racecar eval --record FOLDER` saves every run it scores as a replay (`.npz`, about
   110 kB a minute: every snapshot, the track, and the settings; ADR-0015), exactly the run that
   was scored. `racecar replay FILE` plays one back: Space plays or pauses, Left/Right skip a

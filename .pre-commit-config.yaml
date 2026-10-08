@@ -17,6 +17,7 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1024]
+        exclude: ^docs/media/ # the README's GIF, made on purpose (docs/replays.md)
 
   - repo: local
     hooks:
