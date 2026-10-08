@@ -207,13 +207,15 @@ class RacingEnv(gymnasium.Env[NDArray[np.float32], NDArray[np.float32]]):
             "distance": float(race.distance[0]),
             "speed": float(snapshot.cars.speed[0]),
             "laps": int(race.laps[0]),
+            "last_lap": float(race.last_lap[0]),
             "best_lap": float(race.best_lap[0]),
             "off_track": bool(race.off_track[0]),
         }
         if rewards is not None:
             info["terms"] = {term: float(points[0]) for term, points in rewards.terms.items()}
-        if not math.isfinite(info["best_lap"]):
-            info["best_lap"] = None
+        for lap in ("last_lap", "best_lap"):
+            if not math.isfinite(info[lap]):
+                info[lap] = None
         return info
 
 

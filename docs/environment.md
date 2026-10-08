@@ -54,6 +54,7 @@ env.close()
 | `distance` | always | Metres driven along the track since the run began. |
 | `speed` | always | m/s. |
 | `laps` | always | Laps completed. |
+| `last_lap` | always | The latest valid lap time in seconds, or `None`. |
 | `best_lap` | always | The best valid lap time in seconds, or `None`. |
 | `off_track` | always | Whether the car's centre is off the road. |
 | `terms` | every step | This step's points per reward term. |
@@ -110,7 +111,7 @@ Stable-Baselines3 works the `SameStep` way; its adapter comes with the first tra
 
 `infos` follows Gymnasium's vector convention: each key holds one entry per car, and
 `infos["_key"]` says which cars have it (for example, only cars whose run just ended have an
-`end_reason`). A best lap not yet set is `NaN` here, not `None`.
+`end_reason`). A lap time not yet set is `NaN` here, not `None`.
 
 ## Checks
 
