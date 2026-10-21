@@ -75,7 +75,8 @@ def steer_toward(
 def next_speed(
     speed: FloatArray, pedal: FloatArray, params: VehicleParams, dt: float
 ) -> FloatArray:
-    """The speed after ``dt``, from the engine or the brakes and the air and tyre resistance.
+    """The speed after ``dt``, from the engine or the brakes, engine braking, and the air and
+    tyre resistance.
 
     Resistance and braking only ever slow a car down to a stop, never into reverse.
     """
@@ -83,7 +84,11 @@ def next_speed(
     # (at 25 m/s for the default car), and with max_power / speed above that.
     engine = params.max_power / np.maximum(speed, params.max_power / params.max_drive_force)
     push = np.where(pedal > 0, engine, params.max_brake_force) * pedal
+    # Fading with the throttle (not only at exactly 0) gives an AI's analog pedal the same
+    # engine braking as a released key.
+    engine_braking = params.engine_braking * (1.0 - np.maximum(pedal, 0.0))
     drag = 0.5 * AIR_DENSITY * params.drag_coefficient * params.frontal_area * speed**2
     rolling = params.rolling_resistance * params.mass * GRAVITY
-    result: FloatArray = np.maximum(speed + (push - drag - rolling) / params.mass * dt, 0.0)
+    force = push - engine_braking - drag - rolling
+    result: FloatArray = np.maximum(speed + force / params.mass * dt, 0.0)
     return result

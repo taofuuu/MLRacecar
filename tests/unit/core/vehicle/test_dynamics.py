@@ -15,7 +15,7 @@ from mlracecar.core.vehicle.dynamics import (
     steer_toward,
 )
 
-CAR = VehicleConfig().to_params()
+CAR = replace(VehicleConfig().to_params(), engine_braking=0.0)  # it has its own tests below
 DT = 1 / 120
 
 
@@ -111,6 +111,23 @@ def test_a_stopped_car_stays_stopped_unless_the_engine_beats_the_tyres(pedal: fl
 
 def test_braking_stops_the_car_without_reversing() -> None:
     assert next_speed(np.array([0.01]), np.array([-1.0]), CAR, DT)[0] == 0.0
+
+
+@pytest.mark.parametrize(("pedal", "share"), [(-1.0, 1.0), (0.0, 1.0), (0.5, 0.5), (1.0, 0.0)])
+def test_engine_braking_is_full_off_the_throttle_and_fades_as_it_is_pressed(
+    pedal: float, share: float
+) -> None:
+    speed, pedals = np.array([20.0]), np.array([pedal])
+    without = next_speed(speed, pedals, replace(CAR, engine_braking=0.0), DT)
+    with_it = next_speed(speed, pedals, replace(CAR, engine_braking=5000.0), DT)
+
+    assert (without - with_it)[0] / DT * CAR.mass == pytest.approx(share * 5000.0)
+
+
+def test_engine_braking_stops_the_car_without_reversing() -> None:
+    car = replace(CAR, engine_braking=5000.0)
+
+    assert next_speed(np.array([0.01]), np.array([0.0]), car, DT)[0] == 0.0
 
 
 def test_no_resistance_means_coasting_forever() -> None:

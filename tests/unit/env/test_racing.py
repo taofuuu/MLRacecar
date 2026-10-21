@@ -214,8 +214,9 @@ def test_a_lap_driven_well_counts_and_its_time_is_reported() -> None:
     while (info := env.step(driver.act(env.world.snapshot)[0])[4])["laps"] == 0:
         assert "end_reason" not in info
 
-    assert info["best_lap"] == pytest.approx(2 * math.pi * 60 / 25, rel=0.05)
-    assert info["last_lap"] == pytest.approx(2 * math.pi * 60 / 25, rel=0.05)
+    # From the grid, and a hair under the driver's target speed against engine braking.
+    assert info["best_lap"] == pytest.approx(2 * math.pi * 60 / 25, rel=0.08)
+    assert info["last_lap"] == pytest.approx(2 * math.pi * 60 / 25, rel=0.08)
 
 
 def test_the_time_limit_stops_the_run() -> None:

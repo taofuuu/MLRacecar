@@ -284,7 +284,8 @@ def test_the_velocity_overlay_draws_arrows() -> None:
 
 def test_the_ray_overlay_draws_rays_when_there_are_some() -> None:
     snapshot = race()
-    ends = snapshot.cars.position[:, None, :] + [[[10.0, 10.0], [-10.0, 10.0]]]
+    # Not at 45°: a smoothed 45° line can blend every pixel to half its colour.
+    ends = snapshot.cars.position[:, None, :] + [[[12.0, 5.0], [-5.0, 12.0]]]
 
     assert overlay_drawn(Overlay.RAYS, RAY, rays=ends) == (False, True)
     assert overlay_drawn(Overlay.RAYS, RAY) == (False, False)

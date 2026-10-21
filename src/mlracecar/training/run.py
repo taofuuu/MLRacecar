@@ -55,7 +55,7 @@ from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.vec_env import VecMonitor
 
 from mlracecar.agents.sb3 import SB3Agent, git_commit, library_versions, make_model_card
-from mlracecar.config.files import format_config, load_config
+from mlracecar.config.files import format_config, load_config, read_config_file
 from mlracecar.config.models import RacecarConfig
 from mlracecar.core.track.model import Track
 from mlracecar.core.track.validation import has_errors, validate
@@ -171,7 +171,8 @@ class TrainingRun:
                 f"{folder}: the track {track} has changed (or gone) since this run started, so "
                 "carrying on would train on a different track; start a new run"
             )
-        return cls(folder, load_config([folder / CONFIG_FILE]), meta)
+        saved = folder / CONFIG_FILE
+        return cls(folder, load_config(base=(str(saved), read_config_file(saved))), meta)
 
     def train(
         self,

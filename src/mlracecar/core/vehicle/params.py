@@ -32,6 +32,9 @@ class VehicleParams:
     """Engine power in watts: at speed ``v`` the push is at most ``max_power / v``."""
     max_brake_force: float
     """The brakes' strongest push, in newtons."""
+    engine_braking: float
+    """The engine's slowing force with the throttle released, in newtons. It fades out as the
+    throttle is pressed, and is gone at full throttle."""
     drag_coefficient: float
     """Air resistance of the car's shape (Cd, no unit): drag = ½ · air density · Cd · area · v²."""
     frontal_area: float

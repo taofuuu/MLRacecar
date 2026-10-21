@@ -93,6 +93,17 @@ def test_settings_can_start_from_others_instead_of_the_defaults() -> None:
     assert partial.vehicle.width == VehicleConfig().width  # left out: the default
 
 
+def test_settings_saved_before_engine_braking_existed_keep_a_car_without_it() -> None:
+    saved = RacecarConfig().model_dump(mode="json")
+    del saved["vehicle"]["engine_braking"]
+
+    config = load_config(base=("the model card", saved))
+
+    assert config.vehicle.engine_braking == 0.0
+    assert VehicleConfig().engine_braking > 0.0  # a new run's car has it
+    assert load_config().vehicle.engine_braking == VehicleConfig().engine_braking
+
+
 def test_a_problem_in_the_settings_started_from_says_where_they_came_from() -> None:
     with pytest.raises(ConfigError) as caught:
         load_config(base=("the model card", {"vehicle": {"mass": -1, "colour": "red"}}))
@@ -331,6 +342,7 @@ def configs(draw: st.DrawFn) -> RacecarConfig:
         max_drive_force=draw(positive),
         max_power=draw(positive),
         max_brake_force=draw(positive),
+        engine_braking=draw(non_negative),
         drag_coefficient=draw(non_negative),
         frontal_area=draw(positive),
         rolling_resistance=draw(non_negative),

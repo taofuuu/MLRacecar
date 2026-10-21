@@ -69,9 +69,9 @@ class VehicleConfig(BaseModel):
     """The car's mass, in kilograms."""
     max_steer: Annotated[float, Field(gt=0, lt=90)] = 30.0
     """How far the front wheels turn at full lock, in degrees."""
-    steer_rate: Positive = 180.0
+    steer_rate: Positive = 360.0
     """How fast the front wheels can turn, in degrees per second."""
-    grip: Positive = 2.0
+    grip: Positive = 3.0
     """Tyre grip: the hardest the car can corner, in g (gravity = 1)."""
     max_drive_force: Positive = 12000.0
     """The engine's push at low speed, in newtons."""
@@ -79,7 +79,9 @@ class VehicleConfig(BaseModel):
     """Engine power in kilowatts; it limits the push at high speed."""
     max_brake_force: Positive = 37000.0
     """The brakes' strongest push, in newtons."""
-    drag_coefficient: NonNegative = 0.32
+    engine_braking: NonNegative = 5000.0
+    """How hard lifting off the throttle slows the car, in newtons."""
+    drag_coefficient: NonNegative = 1.0
     """Air resistance of the car's shape (Cd, no unit)."""
     frontal_area: Positive = 2.0
     """Size of the car seen from the front, in square metres."""
@@ -111,6 +113,7 @@ class VehicleConfig(BaseModel):
             max_drive_force=self.max_drive_force,
             max_power=self.max_power * 1000,
             max_brake_force=self.max_brake_force,
+            engine_braking=self.engine_braking,
             drag_coefficient=self.drag_coefficient,
             frontal_area=self.frontal_area,
             rolling_resistance=self.rolling_resistance,
