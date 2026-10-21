@@ -17,7 +17,7 @@ from mlracecar.core.geometry import FloatArray, rotate, wrap_angle
 from mlracecar.core.snapshot import Snapshot
 from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.state import VehicleState
-from mlracecar.render.camera import MAX_SCALE, MIN_SCALE, Camera
+from mlracecar.render.camera import MAX_SCALE, MIN_SCALE, NORTH, Camera
 from mlracecar.render.drawing import draw_track
 from mlracecar.render.hud import Hud
 
@@ -60,6 +60,18 @@ should be instead of jumping when the car brakes hard or the steering flicks."""
 EASE_GAP = 1.0
 """Seconds without a frame after which the follow camera jumps straight to its place."""
 
+CHASE_TURN_TIME = 4.5
+"""Seconds the chase camera takes to turn most of the way (63%) to where the car points: slow,
+so the view doesn't swing with every steering correction or every bend of a twisty track."""
+
+CHASE_CATCH_UP = math.radians(60)
+"""Any angle between the car and the chase camera's up past this is turned quickly
+(`CHASE_CATCH_UP_TIME`), so the car rarely points down the window, where left and right swap."""
+
+CHASE_CATCH_UP_TIME = 0.5
+"""Seconds the chase camera takes to turn most of the way through the angle past
+`CHASE_CATCH_UP`."""
+
 FOLLOW_MARGIN = 40
 """Pixels the follow camera keeps between the road ahead and the edge of the window."""
 
@@ -82,6 +94,8 @@ class CameraMode(StrEnum):
 
     FOLLOW = "follow"
     """The followed car, in the middle of the window."""
+    CHASE = "chase"
+    """The followed car pointing up the window: the view turns with it, slowly."""
     OVERVIEW = "overview"
     """The whole track."""
     FREE = "free"
@@ -124,9 +138,14 @@ class RaceRenderer:
         self._overview = _overview(self._edges, size)
         self._free = self._overview
         self._follow_scale = FOLLOW_SCALE
+        self.look_ahead = True
+        """Whether the follow and chase cameras look ahead of the car, or keep it in the middle."""
         self._lead: FloatArray | None = None  # the follow camera's offset ahead of the car
         self._lead_car = -1
         self._lead_time = 0.0
+        self._up: float | None = None  # the chase camera's up direction
+        self._up_car = -1
+        self._up_time = 0.0
         self._kerbs, self._kerb_colors = _kerb_blocks(track)
         self._hud = Hud()
         self._offscreen: pygame.Surface | None = None
@@ -152,11 +171,14 @@ class RaceRenderer:
             return self._overview
         if self.mode is CameraMode.FREE:
             return self._free
-        return self._follow_camera(snapshot, self.followed % len(snapshot.cars))
+        car = self.followed % len(snapshot.cars)
+        up = self._turn(snapshot, car) if self.mode is CameraMode.CHASE else NORTH
+        return self._follow_camera(snapshot, car, up)
 
-    def _follow_camera(self, snapshot: Snapshot, car: int) -> Camera:
+    def _follow_camera(self, snapshot: Snapshot, car: int, up: float) -> Camera:
         """About `VIEW_AHEAD` / 2 seconds ahead of the car, the way it points, zoomed out from the
-        chosen zoom if that's needed to show `VIEW_AHEAD` seconds of road.
+        chosen zoom if that's needed to show `VIEW_AHEAD` seconds of road; or on the car, when
+        `look_ahead` is off. ``up`` points up the window.
 
         The camera eases towards that place (`CAMERA_LAG`) rather than jumping there, and follows
         the car's heading rather than the exact direction it moves in, which flicks with every
@@ -164,16 +186,40 @@ class RaceRenderer:
         """
         cars = snapshot.cars
         heading = float(cars.yaw[car])
-        target = (
-            float(cars.speed[car]) * VIEW_AHEAD / 2 * np.array([np.cos(heading), np.sin(heading)])
-        )
+        target = np.zeros(2)
+        if self.look_ahead:
+            target = (
+                float(cars.speed[car])
+                * VIEW_AHEAD
+                / 2
+                * np.array([np.cos(heading), np.sin(heading)])
+            )
         lead = self._ease(target, car, snapshot.time)
         center = cars.position[car] + lead
         ahead = float(np.hypot(lead[0], lead[1]))
         scale = self._follow_scale
         if ahead > 0:
             scale = min(scale, (min(self.size) / 2 - FOLLOW_MARGIN) / ahead)
-        return Camera(center=(float(center[0]), float(center[1])), scale=scale, size=self.size)
+        center_xy = (float(center[0]), float(center[1]))
+        return Camera(center=center_xy, scale=scale, size=self.size, up=up)
+
+    def _turn(self, snapshot: Snapshot, car: int) -> float:
+        """The chase camera's up direction, turned part of the way to where the car points for
+        the time since the last frame (`CHASE_TURN_TIME`, but quicker past `CHASE_CATCH_UP`); all
+        the way for a new car, or after a pause in the frames or a jump back in time."""
+        heading = float(snapshot.cars.yaw[car])
+        elapsed = snapshot.time - self._up_time
+        if self._up is None or car != self._up_car or not 0 <= elapsed <= EASE_GAP:
+            up = heading
+        else:
+            turn = float(wrap_angle(heading - self._up))
+            step = turn * (1 - math.exp(-elapsed / CHASE_TURN_TIME))
+            past = abs(turn) - CHASE_CATCH_UP
+            if past > 0:
+                step += math.copysign(past, turn) * (1 - math.exp(-elapsed / CHASE_CATCH_UP_TIME))
+            up = self._up + step
+        self._up, self._up_car, self._up_time = up, car, snapshot.time
+        return up
 
     def _ease(self, target: FloatArray, car: int, time: float) -> FloatArray:
         """The follow camera's offset ahead of the car, moved part of the way towards
@@ -188,14 +234,14 @@ class RaceRenderer:
         return lead
 
     def next_camera(self) -> CameraMode:
-        """Switch to the next camera mode: follow, overview, free, and round again."""
+        """Switch to the next camera mode: follow, chase, overview, free, and round again."""
         modes = list(CameraMode)
         self.mode = modes[(modes.index(self.mode) + 1) % len(modes)]
         return self.mode
 
     def zoom_at(self, pixel: tuple[float, float], factor: float) -> None:
         """Zoom in (``factor`` > 1) or out. The overview camera becomes the free camera."""
-        if self.mode is CameraMode.FOLLOW:
+        if self.mode in (CameraMode.FOLLOW, CameraMode.CHASE):
             self._follow_scale = float(np.clip(self._follow_scale * factor, MIN_SCALE, MAX_SCALE))
             return
         if self.mode is CameraMode.OVERVIEW:

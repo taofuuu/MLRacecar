@@ -23,6 +23,9 @@ MAX_SCALE = 50.0
 DEFAULT_SCALE = 2.0
 """Starting zoom, in pixels per metre: a 1280-pixel window spans 640 m."""
 
+NORTH = math.pi / 2
+"""The world's +y direction: up the window for a camera that doesn't turn."""
+
 
 @dataclass(frozen=True)
 class Camera:
@@ -34,6 +37,9 @@ class Camera:
     """Zoom, in pixels per metre, kept between `MIN_SCALE` and `MAX_SCALE`."""
     size: tuple[int, int] = (1280, 800)
     """Window width and height, in pixels."""
+    up: float = NORTH
+    """World direction shown pointing up the window, in radians (counter-clockwise from +x).
+    `NORTH`, the default, doesn't turn the view; the chase camera turns it with the car."""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "scale", float(np.clip(self.scale, MIN_SCALE, MAX_SCALE)))
@@ -45,17 +51,18 @@ class Camera:
     def to_screen(self, points: ArrayLike) -> FloatArray:
         """World positions (metres, shape ``(..., 2)``) to window pixels."""
         world = np.asarray(points, dtype=np.float64)
-        screen = (world - self.center) * self.scale * (1.0, -1.0)
+        screen = _turned(world - self.center, NORTH - self.up) * self.scale * (1.0, -1.0)
         return screen + np.asarray(self.size) / 2
 
     def to_world(self, pixels: ArrayLike) -> FloatArray:
         """Window pixels (shape ``(..., 2)``) to world positions in metres."""
         screen = np.asarray(pixels, dtype=np.float64) - np.asarray(self.size) / 2
-        return screen * (1.0, -1.0) / self.scale + self.center
+        return _turned(screen * (1.0, -1.0) / self.scale, self.up - NORTH) + self.center
 
     def visible_area(self) -> tuple[FloatArray, FloatArray]:
         """The lowest and highest world corners the window shows, as ``(x, y)`` arrays."""
-        corners = self.to_world([(0, 0), self.size])
+        width, height = self.size
+        corners = self.to_world([(0, 0), (width, 0), (0, height), (width, height)])
         return corners.min(axis=0), corners.max(axis=0)
 
     # ------------------------------------------------------------------ #
@@ -64,8 +71,9 @@ class Camera:
 
     def pan(self, dx: float, dy: float) -> Self:
         """Drag the view by ``(dx, dy)`` pixels: the world moves with the mouse."""
+        moved = _turned(np.array([dx / self.scale, -dy / self.scale]), self.up - NORTH)
         x, y = self.center
-        return replace(self, center=(x - dx / self.scale, y + dy / self.scale))
+        return replace(self, center=(x - float(moved[0]), y - float(moved[1])))
 
     def zoom_at(self, pixel: ArrayLike, factor: float) -> Self:
         """Zoom by ``factor`` (above 1 zooms in), keeping the world point under ``pixel`` still."""
@@ -103,3 +111,12 @@ class Camera:
         power = math.floor(math.log10(smallest))
         steps = (1, power), (2, power), (5, power), (1, power + 1)
         return next(step for m, p in steps if (step := m * 10.0**p) >= smallest)
+
+
+def _turned(points: FloatArray, angle: float) -> FloatArray:
+    """``points`` (shape ``(..., 2)``) turned ``angle`` radians counter-clockwise about 0."""
+    if angle == 0.0:
+        return points
+    cos, sin = math.cos(angle), math.sin(angle)
+    x, y = points[..., 0], points[..., 1]
+    return np.stack([x * cos - y * sin, x * sin + y * cos], axis=-1)

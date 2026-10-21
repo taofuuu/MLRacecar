@@ -181,14 +181,71 @@ def test_zoomed_far_out_cars_are_dots_so_they_still_show() -> None:
     assert tuple(image[position[1], position[0]]) == CAR_COLORS[0]
 
 
-def test_the_camera_cycles_follow_overview_free() -> None:
+def test_the_camera_cycles_follow_chase_overview_free() -> None:
     drawing = renderer()
 
-    assert [drawing.next_camera() for _ in range(3)] == [
+    assert [drawing.next_camera() for _ in range(4)] == [
+        CameraMode.CHASE,
         CameraMode.OVERVIEW,
         CameraMode.FREE,
         CameraMode.FOLLOW,
     ]
+
+
+def chasing() -> RaceRenderer:
+    drawing = renderer()
+    drawing.mode = CameraMode.CHASE
+    return drawing
+
+
+def test_the_chase_camera_points_the_car_up_the_window_and_looks_ahead() -> None:
+    drawing, snapshot = chasing(), moving_at(20.0)
+
+    camera = drawing.camera(snapshot)
+
+    car, yaw = snapshot.cars.position[0], float(snapshot.cars.yaw[0])
+    ahead = np.array([math.cos(yaw), math.sin(yaw)])
+    nose = camera.to_screen(car + ahead) - camera.to_screen(car)
+    np.testing.assert_allclose(nose, (0.0, -camera.scale), atol=1e-9)  # straight up
+    assert camera.to_screen(car)[1] > SIZE[1] / 2  # below the middle: the road ahead shows
+
+
+@pytest.mark.parametrize(("turn", "left"), [(30.0, 24.0), (120.0, 60.8)])
+def test_the_chase_camera_turns_slowly_but_quickly_past_60_degrees(
+    turn: float, left: float
+) -> None:
+    drawing, start = chasing(), moving_at(20.0)
+    drawing.camera(start)
+    yaw = float(start.cars.yaw[0]) + math.radians(turn)
+    turned = replace(start, cars=replace(start.cars, yaw=np.array([yaw])))
+
+    for frame in range(1, 21):  # the car holds the new heading for a second
+        up = drawing.camera(replace(turned, time=start.time + frame * 0.05)).up
+
+    # 30°: still most of it after a second; 120°: the part past 60° made up in about a second.
+    assert math.degrees(abs(math.remainder(yaw - up, math.tau))) == pytest.approx(left, abs=0.1)
+
+
+def test_after_a_pause_the_chase_camera_jumps_round_to_the_car() -> None:
+    drawing, start = chasing(), moving_at(20.0)
+    drawing.camera(start)
+    yaw = float(start.cars.yaw[0]) + 2.0
+    later = replace(
+        start, time=start.time + 2 * EASE_GAP, cars=replace(start.cars, yaw=np.array([yaw]))
+    )
+
+    assert drawing.camera(later).up == yaw
+
+
+@pytest.mark.parametrize("mode", [CameraMode.FOLLOW, CameraMode.CHASE])
+def test_without_look_ahead_the_car_stays_in_the_middle(mode: CameraMode) -> None:
+    drawing, snapshot = renderer(), moving_at(20.0)
+    drawing.mode, drawing.look_ahead = mode, False
+
+    camera = drawing.camera(snapshot)
+
+    np.testing.assert_allclose(camera.center, snapshot.cars.position[0])
+    assert camera.scale == FOLLOW_SCALE
 
 
 def test_zooming_the_follow_camera_keeps_following() -> None:
