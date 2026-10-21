@@ -97,6 +97,8 @@
 | **Sideslip angle** | The small angle between where a car points and where its middle is actually moving while it turns. | The kinematic model's centre moves at this angle. |
 | **Dynamic bicycle model / Pacejka** | More realistic car physics where tires can slip, so drifting and understeer happen. Pacejka is a standard tire-grip formula. | Second car model (M2-3). |
 | **Understeer / oversteer** | The car turns less than you steer (front slides) / more than you steer (rear slides). | The kinematic model understeers at the grip limit; the dynamic model adds both. |
+| **Driver aid** | A helper that changes only how a person's keys become steering and pedal, such as easing the steering at speed or braking before corners. It never changes the car itself, and an AI never gets one. | None yet: you and the AI drive the same car ([ADR-0016](adr/0016-one-car-tuned-for-the-keyboard.md)). Aids wait for M5, with the other human controls. |
+| **Engine braking** | The engine slowing the car when you lift off the throttle, before you touch the brakes. | The `engine_braking` setting: full with the throttle released, fading to nothing at full throttle. |
 | **Fixed timestep** | The simulation always advances by the same tiny time slice (e.g. 1/120 s), so results don't depend on computer speed. | The World loop. |
 | **Semi-implicit Euler** | A simple, stable way to step physics forward in time. | Vehicle integration. |
 | **Action repeat** | The AI decides 20 times per second; each decision is held for several physics steps. | 120 Hz physics, 20 Hz decisions. |

@@ -64,8 +64,9 @@ uv run racecar config --set observation.curvature=false
 
 How many rays there are, how wide they fan, and how far they reach are the `sensors` settings.
 
-150 m is enough for the default car to brake from its top speed (303 km/h) to hairpin speed,
-which takes about 115 m, with room to turn in. The rays only reach 100 m.
+150 m is enough for the default car to brake from its top speed (209 km/h) to hairpin speed,
+which takes about 45 m, with plenty of room to turn in. The rays only reach 100 m. (The 150 m
+was chosen for an earlier, faster default car that needed about 115 m.)
 
 ## The spec and its digest
 
