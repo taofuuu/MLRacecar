@@ -16,6 +16,11 @@ class CenterlineDriver:
     it is along the lap and steers onto the arc that passes through that point. The pedal holds
     the target speed, which drops ahead of each bend to what the tyres can take there, using
     ``corner_grip`` of their grip, and braking at ``braking`` m/s² on the way in.
+
+    The pedal is ``gain`` times the speed error. At 2 it overshot when braking (37 kN undid
+    1.85x the error in one decision), and with engine braking the pedal hovers around 0, so it
+    flipped between throttle and brake and magnified rounding differences: the golden lap
+    drifted apart on Linux and Windows. At 1 a nanometre nudge stays below 1e-8 m/s for a lap.
     """
 
     def __init__(
@@ -25,7 +30,7 @@ class CenterlineDriver:
         speed: float,
         *,
         lookahead: float = 5.0,
-        gain: float = 2.0,
+        gain: float = 1.0,
         corner_grip: float = 0.8,
         braking: float = 0.5 * GRAVITY,
     ) -> None:

@@ -13,24 +13,31 @@ This page describes the first car model, the **kinematic bicycle** (`KinematicBi
 
 ## What the default car can do
 
-The default car is a light race car: 1300 kg, 250 kW, tyres that grip at up to 2 g (like a
-race car with aerodynamic downforce), and brakes that stop it at almost 3 g. It started as a
-plain sporty road car (200 kW, grip 1.0, 13 kN brakes). Test drives with the keyboard showed
-that car was hard to control: it was slow to speed up and slow down, and couldn't turn hard
-enough to make the corners. The race car is the tuning that drove well.
+The default car is an arcade car: easy to drive with a keyboard, not realistic. It's 1300 kg
+and 250 kW, its tyres grip at up to 3 g, its steering is quick, and its air drag is high, so it
+tops out around 210 km/h. Lifting off the throttle slows it straight away (engine braking), so
+you can lift for a corner instead of braking. You and the AI drive this same car
+([ADR-0016](adr/0016-one-car-tuned-for-the-keyboard.md)).
+
+It got here in steps, each from keyboard test drives. A plain sporty road car (200 kW, grip
+1.0, 13 kN brakes) was slow to speed up and slow down, and couldn't turn hard enough to make
+the corners. A light race car (grip 2, 37 kN brakes, 303 km/h) fixed that, but felt like a
+racing simulator on a twisty track: it hardly slowed when you lifted off, so you braked all the
+time. The arcade car is the tuning that drove well.
 
 | | |
 |---|---|
-| 0–100 km/h | 3.2 s |
-| 0–200 km/h | 10.6 s |
-| Top speed | 303 km/h |
-| Braking 100–0 km/h | 13.3 m |
-| Braking 200–0 km/h | 53 m |
-| Fastest through a bend of radius 12 m / 50 m / 200 m | 55 / 113 / 226 km/h |
+| 0–100 km/h | 3.3 s |
+| 0–200 km/h | 18 s |
+| Top speed | 209 km/h |
+| Braking 100–0 km/h | 11.8 m |
+| Braking 200–0 km/h | 46 m |
+| Lifting off for 1 s, from 100 / 200 km/h | down to 83 / 176 km/h |
+| Fastest through a bend of radius 12 m / 50 m / 200 m | 68 / 138 / 276 km/h |
 | Tightest turn (rear-axle radius, at walking pace) | 4.7 m |
-| Steering lock to lock | 0.33 s |
+| Steering lock to lock | 0.17 s |
 
-The tests keep the top speed at about 300 km/h and 0–100 km/h between 2.5 and 4 seconds, so a
+The tests keep the top speed at about 210 km/h and 0–100 km/h between 2.5 and 4 seconds, so a
 change to the physics that makes the car feel different shows up straight away.
 
 ## The driver's controls
@@ -68,12 +75,18 @@ Each step of length `dt` (1/120 s by default) does this, for all cars at once:
       75 km/h the engine pushes with its full force; above that its power runs out, and the push
       falls as the speed rises.
     - **Brakes:** `pedal · max_brake_force`, for `pedal < 0`.
+    - **Engine braking:** `engine_braking`, for `pedal ≤ 0`, fading to nothing at full
+      throttle: `(1 − pedal) · engine_braking`, for `pedal > 0`. Lifting off the throttle
+      slows the car. It fades instead of switching off at exactly 0, so an AI's pedal gets the
+      same engine braking as a released key. It also fades out below 18 km/h (in proportion to
+      the speed): it slows a moving car, but doesn't hold a stopped one, so a light throttle
+      still pulls away.
     - **Air drag:** `½ · ρ · Cd · A · v²`, with air density `ρ = 1.225 kg/m³`.
     - **Rolling resistance:** `rolling_resistance · m · g`.
 
-    The new speed is `v + (engine or brakes − drag − rolling) / m · dt`. It never goes below
-    zero: brakes and resistance stop the car, but don't drive it backwards. There is no reverse
-    gear.
+    The new speed is `v + (engine or brakes − engine braking − drag − rolling) / m · dt`. It
+    never goes below zero: brakes and resistance stop the car, but don't drive it backwards.
+    There is no reverse gear.
 
 3. **Grip.** The tyres can hold at most `grip · g` sideways. A car turning about a point
    `R = wheelbase / tan(angle)` from its rear axle needs up to `v² / R` sideways, so at speed

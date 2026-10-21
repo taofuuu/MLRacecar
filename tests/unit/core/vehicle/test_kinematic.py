@@ -85,7 +85,9 @@ def test_constant_steering_drives_a_circle_of_radius_wheelbase_over_tan_steer(
     # speed changing, the steps' small lag in direction would shift the circle as it goes.
     # (The faster the turn, the more that lag also moves the rear axle off the circle.)
     speed = 0.5 * math.sqrt(GRAVITY * radius)
-    steady = KinematicBicycle(replace(CAR, drag_coefficient=0.0, rolling_resistance=0.0))
+    steady = KinematicBicycle(
+        replace(CAR, drag_coefficient=0.0, rolling_resistance=0.0, engine_braking=0.0)
+    )
     lap = 2 * math.pi * radius / speed
     start = one_car(speed=speed, steer=angle)
     states = drive(start, [[angle / CAR.max_steer, 0.0]], round(lap / DT), model=steady)
@@ -102,7 +104,7 @@ def test_constant_steering_drives_a_circle_of_radius_wheelbase_over_tan_steer(
 def test_full_throttle_reaches_the_top_speed_where_power_meets_drag() -> None:
     state = drive(one_car(), [[0.0, 1.0]], round(240 / DT))[-1]  # four minutes
 
-    assert top_speed(CAR) * 3.6 == pytest.approx(303, abs=5)  # km/h
+    assert top_speed(CAR) * 3.6 == pytest.approx(209, abs=5)  # km/h
     assert state.speed[0] == pytest.approx(top_speed(CAR), rel=1e-4)
 
 
@@ -193,7 +195,7 @@ def test_the_default_car_is_quick() -> None:
     states = drive(one_car(), [[0.0, 1.0]], round(10 / DT))
     seconds = DT * next(index for index, state in enumerate(states) if state.speed[0] >= 100 / 3.6)
 
-    assert 2.5 < seconds < 4  # 0-100 km/h, like a hot sporty car
+    assert 2.5 < seconds < 4  # 0-100 km/h, quick off the line
 
 
 def test_bad_actions_are_refused() -> None:

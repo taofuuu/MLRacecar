@@ -59,7 +59,7 @@ def test_settings_cannot_be_changed_after_loading() -> None:
         config.vehicle.mass = 900.0
 
 
-def test_the_default_car_is_a_hot_sporty_car() -> None:
+def test_the_default_car_is_an_arcade_car_with_a_modest_top_speed() -> None:
     car = VehicleConfig().to_params()
     air_density, gravity = 1.225, 9.81
     drag = 0.5 * air_density * car.drag_coefficient * car.frontal_area
@@ -69,7 +69,7 @@ def test_the_default_car_is_a_hot_sporty_car() -> None:
     roots = np.roots([drag, 0, rolling, -car.max_power])
     top_speed = max(root.real for root in roots if abs(root.imag) < 1e-9)
 
-    assert 295 < top_speed * 3.6 < 310  # km/h
+    assert 200 < top_speed * 3.6 < 215  # km/h
 
 
 # --------------------------------------------------------------------------- #

@@ -41,6 +41,10 @@ HEADER = (
 type Location = tuple[Hashable, ...]
 """Where a value sits in the settings, e.g. ``("vehicle", "mass")``."""
 
+ADDED_SETTINGS: dict[tuple[str, str], Any] = {("vehicle", "engine_braking"): 0.0}
+"""Settings added after runs were first saved, with the value that keeps an older saved run
+behaving as it did (its car had no engine braking), where the default would change it."""
+
 
 class ConfigError(ValueError):
     """Settings can't be used. The message lists every problem and where it came from."""
@@ -49,21 +53,24 @@ class ConfigError(ValueError):
 def load_config(
     files: Iterable[str | Path] = (),
     overrides: Iterable[str] = (),
-    base: tuple[str, Mapping[str, Any]] | None = None,
+    base: tuple[str, Mapping[Any, Any]] | None = None,
 ) -> RacecarConfig:
     """Build the settings: the defaults, changed by each file in order, then by each override.
 
     Args:
         files: Settings files (YAML); each only needs the settings it changes.
         overrides: ``section.key=value`` strings, as given to ``--set``.
-        base: Settings to start from before the files, and where they're from, such as
-            ``("the model card", card.config)``. Any they leave out are the defaults.
+        base: Saved settings to start from before the files, and where they're from, such as
+            ``("the model card", card.config)``. Any they leave out are the defaults, except
+            `ADDED_SETTINGS`: those they were saved without.
 
     Raises:
         ConfigError: If a file can't be read, an override isn't ``key=value``, or a setting is
             invalid. Every invalid setting is listed, with the file (or ``--set``) it came from.
     """
-    layers: list[tuple[str, Mapping[Any, Any]]] = [] if base is None else [base]
+    layers: list[tuple[str, Mapping[Any, Any]]] = []
+    if base is not None:
+        layers.append((base[0], _with_added_settings(base[1])))
     layers += [(str(path), read_config_file(path)) for path in files]
     layers += [("--set", parse_override(override)) for override in overrides]
     merged: dict[Hashable, Any] = {}
@@ -74,6 +81,16 @@ def load_config(
         return RacecarConfig.model_validate(merged)
     except ValidationError as error:
         raise ConfigError(_describe(error, sources)) from None
+
+
+def _with_added_settings(saved: Mapping[Any, Any]) -> dict[Any, Any]:
+    """``saved``, with each of `ADDED_SETTINGS` it lacks set to its value for older runs."""
+    filled = dict(saved)
+    for (section, key), value in ADDED_SETTINGS.items():
+        part = filled.get(section, {})
+        if isinstance(part, Mapping) and key not in part:
+            filled[section] = {**part, key: value}
+    return filled
 
 
 def read_config_file(path: str | Path) -> dict[Hashable, Any]:

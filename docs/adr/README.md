@@ -29,3 +29,4 @@ To add one, copy [`0000-template.md`](0000-template.md), take the next number, a
 | [0013](0013-track-checks-in-the-background.md)       | The editor runs the track checks in the background            | Accepted |
 | [0014](0014-kinematic-car-model.md)                  | A kinematic car with grip-limited turning and no reverse gear | Accepted |
 | [0015](0015-replays-as-npz-snapshot-streams.md)      | Replays as snapshot streams in NumPy's npz                    | Accepted |
+| [0016](0016-one-car-tuned-for-the-keyboard.md)       | One car for people and the AI, tuned for the keyboard         | Accepted |

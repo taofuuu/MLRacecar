@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- Engine braking: the new `vehicle.engine_braking` setting (newtons) slows a car when the
+  throttle is released, fading to nothing at full throttle (and below 18 km/h, so it never
+  holds a stopped car), the same for people and the AI.
 - Videos: `racecar replay FILE --export OUT.gif|OUT.mp4` saves a replay as a GIF or an MP4,
   with `--camera follow|overview`, `--rays`, `--from`/`--to` or `--lap N`, `--fps`, and
   `--size`; the camera, rays, and start work for watching too. MP4s need the new optional
@@ -210,6 +213,14 @@ All notable changes to this project are documented here. The format is based on
   and a pull request template with the Definition of Done.
 - Documentation website (MkDocs Material) with Mermaid diagrams and an API reference generated
   from docstrings; built in strict mode on every PR and published to GitHub Pages from `main`.
+
+### Changed
+
+- The default car is now an arcade car, easy to drive with a keyboard (ADR-0016): grip 3 (was
+  2), steering 360°/s (was 180), air drag 1.0 (was 0.32; top speed 209 km/h instead of 303),
+  and 5000 N of engine braking. People and the AI drive the same car. Saved settings without
+  `engine_braking` (older trained AIs and runs) load it as 0, so they keep the car they learned
+  on.
 
 ### Fixed
 

@@ -129,9 +129,12 @@ def test_the_scripted_driver_laps_in_the_expected_time() -> None:
         laps += [event for event in events if isinstance(event, LapCompleted)]
 
     assert all(lap.valid for lap in laps)
-    # The first lap starts slowly, from the grid; the others are at full speed.
+    # The first lap starts slowly, from the grid; the others at the speed the car settles at
+    # (a little under the driver's target: its pedal is proportional to the shortfall).
+    held = float(world.snapshot.cars.speed[0])
+    assert held == pytest.approx(speed, rel=0.05)
     for lap in laps[1:]:
-        assert lap.time == pytest.approx(LENGTH / speed, rel=0.01)
+        assert lap.time == pytest.approx(LENGTH / held, rel=0.01)
     assert world.snapshot.race.laps[0] == 3
 
 
@@ -142,7 +145,7 @@ def test_the_scripted_driver_laps_the_gp_circuit() -> None:
         assert world.snapshot.time < 200, "no valid lap after 200 s"
         world.step(driver.act(world.snapshot))
 
-    assert world.snapshot.race.best_lap[0] == pytest.approx(103, abs=5)  # about 120 km/h
+    assert world.snapshot.race.best_lap[0] == pytest.approx(97, abs=5)  # about 130 km/h
 
 
 # --------------------------------------------------------------------------- #
