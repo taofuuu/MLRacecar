@@ -25,6 +25,9 @@ GRAVITY = 9.81
 """m/s²."""
 AIR_DENSITY = 1.225
 """kg/m³, at sea level and 15 °C."""
+ENGINE_BRAKING_FADE = 5.0
+"""m/s (18 km/h). Engine braking fades out below this speed: it slows a moving car, but doesn't
+hold a stopped one, so a light throttle still pulls away."""
 
 STEER = 0
 """Column of the steering command in an action array."""
@@ -86,7 +89,11 @@ def next_speed(
     push = np.where(pedal > 0, engine, params.max_brake_force) * pedal
     # Fading with the throttle (not only at exactly 0) gives an AI's analog pedal the same
     # engine braking as a released key.
-    engine_braking = params.engine_braking * (1.0 - np.maximum(pedal, 0.0))
+    engine_braking = (
+        params.engine_braking
+        * (1.0 - np.maximum(pedal, 0.0))
+        * np.minimum(speed / ENGINE_BRAKING_FADE, 1.0)
+    )
     drag = 0.5 * AIR_DENSITY * params.drag_coefficient * params.frontal_area * speed**2
     rolling = params.rolling_resistance * params.mass * GRAVITY
     force = push - engine_braking - drag - rolling

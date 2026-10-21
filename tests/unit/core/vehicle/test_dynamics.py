@@ -9,6 +9,7 @@ from numpy.typing import ArrayLike
 
 from mlracecar.config.models import VehicleConfig
 from mlracecar.core.vehicle.dynamics import (
+    ENGINE_BRAKING_FADE,
     GRAVITY,
     checked_actions,
     next_speed,
@@ -124,10 +125,20 @@ def test_engine_braking_is_full_off_the_throttle_and_fades_as_it_is_pressed(
     assert (without - with_it)[0] / DT * CAR.mass == pytest.approx(share * 5000.0)
 
 
+def test_engine_braking_fades_out_at_low_speed_so_a_light_throttle_pulls_away() -> None:
+    car = replace(CAR, engine_braking=5000.0)
+    slow = np.array([ENGINE_BRAKING_FADE / 2])
+    without = next_speed(slow, np.array([0.0]), replace(car, engine_braking=0.0), DT)
+
+    half = (without - next_speed(slow, np.array([0.0]), car, DT))[0] / DT * CAR.mass
+    assert half == pytest.approx(2500.0)
+    assert next_speed(np.array([0.0]), np.array([0.1]), car, DT)[0] > 0.0
+
+
 def test_engine_braking_stops_the_car_without_reversing() -> None:
     car = replace(CAR, engine_braking=5000.0)
 
-    assert next_speed(np.array([0.01]), np.array([0.0]), car, DT)[0] == 0.0
+    assert next_speed(np.array([0.001]), np.array([0.0]), car, DT)[0] == 0.0
 
 
 def test_no_resistance_means_coasting_forever() -> None:

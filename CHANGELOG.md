@@ -9,7 +9,8 @@ All notable changes to this project are documented here. The format is based on
 ### Added
 
 - Engine braking: the new `vehicle.engine_braking` setting (newtons) slows a car when the
-  throttle is released, fading to nothing at full throttle, the same for people and the AI.
+  throttle is released, fading to nothing at full throttle (and below 18 km/h, so it never
+  holds a stopped car), the same for people and the AI.
 - Videos: `racecar replay FILE --export OUT.gif|OUT.mp4` saves a replay as a GIF or an MP4,
   with `--camera follow|overview`, `--rays`, `--from`/`--to` or `--lap N`, `--fps`, and
   `--size`; the camera, rays, and start work for watching too. MP4s need the new optional

@@ -78,7 +78,9 @@ Each step of length `dt` (1/120 s by default) does this, for all cars at once:
     - **Engine braking:** `engine_braking`, for `pedal ≤ 0`, fading to nothing at full
       throttle: `(1 − pedal) · engine_braking`, for `pedal > 0`. Lifting off the throttle
       slows the car. It fades instead of switching off at exactly 0, so an AI's pedal gets the
-      same engine braking as a released key.
+      same engine braking as a released key. It also fades out below 18 km/h (in proportion to
+      the speed): it slows a moving car, but doesn't hold a stopped one, so a light throttle
+      still pulls away.
     - **Air drag:** `½ · ρ · Cd · A · v²`, with air density `ρ = 1.225 kg/m³`.
     - **Rolling resistance:** `rolling_resistance · m · g`.
 

@@ -36,7 +36,9 @@ wait for M5, with the other human controls.
 
 Engine braking fades out as the throttle is pressed instead of switching on only at exactly
 zero throttle: a released key sends exactly 0, but the AI's pedal is a number that's almost
-never exactly 0, so a switch would be a hidden aid for people.
+never exactly 0, so a switch would be a hidden aid for people. It also fades out below 18 km/h:
+at full strength even when stopped, it held a car still until the throttle passed 30%, so an
+untrained AI, whose pedal starts near 0, never left the grid.
 
 The grip limit of [ADR-0014](0014-kinematic-car-model.md) stays: the car is easier, not
 unlimited, so braking for corners still matters to the AI.
