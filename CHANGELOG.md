@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format is based on
 
 ### Added
 
+- A chase camera: the race window's view turns with the followed car so it points up the
+  window, and left stays left. It turns slowly (4.5 s), and quickly past 60°, so the car rarely
+  points down the screen. `racecar drive` starts on it; C cycles follow, chase, overview, free,
+  and L keeps the car in the middle instead of looking ahead.
 - Engine braking: the new `vehicle.engine_braking` setting (newtons) slows a car when the
   throttle is released, fading to nothing at full throttle (and below 18 km/h, so it never
   holds a stopped car), the same for people and the AI.

@@ -37,7 +37,7 @@ with a timeline along the bottom showing where the replay is up to:
 | Up / Down | Faster or slower: x0.25, x0.5, x1, x2, x4. |
 | Home / End | The start or the end. |
 | Click or drag the timeline | Go anywhere. |
-| C | The camera: following the car, the whole track, or free. |
+| C | The camera: following the car, chasing it (the view turns with it), the whole track, or free. |
 | 1-4 | Overlays: centerline, checkpoints, velocity, distance rays. |
 | Wheel, drag elsewhere | Zoom and move the view. |
 | Esc | Close. |
@@ -58,7 +58,7 @@ uv run racecar replay replays/technical-A-01.npz --export clip.mp4 --from 10 --t
 | Option | Default | Meaning |
 |--------|--------:|---------|
 | `--export FILE` | | A `.gif` or `.mp4` file to save it as. |
-| `--camera` | `follow` | `follow` (the chase camera) or `overview` (the whole track). |
+| `--camera` | `follow` | `follow` (following the car, north up) or `overview` (the whole track). |
 | `--rays` | off | Show the distance rays the car drives by. |
 | `--from`, `--to` | the whole replay | Where to start and stop, in seconds. |
 | `--lap N` | | Just the Nth valid lap, from the line to the line. |

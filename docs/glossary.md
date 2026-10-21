@@ -44,6 +44,7 @@
 | **Protocol / interface** | A promise about what methods something has, without saying how it works. Lets you swap implementations. | `Agent`: human, SB3, or our own PPO all fit the same slot. |
 | **MVC** (Model–View–Controller) | Splitting an app into data (model), drawing (view), and input handling (controller). | The track editor. |
 | **Camera** | Which part of the world the window shows, and how zoomed in. It converts metres to screen pixels and back. | Panning and zooming in the editor and the race window. |
+| **Follow camera / chase camera** | Two ways to keep a car on screen. The follow camera keeps north at the top of the window. The chase camera turns the view with the car, slowly, so the car points up the window and its left is your left. Both look ahead of the car unless you switch that off. | The race window's cameras; `racecar drive` starts on the chase camera. |
 | **Grid snap** | New and moved points jump to the nearest grid crossing, so a track lines up neatly. | Press G in the editor. |
 | **Immutable** | Can't be changed after it's made. Changing it means making a new copy with the change. | Editor drafts: undo is going back to an earlier copy ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |
 | **Command pattern** | Each edit is stored as an object that knows how to do *and* undo itself. A classic way to build undo/redo. | Considered for the editor, replaced by immutable drafts ([ADR-0011](adr/0011-immutable-editor-drafts.md)). |

@@ -45,7 +45,8 @@ uv run racecar config
 ```
 
 `racecar drive` puts you behind the wheel: arrow keys or WASD to drive, **R** to restart,
-**C** to change the camera, **4** to see the distance sensors the AI will drive by
+**C** to change the camera (it starts on the chase camera, which turns with your car), **L** to
+keep the car in the middle instead of looking ahead, **4** to see the distance sensors the AI will drive by
 ([docs/sensors.md](docs/sensors.md)). The panel shows your speed, lap, and lap times; a lap only counts
 if you stay on the road and pass every checkpoint in order. `racecar edit` opens the track editor: click to add points, the road appears as you draw, and
 any problems are marked in red or orange. Ctrl+Z undoes, Ctrl+S saves. Press **H** in the editor for all the
