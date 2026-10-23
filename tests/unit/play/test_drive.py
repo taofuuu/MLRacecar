@@ -50,7 +50,7 @@ def test_the_car_starts_on_the_grid_at_rest(window: DriveWindow) -> None:
     assert len(snapshot.cars) == 1
     assert snapshot.cars.speed[0] == 0.0
     assert snapshot.race.checkpoint[0] == -1
-    assert window.renderer.mode is CameraMode.FOLLOW
+    assert window.renderer.mode is CameraMode.CHASE
 
 
 def test_the_keys_drive_the_car(window: DriveWindow) -> None:
@@ -103,6 +103,14 @@ def test_c_switches_the_camera_and_number_keys_the_overlays(window: DriveWindow)
 
     assert window.renderer.mode is CameraMode.OVERVIEW
     assert window.renderer.overlays == {Overlay.CHECKPOINTS}
+
+
+def test_l_switches_looking_ahead_off_and_on(window: DriveWindow) -> None:
+    window.handle(key(pygame.K_l))
+    assert not window.renderer.look_ahead
+
+    window.handle(key(pygame.K_l))
+    assert window.renderer.look_ahead
 
 
 def test_4_shows_the_distance_rays_the_ai_will_drive_by(window: DriveWindow) -> None:
@@ -213,7 +221,7 @@ def test_other_keys_do_nothing(window: DriveWindow) -> None:
 
     assert window.running
     assert not window.paused
-    assert window.renderer.mode is CameraMode.FOLLOW
+    assert window.renderer.mode is CameraMode.CHASE
     assert window.renderer.overlays == set()
 
 

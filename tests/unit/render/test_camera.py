@@ -5,7 +5,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from mlracecar.render.camera import DEFAULT_SCALE, MAX_SCALE, MIN_SCALE, Camera
+from mlracecar.render.camera import DEFAULT_SCALE, MAX_SCALE, MIN_SCALE, NORTH, Camera
 
 world_points = st.tuples(st.floats(-5000, 5000), st.floats(-5000, 5000))
 pixels = st.tuples(st.floats(0, 1280), st.floats(0, 800))
@@ -14,6 +14,7 @@ cameras = st.builds(
     center=world_points,
     scale=st.floats(MIN_SCALE, MAX_SCALE),
     size=st.tuples(st.integers(100, 2000), st.integers(100, 2000)),
+    up=st.one_of(st.just(NORTH), st.floats(-7.0, 7.0)),
 )
 
 
@@ -43,6 +44,17 @@ def test_the_window_shows_the_area_around_the_centre() -> None:
     low, high = Camera(center=(10.0, 20.0), scale=2.0, size=(800, 600)).visible_area()
     np.testing.assert_allclose(low, (-190, -130))
     np.testing.assert_allclose(high, (210, 170))
+
+
+def test_a_turned_camera_shows_its_up_direction_up_the_window() -> None:
+    east_up = Camera(scale=2.0, size=(800, 600), up=0.0)
+
+    np.testing.assert_allclose(
+        east_up.to_screen([(10.0, 0.0), (0.0, 10.0)]), [(400, 280), (380, 300)], atol=1e-9
+    )  # east is up, so north is to the left
+    low, high = east_up.visible_area()  # the window's width now spans north to south
+    np.testing.assert_allclose(low, (-150, -200), atol=1e-9)
+    np.testing.assert_allclose(high, (150, 200), atol=1e-9)
 
 
 @given(cameras, pixels, st.floats(-500, 500), st.floats(-500, 500))

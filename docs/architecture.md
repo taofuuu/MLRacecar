@@ -384,12 +384,13 @@ use the same GIF writer; import-linter keeps Pillow and the encoder in video and
 
 `RaceRenderer` draws the track (with red and white kerbs on bends tighter than 100 m), the
 cars, and a HUD for the followed car (speed, lap, current, last and best lap times, and
-warnings). It has three cameras (follow a car, overview of the whole track, free pan and zoom)
+warnings). It has four cameras (follow a car with north up; chase it, the view turning slowly
+with it so it points up the window; overview of the whole track; free pan and zoom)
 and debug overlays that can be toggled: centerline, checkpoints (the followed car's next one
 highlighted), velocity arrows, and sensor rays. `render(snapshot)` draws offscreen and returns
 an RGB array, which works headless (SDL's dummy driver) for tests, CI, and video. With 16 cars
-on the 3.5 km GP circuit a frame takes about 6 ms following a car and 9 ms for the overview,
-all overlays on (`tests/benchmarks/test_render_speed.py`).
+on the 3.5 km GP circuit a frame takes about 6 ms following a car, 7 ms chasing it, and 8 ms
+for the overview, all overlays on (`tests/benchmarks/test_render_speed.py`).
 
 ### 4.12 Track editor
 

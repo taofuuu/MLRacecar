@@ -102,8 +102,10 @@ def _draw_direction(surface: pygame.Surface, track: Track, camera: Camera) -> No
     width = float(track.width[0])
     index = min(len(track.left) - 1, round(width / (track.length / len(track.left))))
     tip_length = max(8.0, 0.4 * width * camera.scale)
-    center = camera.to_screen(track.centerline.points[index])
-    ahead = track.centerline.tangent[index] * (1.0, -1.0)  # screen y points down
+    point = track.centerline.points[index]
+    center = camera.to_screen(point)
+    ahead = camera.to_screen(point + track.centerline.tangent[index]) - center  # views can turn
+    ahead /= np.hypot(ahead[0], ahead[1])
     side = np.array([-ahead[1], ahead[0]])
     tip = center + ahead * tip_length / 2
     back = center - ahead * tip_length / 2

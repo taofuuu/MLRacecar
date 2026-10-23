@@ -19,7 +19,7 @@ from mlracecar.core.track.model import Track
 from mlracecar.core.vehicle.kinematic import KinematicBicycle
 from mlracecar.core.world import World
 from mlracecar.render.hud import lap_time_text
-from mlracecar.render.race import Overlay, RaceRenderer, interpolated
+from mlracecar.render.race import CameraMode, Overlay, RaceRenderer, interpolated
 
 WINDOW_SIZE = (1280, 800)
 """The window's size, unless the screen is too small for it."""
@@ -45,7 +45,10 @@ OVERLAY_KEYS = {
     pygame.K_4: Overlay.RAYS,
 }
 
-HINT = "Arrows or WASD: drive  ·  R: restart  ·  C: camera  ·  1-4: overlays  ·  P: pause"
+HINT = (
+    "Arrows or WASD: drive  ·  R: restart  ·  C: camera  ·  L: look ahead  ·  1-4: overlays"
+    "  ·  P: pause"
+)
 
 _NO_OBSERVATIONS = np.zeros((1, 0), dtype=np.float32)
 """The keyboard agent needs no observations: the person sees the screen."""
@@ -88,6 +91,7 @@ class DriveWindow:
         self.sensor = RaySensor(track, config.sensors.to_settings())
         """The distance rays the AI will drive by; key 4 shows them."""
         self.renderer = RaceRenderer(track, (car.length, car.width), self._screen.get_size())
+        self.renderer.mode = CameraMode.CHASE  # turns with the car: left stays left
         self.title = title
         self.running = True
         self.paused = False
@@ -122,6 +126,8 @@ class DriveWindow:
             self.restart()
         elif key == pygame.K_c:
             self.renderer.next_camera()
+        elif key == pygame.K_l:
+            self.renderer.look_ahead = not self.renderer.look_ahead
         elif key == pygame.K_p:
             self.paused = not self.paused
         elif key in OVERLAY_KEYS:
